@@ -1990,7 +1990,6 @@
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\juce_midi_ci.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\JuceLibraryCode\BinaryData.cpp"/>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_audio_basics.cpp"/>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_core.cpp">
       <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -2010,6 +2009,7 @@
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_midi_ci.cpp"/>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IterableComparator.h"/>
     <ClInclude Include="BitSetEnumeration.h"/>
     <ClInclude Include="CollectionUtils.h"/>
     <ClInclude Include="Combination.h"/>
@@ -2942,7 +2942,6 @@
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\detail\juce_CIPropertyHostUtils.h"/>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\detail\juce_CIResponder.h"/>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\juce_midi_ci.h"/>
-    <ClInclude Include="..\..\JuceLibraryCode\BinaryData.h"/>
     <ClInclude Include="..\..\JuceLibraryCode\JuceHeader.h"/>
     <ClInclude Include="..\..\JuceLibraryCode\JucePluginDefines.h"/>
   </ItemGroup>

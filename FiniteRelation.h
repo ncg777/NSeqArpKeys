@@ -16,9 +16,10 @@
 #include "Parsers.h"
 #include "Printers.h"
 #include "CollectionUtils.h"
+#include "IterableComparator.h"
 
 template <typename X, typename Y>
-class FiniteRelation : public Relation<X, Y>, public std::enable_shared_from_this<FiniteRelation<X, Y>> {
+class FiniteRelation : public std::function<bool(X, Y)> {
 public:
     FiniteRelation() = default;
 
@@ -54,7 +55,9 @@ public:
             add(x, f(x));
         }
     }
-
+    bool operator()(X a, Y b) const {
+        return pairs.find(HeteroPair<X, Y>(a, b)) != pairs.end();
+    }
     static FiniteRelation<X, Y> evaluateParametric(std::function<HeteroPair<X, Y>(double)> f, double delta) {
         return evaluateParametric(f, delta, 0.0, 1.0);
     }
@@ -329,37 +332,25 @@ public:
         return isLeftUnique() && isRightUnique();
     }
 
-    static void writeToCSV(const FiniteRelation<X, Y>& finiteBinaryRelation, std::function<std::string(X)> xToString, std::function<std::string(Y)> yToString, const std::string& path, bool useBase64) {
+    static void writeToCSV(const FiniteRelation<X, Y>& finiteBinaryRelation, std::function<std::string(X)> xToString, std::function<std::string(Y)> yToString, const std::string& path) {
         std::ofstream p(path);
         io::CSVWriter<2> w(p);
         auto xp = [xToString](X x) { return x == X() ? "null" : xToString(x); };
         auto yp = [yToString](Y y) { return y == Y() ? "null" : yToString(y); };
-
-        if (useBase64) {
-            xp = Printers::base64Decorator(xp);
-            yp = Printers::base64Decorator(yp);
-        }
 
         for (const auto& t : finiteBinaryRelation.pairs) {
             w << xp(t.first) << yp(t.second);
         }
     }
 
-    void writeToCSV(std::function<std::string(X)> xFunction, std::function<std::string(Y)> yToString, const std::string& path, bool useBase64) const {
-        writeToCSV(*this, xFunction, yToString, path, useBase64);
-    }
 
     void writeToCSV(std::function<std::string(X)> xToString, std::function<std::string(Y)> yToString, const std::string& path) const {
         writeToCSV(*this, xToString, yToString, path, false);
     }
 
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, std::istream& is, bool useBase64) {
+    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, std::istream& is) {
         io::CSVReader<2> r(is);
         FiniteRelation<X, Y> o;
-        if (useBase64) {
-            xParser = Parsers::base64Decorator(xParser);
-            yParser = Parsers::base64Decorator(yParser);
-        }
 
         std::string x, y;
         while (r.read_row(x, y)) {
@@ -368,26 +359,10 @@ public:
         return o;
     }
 
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, std::istream& is) {
-        return readFromCSV(xParser, yParser, is, false);
-    }
 
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path, bool useBase64) {
+    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path {
         std::ifstream is(path);
-        return readFromCSV(xParser, yParser, is, useBase64);
-    }
-
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path) {
-        std::ifstream is(path);
-        return readFromCSV(xParser, yParser, is, false);
-    }
-
-    std::string toString() const {
-        return toString([](X t) { return std::to_string(t); }, [](Y u) { return std::to_string(u); });
-    }
-
-    std::string toString(std::function<std::string(X)> printer1, std::function<std::string(Y)> printer2) const {
-        return toJSONArrayString(printer1, printer2);
+        return readFromCSV(xParser, yParser, is);
     }
 
     bool apply(const X& a, const Y& b) const override {
@@ -399,20 +374,8 @@ public:
         return it.compare(*this, o);
     }
 
-    void printToJSON(std::function<std::string(X)> printer1, std::function<std::string(Y)> printer2, const std::string& path) const {
-        toStringJaggedList(printer1, printer2).printToJSON([](const std::string& s) { return s; }, path);
-    }
-
-    std::string toJSONArrayString(std::function<std::string(X)> printer1, std::function<std::string(Y)> printer2) const {
-        return toStringJaggedList(printer1, printer2).toJSONArrayString([](const std::string& s) { return s; });
-    }
-
-    static FiniteRelation<X, Y> parseJSONArray(const std::string& str, std::function<X(std::string)> parser1, std::function<Y(std::string)> parser2) {
-        return fromStringJaggedList(JaggedList<std::string>::parseJSONArray(str, [](const std::string& s) { return s; }), parser1, parser2);
-    }
-
-    static FiniteRelation<X, Y> parseJSONFile(const std::string& path, std::function<X(std::string)> parser1, std::function<Y(std::string)> parser2) {
-        return fromStringJaggedList(JaggedList<std::string>::parseJSONFile(path, [](const std::string& s) { return s; }), parser1, parser2);
+    std::string toString() const {
+        return toString([](X t) { return std::to_string(t); }, [](Y u) { return std::to_string(u); });
     }
 
     JaggedList<std::string> toStringJaggedList(std::function<std::string(X)> printer1, std::function<std::string(Y)> printer2) const {

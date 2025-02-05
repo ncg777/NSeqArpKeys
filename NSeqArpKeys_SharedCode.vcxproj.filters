@@ -2308,9 +2308,6 @@
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\juce_midi_ci.cpp">
       <Filter>JUCE Modules\juce_midi_ci</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\JuceLibraryCode\BinaryData.cpp">
-      <Filter>JUCE Library Code</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_audio_basics.cpp">
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
@@ -2346,6 +2343,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IterableComparator.h">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClInclude>
     <ClInclude Include="BitSetEnumeration.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
@@ -5141,9 +5141,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_midi_ci\juce_midi_ci.h">
       <Filter>JUCE Modules\juce_midi_ci</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\JuceLibraryCode\BinaryData.h">
-      <Filter>JUCE Library Code</Filter>
     </ClInclude>
     <ClInclude Include="..\..\JuceLibraryCode\JuceHeader.h">
       <Filter>JUCE Library Code</Filter>

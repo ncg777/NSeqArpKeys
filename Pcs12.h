@@ -86,7 +86,7 @@ public:
     }
 
     Composition getComposition() const {
-        return combination.getComposition();
+        return Composition::getCompositionFromCombination(combination);
     }
 
     Pcs12 merge(const Pcs12& other) const {
@@ -144,7 +144,7 @@ public:
             return empty();
         }
 
-        return ChordCombinationDict.at(input);
+        return ChordDict.at(input.toString());
     }
 
     static Pcs12 identify(const Sequence& input) {
@@ -467,7 +467,6 @@ private:
         : ImmutableCombination(12, p_s), m_Order(p_Order), m_Transpose(p_Transpose) {
     }
     static std::map<std::string, Pcs12> ChordDict;
-    static std::map<ImmutableCombination, Pcs12> ChordCombinationDict;
     static std::map<Pcs12, std::string> ForteNumbersDict;
     static std::map<Pcs12, int> ForteNumbersRotationDict;
     static std::map<std::string, Pcs12> ForteNumbersToPCS12Dict;

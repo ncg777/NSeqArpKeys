@@ -22,7 +22,6 @@ public:
     static std::function<std::string(const std::vector<double>&)> doubleArrayPrinter;
     static std::function<std::string(const std::vector<int>&)> integerArrayPrinter;
     static std::function<std::string(const Sequence&)> sequencePrinter;
-    static std::function<std::string(const Pcs12&)> PCS12Printer;
     static std::function<std::string(const Combination&)> combinationPrinter;
     static std::function<std::string(const Composition&)> compositionPrinter;
     static std::function<std::string(const HomoPair<int>&)> intPairPrinter;
