@@ -58,8 +58,6 @@ std::function<std::string(const std::string&)> Printers::stringPrinter = [](cons
 std::function<std::string(int)> Printers::integerPrinter = [](int i) { return std::to_string(i); };
 std::function<std::string(int)> Printers::intPrinter = [](int value) { return std::to_string(value); };
 std::function<std::string(double)> Printers::doublePrinter = [](double d) { return std::to_string(d); };
-std::function<std::string(const std::vector<double>&)> Printers::doubleArrayPrinter = Printers::arrayDecorator<double>(Printers::doublePrinter);
-std::function<std::string(const std::vector<int>&)> Printers::integerArrayPrinter = Printers::arrayDecorator<int>(Printers::integerPrinter);
 std::function<std::string(const Sequence&)> Printers::sequencePrinter = [](const Sequence& s) { return s.toString(); };
 std::function<std::string(const HomoPair<int>&)> Printers::intPairPrinter = [](const HomoPair<int>& p) {
     Sequence ss;

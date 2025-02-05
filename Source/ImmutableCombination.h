@@ -90,7 +90,7 @@ public:
     }
 
     Composition getComposition() const {
-        return combination.getComposition();
+        return Composition::getCompositionFromCombination(combination);
     }
 
     ImmutableCombination merge(const ImmutableCombination& other) const {

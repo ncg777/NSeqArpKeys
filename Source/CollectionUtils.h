@@ -103,4 +103,3 @@ public:
     template <typename T>
     static std::vector<T> permutateRandomly(const std::vector<T>& arr);
 };
-

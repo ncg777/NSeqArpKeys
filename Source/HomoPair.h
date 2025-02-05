@@ -23,4 +23,3 @@ public:
 private:
     HomoPair(const T& p_x, const T& p_y) : HeteroPair<T, T>(p_x, p_y) {}
 };
-
