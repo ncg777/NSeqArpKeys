@@ -50,4 +50,3 @@ public:
 
     static long reverseTriangularNumber(int n);
 };
-

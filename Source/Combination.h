@@ -96,16 +96,3 @@ public:
 private:
     int m_n;
 };
-
-template<typename T>
-inline std::vector<T> Combination::applyTo(const std::vector<T>& arr) const {
-    if (arr.size() != this->getN()) {
-        throw std::invalid_argument("Array size does not match combination size");
-    }
-    std::vector<T> o(this->getK());
-    int k = 0;
-    for (int i = this->find_first(); i > -1; i = this->find_next(i + 1)) {
-        o[k++] = arr[i];
-    }
-    return o;
-}
