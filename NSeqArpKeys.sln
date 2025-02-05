@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio Version 17
+
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NSeqArpKeys - Standalone Plugin", "NSeqArpKeys_StandalonePlugin.vcxproj", "{5FEF1E7A-D0DA-2448-6D58-F5534FA73B2D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC} = {E8F25603-AF61-63E2-7B19-76B4B96D56CC}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NSeqArpKeys - VST3", "NSeqArpKeys_VST3.vcxproj", "{A404D6BE-DB61-8E89-8008-8AAFF5852105}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC} = {E8F25603-AF61-63E2-7B19-76B4B96D56CC}
+		{BB1F8356-B08D-05C8-5AB5-91F14F13437B} = {BB1F8356-B08D-05C8-5AB5-91F14F13437B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NSeqArpKeys - Shared Code", "NSeqArpKeys_SharedCode.vcxproj", "{E8F25603-AF61-63E2-7B19-76B4B96D56CC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NSeqArpKeys - VST3 Manifest Helper", "NSeqArpKeys_VST3ManifestHelper.vcxproj", "{BB1F8356-B08D-05C8-5AB5-91F14F13437B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A404D6BE-DB61-8E89-8008-8AAFF5852105}.Debug|x64.ActiveCfg = Debug|x64
+		{A404D6BE-DB61-8E89-8008-8AAFF5852105}.Debug|x64.Build.0 = Debug|x64
+		{A404D6BE-DB61-8E89-8008-8AAFF5852105}.Release|x64.ActiveCfg = Release|x64
+		{A404D6BE-DB61-8E89-8008-8AAFF5852105}.Release|x64.Build.0 = Release|x64
+		{5FEF1E7A-D0DA-2448-6D58-F5534FA73B2D}.Debug|x64.ActiveCfg = Debug|x64
+		{5FEF1E7A-D0DA-2448-6D58-F5534FA73B2D}.Debug|x64.Build.0 = Debug|x64
+		{5FEF1E7A-D0DA-2448-6D58-F5534FA73B2D}.Release|x64.ActiveCfg = Release|x64
+		{5FEF1E7A-D0DA-2448-6D58-F5534FA73B2D}.Release|x64.Build.0 = Release|x64
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC}.Debug|x64.ActiveCfg = Debug|x64
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC}.Debug|x64.Build.0 = Debug|x64
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC}.Release|x64.ActiveCfg = Release|x64
+		{E8F25603-AF61-63E2-7B19-76B4B96D56CC}.Release|x64.Build.0 = Release|x64
+		{BB1F8356-B08D-05C8-5AB5-91F14F13437B}.Debug|x64.ActiveCfg = Debug|x64
+		{BB1F8356-B08D-05C8-5AB5-91F14F13437B}.Debug|x64.Build.0 = Debug|x64
+		{BB1F8356-B08D-05C8-5AB5-91F14F13437B}.Release|x64.ActiveCfg = Release|x64
+		{BB1F8356-B08D-05C8-5AB5-91F14F13437B}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
