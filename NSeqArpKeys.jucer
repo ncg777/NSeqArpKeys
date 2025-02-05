@@ -4,35 +4,42 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="{43162544-3E87-CB29-D53B-D79E9C065FE7}" name="Source">
-      <FILE id="oMnNJA" name="IterableComparator.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/IterableComparator.h"/>
-      <FILE id="F6NPK9" name="BitSetEnumeration.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/BitSetEnumeration.h"/>
-      <FILE id="aLxNXt" name="CollectionUtils.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/CollectionUtils.h"/>
-      <FILE id="sGkn7m" name="Combination.h" compile="0" resource="0" file="Builds/VisualStudio2022/Combination.h"/>
-      <FILE id="ntrlE2" name="CombinationEnumeration.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/CombinationEnumeration.h"/>
-      <FILE id="W2l9I1" name="Composition.h" compile="0" resource="0" file="Builds/VisualStudio2022/Composition.h"/>
-      <FILE id="tIcDct" name="CompositionEnumeration.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/CompositionEnumeration.h"/>
-      <FILE id="u7IbiN" name="FiniteRelation.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/FiniteRelation.h"/>
-      <FILE id="tClD5O" name="ForteCSV.h" compile="0" resource="0" file="Builds/VisualStudio2022/ForteCSV.h"/>
-      <FILE id="mM94Lp" name="HeteroPair.h" compile="0" resource="0" file="Builds/VisualStudio2022/HeteroPair.h"/>
-      <FILE id="ySXtgs" name="HomoPair.h" compile="0" resource="0" file="Builds/VisualStudio2022/HomoPair.h"/>
-      <FILE id="FwdM5r" name="ImmutableCombination.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/ImmutableCombination.h"/>
-      <FILE id="taVoVN" name="JaggedList.h" compile="0" resource="0" file="Builds/VisualStudio2022/JaggedList.h"/>
-      <FILE id="H4r14o" name="Matrix.h" compile="0" resource="0" file="Builds/VisualStudio2022/Matrix.h"/>
-      <FILE id="a9xuXx" name="Necklace.h" compile="0" resource="0" file="Builds/VisualStudio2022/Necklace.h"/>
-      <FILE id="gB29bV" name="Numbers.h" compile="0" resource="0" file="Builds/VisualStudio2022/Numbers.h"/>
-      <FILE id="hIf2i0" name="Parsers.h" compile="0" resource="0" file="Builds/VisualStudio2022/Parsers.h"/>
-      <FILE id="rjKm6s" name="Pcs12.h" compile="0" resource="0" file="Builds/VisualStudio2022/Pcs12.h"/>
-      <FILE id="bD4MPN" name="Printers.h" compile="0" resource="0" file="Builds/VisualStudio2022/Printers.h"/>
-      <FILE id="saybBt" name="RandomNumberGenerator.h" compile="0" resource="0"
-            file="Builds/VisualStudio2022/RandomNumberGenerator.h"/>
-      <FILE id="l5uIDS" name="Sequence.h" compile="0" resource="0" file="Builds/VisualStudio2022/Sequence.h"/>
+      <FILE id="LNlMM1" name="CollectionUtils.cpp" compile="1" resource="0"
+            file="Source/CollectionUtils.cpp"/>
+      <FILE id="fepfTE" name="Numbers.cpp" compile="1" resource="0" file="Source/Numbers.cpp"/>
+      <FILE id="VZwps5" name="Matrix.cpp" compile="1" resource="0" file="Source/Matrix.cpp"/>
+      <FILE id="upkXu0" name="Composition.cpp" compile="1" resource="0" file="Source/Composition.cpp"/>
+      <FILE id="FMDCev" name="Combination.cpp" compile="1" resource="0" file="Source/Combination.cpp"/>
+      <FILE id="r8VdMB" name="Sequence.cpp" compile="1" resource="0" file="Source/Sequence.cpp"/>
+      <FILE id="ll1Q0p" name="BitSetEnumeration.h" compile="0" resource="0"
+            file="Source/BitSetEnumeration.h"/>
+      <FILE id="ZrXR3D" name="CollectionUtils.h" compile="0" resource="0"
+            file="Source/CollectionUtils.h"/>
+      <FILE id="rNrQwT" name="Combination.h" compile="0" resource="0" file="Source/Combination.h"/>
+      <FILE id="JnvvZA" name="CombinationEnumeration.h" compile="0" resource="0"
+            file="Source/CombinationEnumeration.h"/>
+      <FILE id="az35kH" name="Composition.h" compile="0" resource="0" file="Source/Composition.h"/>
+      <FILE id="Y1Y0cJ" name="CompositionEnumeration.h" compile="0" resource="0"
+            file="Source/CompositionEnumeration.h"/>
+      <FILE id="H6hXZs" name="FiniteRelation.h" compile="0" resource="0"
+            file="Source/FiniteRelation.h"/>
+      <FILE id="DNgz71" name="ForteCSV.h" compile="0" resource="0" file="Source/ForteCSV.h"/>
+      <FILE id="rC5NIm" name="HeteroPair.h" compile="0" resource="0" file="Source/HeteroPair.h"/>
+      <FILE id="YDClpx" name="HomoPair.h" compile="0" resource="0" file="Source/HomoPair.h"/>
+      <FILE id="MH6n6n" name="ImmutableCombination.h" compile="0" resource="0"
+            file="Source/ImmutableCombination.h"/>
+      <FILE id="TSURt6" name="IterableComparator.h" compile="0" resource="0"
+            file="Source/IterableComparator.h"/>
+      <FILE id="Pj9qm6" name="JaggedList.h" compile="0" resource="0" file="Source/JaggedList.h"/>
+      <FILE id="hIs919" name="Matrix.h" compile="0" resource="0" file="Source/Matrix.h"/>
+      <FILE id="Xjuyvq" name="Necklace.h" compile="0" resource="0" file="Source/Necklace.h"/>
+      <FILE id="r95ONZ" name="Numbers.h" compile="0" resource="0" file="Source/Numbers.h"/>
+      <FILE id="Mf08L0" name="Parsers.h" compile="0" resource="0" file="Source/Parsers.h"/>
+      <FILE id="akmHBZ" name="Pcs12.h" compile="0" resource="0" file="Source/Pcs12.h"/>
+      <FILE id="Tk95uQ" name="Printers.h" compile="0" resource="0" file="Source/Printers.h"/>
+      <FILE id="OV3h9y" name="RandomNumberGenerator.h" compile="0" resource="0"
+            file="Source/RandomNumberGenerator.h"/>
+      <FILE id="fU5YOz" name="Sequence.h" compile="0" resource="0" file="Source/Sequence.h"/>
       <FILE id="u1gvYZ" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="bAH7Ps" name="PluginProcessor.h" compile="0" resource="0"

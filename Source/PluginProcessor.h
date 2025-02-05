@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 #include <unordered_map>
 #include <vector>
-#include "../Builds/VisualStudio2022/Pcs12.h"
+#include "Pcs12.h"
 
 //==============================================================================
 /**

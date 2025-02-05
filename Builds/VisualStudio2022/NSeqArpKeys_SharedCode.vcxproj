@@ -143,6 +143,12 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\CollectionUtils.cpp"/>
+    <ClCompile Include="..\..\Source\Numbers.cpp"/>
+    <ClCompile Include="..\..\Source\Matrix.cpp"/>
+    <ClCompile Include="..\..\Source\Composition.cpp"/>
+    <ClCompile Include="..\..\Source\Combination.cpp"/>
+    <ClCompile Include="..\..\Source\Sequence.cpp"/>
     <ClCompile Include="..\..\Source\PluginProcessor.cpp"/>
     <ClCompile Include="..\..\Source\PluginEditor.cpp"/>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_audio_basics\audio_play_head\juce_AudioPlayHead.cpp">
@@ -2009,27 +2015,27 @@
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_midi_ci.cpp"/>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IterableComparator.h"/>
-    <ClInclude Include="BitSetEnumeration.h"/>
-    <ClInclude Include="CollectionUtils.h"/>
-    <ClInclude Include="Combination.h"/>
-    <ClInclude Include="CombinationEnumeration.h"/>
-    <ClInclude Include="Composition.h"/>
-    <ClInclude Include="CompositionEnumeration.h"/>
-    <ClInclude Include="FiniteRelation.h"/>
-    <ClInclude Include="ForteCSV.h"/>
-    <ClInclude Include="HeteroPair.h"/>
-    <ClInclude Include="HomoPair.h"/>
-    <ClInclude Include="ImmutableCombination.h"/>
-    <ClInclude Include="JaggedList.h"/>
-    <ClInclude Include="Matrix.h"/>
-    <ClInclude Include="Necklace.h"/>
-    <ClInclude Include="Numbers.h"/>
-    <ClInclude Include="Parsers.h"/>
-    <ClInclude Include="Pcs12.h"/>
-    <ClInclude Include="Printers.h"/>
-    <ClInclude Include="RandomNumberGenerator.h"/>
-    <ClInclude Include="Sequence.h"/>
+    <ClInclude Include="..\..\Source\BitSetEnumeration.h"/>
+    <ClInclude Include="..\..\Source\CollectionUtils.h"/>
+    <ClInclude Include="..\..\Source\Combination.h"/>
+    <ClInclude Include="..\..\Source\CombinationEnumeration.h"/>
+    <ClInclude Include="..\..\Source\Composition.h"/>
+    <ClInclude Include="..\..\Source\CompositionEnumeration.h"/>
+    <ClInclude Include="..\..\Source\FiniteRelation.h"/>
+    <ClInclude Include="..\..\Source\ForteCSV.h"/>
+    <ClInclude Include="..\..\Source\HeteroPair.h"/>
+    <ClInclude Include="..\..\Source\HomoPair.h"/>
+    <ClInclude Include="..\..\Source\ImmutableCombination.h"/>
+    <ClInclude Include="..\..\Source\IterableComparator.h"/>
+    <ClInclude Include="..\..\Source\JaggedList.h"/>
+    <ClInclude Include="..\..\Source\Matrix.h"/>
+    <ClInclude Include="..\..\Source\Necklace.h"/>
+    <ClInclude Include="..\..\Source\Numbers.h"/>
+    <ClInclude Include="..\..\Source\Parsers.h"/>
+    <ClInclude Include="..\..\Source\Pcs12.h"/>
+    <ClInclude Include="..\..\Source\Printers.h"/>
+    <ClInclude Include="..\..\Source\RandomNumberGenerator.h"/>
+    <ClInclude Include="..\..\Source\Sequence.h"/>
     <ClInclude Include="..\..\Source\PluginProcessor.h"/>
     <ClInclude Include="..\..\Source\PluginEditor.h"/>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_audio_basics\audio_play_head\juce_AudioPlayHead.h"/>

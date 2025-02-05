@@ -130,11 +130,6 @@ public:
         return combination.compareTo(o.combination);
     }
 
-    std::vector<ImmutableCombination> generate(int k) const {
-        std::vector<Combination> combinations = Combination::generate(combination.getN(), k);
-        return toImmutableCombinations(combinations);
-    }
-
 protected:
     Combination combination;
 };

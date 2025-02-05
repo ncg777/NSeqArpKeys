@@ -346,6 +346,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\CollectionUtils.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Numbers.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Matrix.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Composition.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Combination.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Sequence.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\PluginProcessor.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClCompile>
@@ -2343,67 +2361,67 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IterableComparator.h">
+    <ClInclude Include="..\..\Source\BitSetEnumeration.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="BitSetEnumeration.h">
+    <ClInclude Include="..\..\Source\CollectionUtils.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="CollectionUtils.h">
+    <ClInclude Include="..\..\Source\Combination.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Combination.h">
+    <ClInclude Include="..\..\Source\CombinationEnumeration.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="CombinationEnumeration.h">
+    <ClInclude Include="..\..\Source\Composition.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Composition.h">
+    <ClInclude Include="..\..\Source\CompositionEnumeration.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="CompositionEnumeration.h">
+    <ClInclude Include="..\..\Source\FiniteRelation.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="FiniteRelation.h">
+    <ClInclude Include="..\..\Source\ForteCSV.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="ForteCSV.h">
+    <ClInclude Include="..\..\Source\HeteroPair.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="HeteroPair.h">
+    <ClInclude Include="..\..\Source\HomoPair.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="HomoPair.h">
+    <ClInclude Include="..\..\Source\ImmutableCombination.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="ImmutableCombination.h">
+    <ClInclude Include="..\..\Source\IterableComparator.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="JaggedList.h">
+    <ClInclude Include="..\..\Source\JaggedList.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Matrix.h">
+    <ClInclude Include="..\..\Source\Matrix.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Necklace.h">
+    <ClInclude Include="..\..\Source\Necklace.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Numbers.h">
+    <ClInclude Include="..\..\Source\Numbers.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Parsers.h">
+    <ClInclude Include="..\..\Source\Parsers.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Pcs12.h">
+    <ClInclude Include="..\..\Source\Pcs12.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Printers.h">
+    <ClInclude Include="..\..\Source\Printers.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="RandomNumberGenerator.h">
+    <ClInclude Include="..\..\Source\RandomNumberGenerator.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
-    <ClInclude Include="Sequence.h">
+    <ClInclude Include="..\..\Source\Sequence.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\PluginProcessor.h">

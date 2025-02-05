@@ -360,12 +360,12 @@ public:
     }
 
 
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path {
+    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path{
         std::ifstream is(path);
         return readFromCSV(xParser, yParser, is);
-    }
+        }
 
-    bool apply(const X& a, const Y& b) const override {
+        bool apply(const X& a, const Y& b) const override {
         return pairs.find(HeteroPair<X, Y>(a, b)) != pairs.end();
     }
 
