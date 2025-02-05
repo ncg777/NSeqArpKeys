@@ -4,11 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="{43162544-3E87-CB29-D53B-D79E9C065FE7}" name="Source">
+      <FILE id="m9Zsbe" name="csv.h" compile="0" resource="0" file="Source/csv.h"/>
       <FILE id="LNlMM1" name="CollectionUtils.cpp" compile="1" resource="0"
             file="Source/CollectionUtils.cpp" skipPCH="0"/>
       <FILE id="fepfTE" name="Numbers.cpp" compile="1" resource="0" file="Source/Numbers.cpp"
-            skipPCH="0"/>
-      <FILE id="VZwps5" name="Matrix.cpp" compile="1" resource="0" file="Source/Matrix.cpp"
             skipPCH="0"/>
       <FILE id="upkXu0" name="Composition.cpp" compile="1" resource="0" file="Source/Composition.cpp"
             skipPCH="0"/>
@@ -36,7 +35,6 @@
       <FILE id="TSURt6" name="IterableComparator.h" compile="0" resource="0"
             file="Source/IterableComparator.h"/>
       <FILE id="Pj9qm6" name="JaggedList.h" compile="0" resource="0" file="Source/JaggedList.h"/>
-      <FILE id="hIs919" name="Matrix.h" compile="0" resource="0" file="Source/Matrix.h"/>
       <FILE id="Xjuyvq" name="Necklace.h" compile="0" resource="0" file="Source/Necklace.h"/>
       <FILE id="r95ONZ" name="Numbers.h" compile="0" resource="0" file="Source/Numbers.h"/>
       <FILE id="Mf08L0" name="Parsers.h" compile="0" resource="0" file="Source/Parsers.h"/>
@@ -56,6 +54,9 @@
   </MAINGROUP>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -80,6 +81,8 @@
         <MODULEPATH id="juce_gui_extra" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_midi_ci" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_basics" path="../../../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../../../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>

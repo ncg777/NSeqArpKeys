@@ -83,7 +83,7 @@ inline Sequence CollectionUtils::calcIntervalVector(const std::bitset<128>& inpu
     return s;
 }
 
-inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const Sequence& input) {
+inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const std::vector<int>& input) {
     std::map<int, Sequence> output;
     std::set<int> t(input.begin(), input.end());
 
@@ -95,11 +95,6 @@ inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const Sequenc
         output[v] = calcIntervalVector(b);
     }
     return output;
-}
-
-inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const std::vector<int>& input) {
-    Sequence s(input.begin(), input.end());
-    return calcIntervalVector(s);
 }
 
 inline std::vector<int> CollectionUtils::antidifference(const std::vector<int>& p_arr, int k) {

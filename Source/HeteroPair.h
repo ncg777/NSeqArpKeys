@@ -10,9 +10,7 @@
 template <typename T, typename U>
 class HeteroPair {
 public:
-    static HeteroPair<T, U> makeHeteroPair(const T& first, const U& second) {
-        return HeteroPair<T, U>(first, second);
-    }
+    HeteroPair(const T& p_x, const U& p_y) : x(p_x), y(p_y) {}
 
     T getFirst() const {
         return x;
@@ -23,7 +21,7 @@ public:
     }
 
     HeteroPair<U, T> converse() const {
-        return makeHeteroPair(y, x);
+        return HeteroPair<U, T>(y, x);
     }
 
     bool operator==(const HeteroPair<T, U>& other) const {
@@ -62,7 +60,7 @@ private:
     T x;
     U y;
 
-    HeteroPair(const T& p_x, const U& p_y) : x(p_x), y(p_y) {}
+    
 
     int compareTo(const HeteroPair<T, U>& other) const {
         if (x < other.x) return -1;

@@ -75,8 +75,6 @@ public:
 
     static Sequence calcIntervalVector(const std::bitset<128>& input, int n);
 
-    static std::map<int, Sequence> calcIntervalVector(const Sequence& input);
-
     static std::map<int, Sequence> calcIntervalVector(const std::vector<int>& input);
 
     static std::vector<int> antidifference(const std::vector<int>& p_arr, int k);

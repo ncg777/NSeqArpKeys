@@ -1,4 +1,5 @@
 #include "Sequence.h"
+#include "CollectionUtils.h"
 
 inline bool Sequence::isNatural() const {
     return std::all_of(this->begin(), this->end(), [](int n) { return n >= 0; });

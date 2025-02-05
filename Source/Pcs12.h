@@ -446,6 +446,9 @@ public:
         std::reverse(forteNumbers.begin(), forteNumbers.end());
         return forteNumbers;
     }
+    Pcs12() : m_Order(1), m_Transpose(0){
+    
+    }
 private:
     int m_Order;
     int m_Transpose;

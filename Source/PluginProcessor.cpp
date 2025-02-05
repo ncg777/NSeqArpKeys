@@ -1,5 +1,9 @@
 #include "PluginProcessor.h"
 
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new NSeqArpKeysAudioProcessor();
+}
 NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
     : AudioProcessor(BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true))

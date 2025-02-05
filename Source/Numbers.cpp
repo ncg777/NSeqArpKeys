@@ -1,4 +1,5 @@
 #include "Numbers.h"
+#include <string>
 
 inline bool Numbers::divides(int k, int n) {
     return n % k == 0;

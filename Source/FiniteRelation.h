@@ -11,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "csv.h"
 #include "HeteroPair.h"
 #include "Parsers.h"
 #include "Printers.h"

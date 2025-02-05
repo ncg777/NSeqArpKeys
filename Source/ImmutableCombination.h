@@ -14,6 +14,7 @@ public:
 
     ImmutableCombination(const Combination& c) : combination(c) {}
     ImmutableCombination(int p_n) : combination(p_n) {}
+    ImmutableCombination() : combination() {}
 
     ImmutableCombination(int p_n, const std::set<int>& p_s) : combination(p_n, p_s) {}
 
@@ -125,7 +126,9 @@ public:
     int compareTo(const ImmutableCombination& o) const {
         return combination.compareTo(o.combination);
     }
-
+    bool operator<(const ImmutableCombination& other) const {
+        return combination.compareTo(other.combination) < 0;
+    }
 protected:
     Combination combination;
 };

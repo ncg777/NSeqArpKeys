@@ -1,9 +1,10 @@
 #include "Combination.h"
+#include "CollectionUtils.h"
 
 inline Combination::Combination(const Combination& c) : std::bitset<128>(c), m_n(c.m_n) {}
 
 inline Combination::Combination(int n) : m_n(n) {}
-
+inline Combination::Combination() : m_n(0) {}
 inline int Combination::find_first(const std::bitset<128>& bitset, int n) {
     for (int i = 0; i < n; ++i) {
         if (bitset.test(i)) {
@@ -81,9 +82,7 @@ inline Combination::Combination(int n, const std::set<int>& s) : Combination(n) 
 }
 
 inline Combination::Combination(const std::bitset<128>& c, int n) : std::bitset<128>(c), m_n(n) {}
-inline Combination::Combination(const Combination& c) : Combination(c.m_n) {
-    this->operator|=(c);
-}
+
 inline Combination Combination::reverse() const {
     Combination o(this->getN());
     for (int i = 0; i < o.getN(); ++i) {
@@ -212,7 +211,9 @@ inline int Combination::compareTo(const Combination& o) const {
         return b.test(i) ? -1 : 1;
     }
 }
-
+bool Combination::operator<(const Combination& other) const {
+    return compareTo(other) < 0;
+}
 inline std::vector<Combination> Combination::refinements(const Combination& c) {
     int n = c.getN() - c.getK();
     if (n == 0) {
@@ -271,10 +272,6 @@ inline Combination Combination::minus(const Combination& c) const {
         }
     }
     return o;
-}
-
-inline Sequence Combination::applyTo(const Sequence& seq) const {
-    return Sequence(this->applyTo(seq));
 }
 
 inline std::vector<Combination> Combination::partition(const Sequence& p0) const {

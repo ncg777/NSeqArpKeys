@@ -16,6 +16,7 @@ class Combination : public std::bitset<128> {
 public:
     Combination(const Combination& c);
     Combination(int n);
+    Combination();
     static int find_first(const std::bitset<128>& bitset, int n);
 
     static int find_next(const std::bitset<128>& bitset, int pos, int n);
@@ -51,10 +52,6 @@ public:
 
     static Combination mergeAll(const std::vector<Combination>& r);
 
-    Sequence homogeneityRegionsSequence() const;
-
-    std::vector<Combination> decomposeIntoHomogeneousRegions() const;
-
     std::string toString() const;
 
     Sequence asSequence() const;
@@ -66,7 +63,7 @@ public:
     static Combination fromBinarySequence(const Sequence& s);
 
     int compareTo(const Combination& o) const;
-
+    bool operator<(const Combination& other) const;
     static std::vector<Combination> refinements(const Combination& c);
 
     static Combination merge(const Combination& a, const Combination& b);
@@ -76,11 +73,6 @@ public:
     Combination intersect(const Combination& c) const;
 
     Combination minus(const Combination& c) const;
-
-    template <typename T>
-    std::vector<T> applyTo(const std::vector<T>& arr) const;
-
-    Sequence applyTo(const Sequence& seq) const;
 
     std::vector<Combination> partition(const Sequence& p0) const;
 
