@@ -12,7 +12,6 @@
 #include <fstream>
 #include <string>
 #include "HeteroPair.h"
-#include "JaggedList.h"
 #include "Parsers.h"
 #include "Printers.h"
 #include "CollectionUtils.h"
@@ -363,9 +362,9 @@ public:
     static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path{
         std::ifstream is(path);
         return readFromCSV(xParser, yParser, is);
-        }
+    }
 
-        bool apply(const X& a, const Y& b) const override {
+    bool apply(const X& a, const Y& b) const override {
         return pairs.find(HeteroPair<X, Y>(a, b)) != pairs.end();
     }
 
@@ -376,26 +375,6 @@ public:
 
     std::string toString() const {
         return toString([](X t) { return std::to_string(t); }, [](Y u) { return std::to_string(u); });
-    }
-
-    JaggedList<std::string> toStringJaggedList(std::function<std::string(X)> printer1, std::function<std::string(Y)> printer2) const {
-        JaggedList<std::string> o;
-        for (const auto& p : pairs) {
-            auto x = o.newChild();
-            x.add(p.first == X() ? "null" : printer1(p.first));
-            x.add(p.second == Y() ? "null" : printer2(p.second));
-        }
-        return o;
-    }
-
-    static FiniteRelation<X, Y> fromStringJaggedList(const JaggedList<std::string>& arr, std::function<X(std::string)> parser1, std::function<Y(std::string)> parser2) {
-        FiniteRelation<X, Y> o;
-        parser1 = Parsers::nullDecorator(parser1);
-        parser2 = Parsers::nullDecorator(parser2);
-        for (int i = 0; i < arr.size(); ++i) {
-            o.add(parser1(arr.get(i, 0).value()), parser2(arr.get(i, 1).value()));
-        }
-        return o;
     }
 
     class Iterator {

@@ -8,7 +8,6 @@
 #include <algorithm>
 #include "HeteroPair.h"
 #include "HomoPair.h"
-#include "JaggedList.h"
 #include "Combination.h"
 #include "Composition.h"
 #include "Sequence.h"
@@ -25,13 +24,6 @@ public:
     static std::function<std::string(const Combination&)> combinationPrinter;
     static std::function<std::string(const Composition&)> compositionPrinter;
     static std::function<std::string(const HomoPair<int>&)> intPairPrinter;
-
-    template <typename T>
-    static std::function<std::string(const std::vector<T>&)> arrayDecorator(std::function<std::string(T)> printer) {
-        return [printer](const std::vector<T>& arr) {
-            return JaggedList<T>::fromArray(arr).toJSONArrayString(printer);
-            };
-    }
 
     template <typename T>
     static std::function<std::string(const std::vector<T>&)> listPrinter(std::function<std::string(T)> printer) {

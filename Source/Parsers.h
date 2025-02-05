@@ -8,7 +8,6 @@
 #include <algorithm>
 #include "HeteroPair.h"
 #include "HomoPair.h"
-#include "JaggedList.h"
 #include "Combination.h"
 #include "Composition.h"
 #include "Sequence.h"
@@ -27,12 +26,6 @@ public:
     static std::function<Sequence(const std::string&)> sequenceParser;
     static std::function<HomoPair<int>(const std::string&)> intPairParser;
 
-    template <typename T>
-    static std::function<std::vector<T>(const std::string&)> arrayDecorator(std::function<T(const std::string&)> parser) {
-        return [parser](const std::string& s) {
-            return JaggedList<T>::parseJSONArray(s, parser).toArray();
-            };
-    }
 
     template <typename T>
     static std::function<T(const std::string&)> quoteRemoverDecorator(std::function<T(const std::string&)> parser) {
