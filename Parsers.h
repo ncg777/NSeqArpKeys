@@ -11,7 +11,6 @@
 #include "JaggedList.h"
 #include "Combination.h"
 #include "Composition.h"
-#include "Pcs12.h"
 #include "Sequence.h"
 
 class Parsers {
@@ -26,7 +25,6 @@ public:
     static std::function<Composition(const std::string&)> compositionParser;
     static std::function<std::vector<int>(const std::string&)> intArrayParser;
     static std::function<Sequence(const std::string&)> sequenceParser;
-    static std::function<Pcs12(const std::string&)> PCS12parser;
     static std::function<HomoPair<int>(const std::string&)> intPairParser;
 
     template <typename T>

@@ -110,39 +110,6 @@ public:
         return o;
     }
 
-    static Matrix<int> enumerate(int n, int range) {
-        if (n < 1 || range == 0) {
-            throw std::runtime_error("CollectionUtils::enumerate Invalid arguments");
-        }
-        int sign = (range > 0) ? 1 : -1;
-        if (n == 1) {
-            Matrix<int> m0(std::abs(range), 1, 0);
-            for (int i = 0; i < std::abs(range); ++i) {
-                m0.set(i, 0, i * sign);
-            }
-            return m0;
-        }
-        else {
-            Matrix<int> m0 = enumerate(n - 1, range);
-            int nbRowM0 = m0.rowCount();
-
-            int mr = std::abs(range) * m0.rowCount();
-            int nr = m0.columnCount() + 1;
-
-            Matrix<int> m1(mr, nr, 0);
-
-            std::vector<int> cz(std::abs(range) * m0.rowCount());
-            for (int i = 0; i < std::abs(range); ++i) {
-                m1.setBlock(m0, i * nbRowM0, 0);
-                for (int j = 0; j < m0.rowCount(); ++j) {
-                    cz.push_back(i * sign);
-                }
-            }
-            m1.setColumn(nr - 1, cz);
-            return m1;
-        }
-    }
-
     template <typename T, typename Predicate>
     static void filter(std::set<T>& s, Predicate p) {
         std::vector<T> x;

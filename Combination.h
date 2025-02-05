@@ -77,7 +77,7 @@ public:
     }
 
     int calcSpan() const {
-        return getN() - getComposition().asSequence().getMax();
+        return getN() - Composition::getCompositionFromCombination(*this).asSequence().getMax();
     }
 
     Sequence getIntervalVector() const {
@@ -103,21 +103,6 @@ public:
             if (this->test(i)) o.set(-1 + o.getN() - i);
         }
         return o;
-    }
-
-    Composition getComposition() const {
-        int nsb = this->find_first();
-        if (nsb == -1) {
-            return Composition(m_n);
-        }
-        else {
-            Combination t = rotate(nsb);
-            std::vector<bool> l;
-            for (int i = 1; i < m_n; ++i) {
-                l.push_back(t.test(i));
-            }
-            return Composition(l);
-        }
     }
 
     double calcNormalizedDistanceWith(const Combination& other) const {
@@ -176,7 +161,7 @@ public:
     }
 
     Sequence homogeneityRegionsSequence() const {
-        Sequence s = this->getComposition().asSequence();
+        Sequence s = Composition::getCompositionFromCombination(*this).asSequence();
         Sequence groups(s.size(), 0);
         int k = 0;
         for (int j = s.size() - 1; j >= 0; --j) {
@@ -204,7 +189,7 @@ public:
 
     std::vector<Combination> decomposeIntoHomogeneousRegions() const {
         std::vector<Combination> o;
-        Sequence seq = this->getComposition().asSequence();
+        Sequence seq = Composition::getCompositionFromCombination(*this).asSequence();
         Sequence partition = this->homogeneityRegionsSequence();
         Sequence deduped;
         int last = seq[0];

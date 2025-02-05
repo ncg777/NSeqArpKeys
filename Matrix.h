@@ -287,33 +287,6 @@ public:
         return o;
     }
 
-    template <typename U>
-    JaggedList<U> toJaggedList(const std::function<U(T)>& transformer) const {
-        JaggedList<U> o;
-        if (m > 0) o.init(m, n);
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                o.set(transformer(get(i, j)), i, j);
-            }
-        }
-        return o;
-    }
-
-    static Matrix<T> fromStringJaggedList(const JaggedList<std::string>& arr, const std::function<T(const std::string&)>& parser) {
-        return fromJaggedList(arr).map(parser);
-    }
-
-    static Matrix<T> fromJaggedList(const JaggedList<T>& arr) {
-        Matrix<T> o;
-        for (int i = 0; i < arr.size(); ++i) {
-            o.appendRow();
-            for (int j = 0; j < arr.get(i).size(); ++j) {
-                if (o.columnCount() < j + 1) o.appendColumn();
-                o.set(i, j, arr.get(i, j).getValue());
-            }
-        }
-        return o;
-    }
 
 private:
     void shiftColumnsRight(int j) {

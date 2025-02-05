@@ -17,14 +17,6 @@ public:
         }
     }
 
-    Composition(const std::vector<bool>& comp) : Combination(comp.size()) {
-        for (int i = 0; i < m_n; ++i) {
-            if (comp[i]) {
-                this->set(i, comp[i]);
-            }
-        }
-    }
-
     Composition(int n) : Combination(n - 1) {}
 
     Composition() : Combination(0) {}
@@ -101,6 +93,20 @@ public:
             o[i] = Composition(c[i]);
         }
         return o;
+    }
+    static Composition getCompositionFromCombination(const Combination& c) {
+        int nsb = c.find_first();
+        if (nsb == -1) {
+            return Composition(c.getN());
+        }
+        else {
+            Combination t = c.rotate(nsb);
+            std::vector<bool> l;
+            for (int i = 1; i < c.getN(); ++i) {
+                l.push_back(t.test(i));
+            }
+            return Composition(l);
+        }
     }
 
 private:

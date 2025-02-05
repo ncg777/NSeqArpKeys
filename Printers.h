@@ -11,7 +11,6 @@
 #include "JaggedList.h"
 #include "Combination.h"
 #include "Composition.h"
-#include "Pcs12.h"
 #include "Sequence.h"
 
 class Printers {
@@ -71,8 +70,6 @@ std::function<std::string(double)> Printers::doublePrinter = [](double d) { retu
 std::function<std::string(const std::vector<double>&)> Printers::doubleArrayPrinter = Printers::arrayDecorator<double>(Printers::doublePrinter);
 std::function<std::string(const std::vector<int>&)> Printers::integerArrayPrinter = Printers::arrayDecorator<int>(Printers::integerPrinter);
 std::function<std::string(const Sequence&)> Printers::sequencePrinter = [](const Sequence& s) { return s.toString(); };
-std::function<std::string(const Combination&)> Printers::combinationPrinter = [](const Combination& c) { return c.toBinaryString(); };
-std::function<std::string(const Composition&)> Printers::compositionPrinter = [](const Composition& c) { return c.toBinaryString(); };
 std::function<std::string(const HomoPair<int>&)> Printers::intPairPrinter = [](const HomoPair<int>& p) {
     Sequence ss;
     ss.push_back(p.getFirst());
