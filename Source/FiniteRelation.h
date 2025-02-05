@@ -41,14 +41,6 @@ public:
         }
     }
 
-    FiniteRelation(const std::vector<X>& domain, const std::vector<Y>& codomain, const Relation<X, Y>& rel) {
-        for (const auto& p : HeterogeneousPairEnumeration<X, Y>(domain, codomain)) {
-            if (rel.apply(p.first, p.second)) {
-                add(p.first, p.second);
-            }
-        }
-    }
-
     FiniteRelation(const std::vector<X>& domain, std::function<Y(X)> f) {
         for (const auto& x : domain) {
             add(x, f(x));
@@ -114,8 +106,8 @@ public:
         if (o) {
             pairsReversed.insert(p.converse());
         }
-        domain.insert(a);
-        codomain.insert(b);
+        _domain.insert(a);
+        _codomain.insert(b);
         return o;
     }
 
@@ -126,10 +118,10 @@ public:
             pairsReversed.erase(p.converse());
         }
         if (pairs.find(HeteroPair<X, Y>(a, Y())) == pairs.end()) {
-            domain.erase(a);
+            _domain.erase(a);
         }
         if (pairsReversed.find(HeteroPair<Y, X>(b, X())) == pairsReversed.end()) {
-            codomain.erase(b);
+            _codomain.erase(b);
         }
         return o;
     }
@@ -232,19 +224,19 @@ public:
     }
 
     std::set<X> domain() const {
-        return domain;
+        return _domain;
     }
 
     bool domainCovers(const std::set<X>& s) const {
-        return std::includes(domain.begin(), domain.end(), s.begin(), s.end());
+        return std::includes(_domain.begin(), _domain.end(), s.begin(), s.end());
     }
 
     std::set<Y> codomain() const {
-        return codomain;
+        return _codomain;
     }
 
     bool codomainCovers(const std::set<Y>& s) const {
-        return std::includes(codomain.begin(), codomain.end(), s.begin(), s.end());
+        return std::includes(_codomain.begin(), _codomain.end(), s.begin(), s.end());
     }
 
     std::function<bool(X, Y)> related() const {
@@ -359,13 +351,9 @@ public:
     }
 
 
-    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path{
+    static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, const std::string& path) {
         std::ifstream is(path);
         return readFromCSV(xParser, yParser, is);
-    }
-
-    bool apply(const X& a, const Y& b) const override {
-        return pairs.find(HeteroPair<X, Y>(a, b)) != pairs.end();
     }
 
     int compareTo(const FiniteRelation<X, Y>& o) const {
@@ -414,7 +402,7 @@ public:
 private:
     std::set<HeteroPair<X, Y>> pairs;
     std::set<HeteroPair<Y, X>> pairsReversed;
-    std::set<X> domain;
-    std::set<Y> codomain;
+    std::set<X> _domain;
+    std::set<Y> _codomain;
 };
 

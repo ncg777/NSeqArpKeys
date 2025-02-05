@@ -28,10 +28,6 @@ public:
 
     static bool prime(int n0);
 
-    static Matrix<int> primeFactorization(int n0);
-
-    static int totient(int n);
-
     static long gcd(long a0, long b0);
 
     static long lcm(long a, long b);

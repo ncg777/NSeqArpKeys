@@ -14,7 +14,6 @@
 #include <iostream>
 #include "CollectionUtils.h"
 #include "HomoPair.h"
-#include "Matrix.h"
 #include "Numbers.h"
 #include "RandomNumberGenerator.h"
 
@@ -73,8 +72,6 @@ public:
 
     Sequence apply(const std::function<int(int)>& f) const;
 
-    Matrix<bool> decompose() const;
-
     Sequence powExp(int power) const;
 
     Sequence addToEach(const Sequence& s) const;
@@ -111,8 +108,6 @@ public:
 
     static Sequence from(const std::vector<int>& p_arr);
 
-    static Sequence from(const std::vector<int>& p_arr);
-
     std::set<int> distinct() const;
 
     int count(int n) const;
@@ -142,8 +137,6 @@ public:
     std::map<int, int> mapOrdinalsBipolar() const;
 
     Sequence asOrdinalsBipolar() const;
-
-    std::map<int, Sequence> getIntervalVectors() const;
 
     Sequence map(const Sequence& s) const;
 

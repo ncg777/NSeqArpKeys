@@ -89,10 +89,6 @@ public:
         return combination.asBinarySequence();
     }
 
-    Composition getComposition() const {
-        return Composition::getCompositionFromCombination(combination);
-    }
-
     ImmutableCombination merge(const ImmutableCombination& other) const {
         return ImmutableCombination(Combination::merge(combination, other.combination), combination.getN());
     }

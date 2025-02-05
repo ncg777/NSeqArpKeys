@@ -147,64 +147,6 @@ inline Combination Combination::mergeAll(const std::vector<Combination>& r) {
     return b;
 }
 
-inline Sequence Combination::homogeneityRegionsSequence() const {
-    Sequence s = Composition::getCompositionFromCombination(*this).asSequence();
-    Sequence groups(s.size(), 0);
-    int k = 0;
-    for (int j = s.size() - 1; j >= 0; --j) {
-        if (s[0] == s[j]) {
-            k--;
-        }
-        else {
-            break;
-        }
-    }
-    k += s.size();
-    k = k % s.size();
-    int previousValue = s[k];
-    int currentGroup = 0;
-    for (int i = k + 1; i < s.size() + k; ++i) {
-        int v = s[i % s.size()];
-        if (v != previousValue) {
-            currentGroup++;
-        }
-        groups[i % groups.size()] = currentGroup;
-        previousValue = v;
-    }
-    return groups;
-}
-
-inline std::vector<Combination> Combination::decomposeIntoHomogeneousRegions() const {
-    std::vector<Combination> o;
-    Sequence seq = Composition::getCompositionFromCombination(*this).asSequence();
-    Sequence partition = this->homogeneityRegionsSequence();
-    Sequence deduped;
-    int last = seq[0];
-    deduped.push_back(last);
-    for (const auto& i : seq) {
-        if (i != last) {
-            deduped.push_back(i);
-            last = i;
-        }
-    }
-    int n = partition.getMax() + 1;
-    int k = this->find_first();
-    int j = 0;
-    for (int i = 0; i < n; ++i) {
-        Combination comb(this->getN());
-        int val = deduped[i];
-        while (true) {
-            comb.set(k);
-            k += val;
-            if (++j == seq.size() || seq[j] != val) {
-                break;
-            }
-        }
-        o.push_back(comb);
-    }
-    return o;
-}
-
 inline std::string Combination::toString() const {
     std::ostringstream oss;
     oss << "{";

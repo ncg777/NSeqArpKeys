@@ -85,10 +85,6 @@ public:
         return combination.asBinarySequence();
     }
 
-    Composition getComposition() const {
-        return Composition::getCompositionFromCombination(combination);
-    }
-
     Pcs12 merge(const Pcs12& other) const {
         return Pcs12::identify(Combination::merge(combination, other.combination));
     }
@@ -124,11 +120,6 @@ public:
 
     int compareTo(const Pcs12& o) const {
         return combination.compareTo(o.combination);
-    }
-
-    std::vector<Pcs12> generate(int k) const {
-        std::vector<Combination> combinations = Combination::generate(combination.getN(), k);
-        return toPcs12Combinations(combinations);
     }
 
     static Pcs12 identify(const Combination& input) {
@@ -288,10 +279,6 @@ public:
             }
         }
         return acc;
-    }
-
-    bool get(int i) const {
-        return combination.test(i % getN());
     }
 
     Pcs12 transpose(int t) const {

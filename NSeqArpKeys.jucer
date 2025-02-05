@@ -5,17 +5,17 @@
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="{43162544-3E87-CB29-D53B-D79E9C065FE7}" name="Source">
       <FILE id="LNlMM1" name="CollectionUtils.cpp" compile="1" resource="0"
-            file="Source/CollectionUtils.cpp" skipPCH="1"/>
+            file="Source/CollectionUtils.cpp" skipPCH="0"/>
       <FILE id="fepfTE" name="Numbers.cpp" compile="1" resource="0" file="Source/Numbers.cpp"
-            skipPCH="1"/>
+            skipPCH="0"/>
       <FILE id="VZwps5" name="Matrix.cpp" compile="1" resource="0" file="Source/Matrix.cpp"
-            skipPCH="1"/>
+            skipPCH="0"/>
       <FILE id="upkXu0" name="Composition.cpp" compile="1" resource="0" file="Source/Composition.cpp"
-            skipPCH="1"/>
+            skipPCH="0"/>
       <FILE id="FMDCev" name="Combination.cpp" compile="1" resource="0" file="Source/Combination.cpp"
-            skipPCH="1"/>
+            skipPCH="0"/>
       <FILE id="r8VdMB" name="Sequence.cpp" compile="1" resource="0" file="Source/Sequence.cpp"
-            skipPCH="1"/>
+            skipPCH="0"/>
       <FILE id="ll1Q0p" name="BitSetEnumeration.h" compile="0" resource="0"
             file="Source/BitSetEnumeration.h"/>
       <FILE id="ZrXR3D" name="CollectionUtils.h" compile="0" resource="0"

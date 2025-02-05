@@ -417,8 +417,3 @@ template<typename T>
 inline int CollectionUtils::countkins(const T& k, const std::vector<T>& a) {
     return std::count(a.begin(), a.end(), k);
 }
-
-template<typename T>
-inline T CollectionUtils::chooseAtRandom(const std::vector<T>& t) {
-    return chooseAtRandom(t.begin(), t.size());
-}

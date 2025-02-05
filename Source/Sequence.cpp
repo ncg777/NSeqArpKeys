@@ -296,17 +296,6 @@ inline Sequence Sequence::apply(const std::function<int(int)>& f) const {
     return o;
 }
 
-inline Matrix<bool> Sequence::decompose() const {
-    std::map<int, int> om = mapOrdinalsUnipolar();
-    int m = this->distinct().size();
-    int n = this->size();
-    Matrix<bool> mat(m, n);
-    for (int j = 0; j < n; ++j) {
-        mat.set(om[(*this)[j]], j, true);
-    }
-    return mat;
-}
-
 inline Sequence Sequence::powExp(int power) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
@@ -534,9 +523,6 @@ inline Sequence Sequence::asOrdinalsBipolar() const {
     return this->map(this->mapOrdinalsBipolar());
 }
 
-inline std::map<int, Sequence> Sequence::getIntervalVectors() const {
-    return CollectionUtils::calcIntervalVector(*this);
-}
 
 inline Sequence Sequence::map(const Sequence& s) const {
     std::map<int, int> t;
@@ -619,10 +605,6 @@ inline int Sequence::equivalenceShift(const Sequence& a, const Sequence& b) {
 
 inline bool Sequence::equivalentUnderRotation(const Sequence& a, const Sequence& b) {
     return equivalenceShift(a, b) != -1;
-}
-
-inline Sequence Sequence::from(const std::vector<int>& p_arr) {
-    return Sequence(p_arr);
 }
 
 inline int Sequence::ReverseComparator::operator()(const Sequence& o1, const Sequence& o2) const {

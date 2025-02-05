@@ -103,53 +103,6 @@ inline bool Numbers::prime(int n0) {
     return true;
 }
 
-inline Matrix<int> Numbers::primeFactorization(int n0) {
-    std::map<int, int> tm;
-    int t = std::abs(n0);
-    if (t < 2) {
-        throw std::runtime_error("primeFactorization: |n| < 2");
-    }
-    int p = 2;
-
-    while (t != 1) {
-        if (t % p == 0) {
-            if (tm.find(p) == tm.end()) {
-                tm[p] = 0;
-            }
-            tm[p]++;
-            t = t / p;
-        }
-        else {
-            do {
-                p++;
-            } while (!prime(p));
-        }
-    }
-
-    int ps = tm.size();
-    Matrix<int> m(2, ps);
-
-    int c = 0;
-    for (const auto& kv : tm) {
-        m.set(0, c, kv.first);
-        m.set(1, c, kv.second);
-        c++;
-    }
-    return m;
-}
-
-inline int Numbers::totient(int n) {
-    Matrix<int> m = primeFactorization(n);
-    double d = static_cast<double>(n);
-    int k = m.columnCount();
-
-    for (int i = 0; i < k; ++i) {
-        d = d * (1 - (1 / static_cast<double>(m.get(0, i))));
-    }
-
-    return static_cast<int>(std::round(d));
-}
-
 inline long Numbers::gcd(long a0, long b0) {
     long a = a0;
     long b = b0;

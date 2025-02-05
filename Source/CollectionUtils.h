@@ -12,10 +12,9 @@
 #include <sstream>
 #include <iostream>
 #include <bitset>
-#include "HeteroPair.h"
-#include "Matrix.h"
-#include "Numbers.h"
 #include "Sequence.h"
+#include "HeteroPair.h"
+#include "Numbers.h"
 #include "RandomNumberGenerator.h"
 #include "Composition.h"
 

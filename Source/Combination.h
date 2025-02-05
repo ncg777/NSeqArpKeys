@@ -36,8 +36,6 @@ public:
 
     Combination(int n, const std::set<int>& s);
 
-    Combination(const Combination& c);
-
     Combination(const std::bitset<128>& c, int n);
 
 

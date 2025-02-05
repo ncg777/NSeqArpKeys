@@ -62,8 +62,6 @@ std::function<std::string(const std::string&)> Parsers::stringParser = [](const 
 std::function<int(const std::string&)> Parsers::intParser = [](const std::string& value) { return std::stoi(value); };
 std::function<int(const std::string&)> Parsers::integerParser = [](const std::string& s) { return std::stoi(s); };
 std::function<double(const std::string&)> Parsers::doubleParser = [](const std::string& s) { return std::stod(s); };
-std::function<Combination(const std::string&)> Parsers::combinationParser = [](const std::string& s) { return Combination::fromBinaryString(s); };
-std::function<Composition(const std::string&)> Parsers::compositionParser = [](const std::string& s) { return Composition(Combination::fromBinaryString(s)); };
 std::function<std::vector<int>(const std::string&)> Parsers::intArrayParser = [](const std::string& s) {
     std::istringstream iss(s);
     std::vector<int> result((std::istream_iterator<int>(iss)), std::istream_iterator<int>());
