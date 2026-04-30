@@ -3,6 +3,8 @@
 
 namespace
 {
+constexpr double previewVoiceTailOffDecay = 0.99;
+
 class PreviewSound final : public juce::SynthesiserSound
 {
 public:
@@ -64,7 +66,7 @@ public:
 
                 currentAngle += angleDelta;
                 ++startSample;
-                tailOff *= 0.99;
+                tailOff *= previewVoiceTailOffDecay;
 
                 if (tailOff <= 0.005)
                 {
@@ -137,6 +139,8 @@ void NSeqArpKeysAudioProcessor::releaseResources()
 
 bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
+    // This processor is exported as a stereo-output instrument and deliberately
+    // has no audio input bus, so the runtime layout must mirror that contract.
     return layouts.getMainInputChannelSet().isDisabled()
         && layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
@@ -145,6 +149,8 @@ bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layout
 void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                              juce::MidiBuffer& midiMessages)
 {
+    // The plugin now runs as an instrument with no audio input bus, so each
+    // block starts silent before the preview synth renders generated notes.
     buffer.clear();
 
     {
