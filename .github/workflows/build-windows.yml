@@ -1,0 +1,75 @@
+name: Build Windows x64
+
+on:
+  push:
+    branches:
+      - master
+      - 'copilot/**'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install JUCE 8.0.6
+        shell: cmd
+        run: |
+          git clone --depth=1 --branch=8.0.6 https://github.com/juce-framework/JUCE.git C:\JUCE
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release x64
+        shell: cmd
+        working-directory: Builds\VisualStudio2022
+        run: |
+          msbuild NSeqArpKeys.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
+
+      - name: Stage Windows x64 artifacts
+        shell: pwsh
+        run: |
+          $distVST3      = "dist\windows-x64\VST3"
+          $distStandalone = "dist\windows-x64\Standalone"
+          New-Item -ItemType Directory -Force -Path $distVST3      | Out-Null
+          New-Item -ItemType Directory -Force -Path $distStandalone | Out-Null
+
+          $vst3Src       = "Builds\VisualStudio2022\x64\Release\VST3\NSeqArpKeys.vst3"
+          $standaloneSrc = "Builds\VisualStudio2022\x64\Release\Standalone Plugin\NSeqArpKeys.exe"
+
+          if (Test-Path $vst3Src) {
+            Copy-Item -Recurse -Force $vst3Src $distVST3
+            Write-Host "VST3 bundle staged to $distVST3"
+          } else {
+            Write-Error "VST3 bundle not found at $vst3Src"
+            exit 1
+          }
+
+          if (Test-Path $standaloneSrc) {
+            Copy-Item -Force $standaloneSrc $distStandalone
+            Write-Host "Standalone executable staged to $distStandalone"
+          } else {
+            Write-Error "Standalone executable not found at $standaloneSrc"
+            exit 1
+          }
+
+      - name: Commit and push Windows x64 binaries
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add --force dist/windows-x64/
+          if git diff --staged --quiet; then
+            echo "No changes to commit — binaries are already up to date."
+          else
+            git commit -m "chore: update Windows x64 Release binaries [skip ci]"
+            git push
+          fi

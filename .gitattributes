@@ -45,6 +45,16 @@
 #*.gif   binary
 
 ###############################################################################
+# Windows binary build artifacts — treat as binary so git never corrupts them
+# with line-ending normalization.
+###############################################################################
+*.dll   binary
+*.exe   binary
+*.lib   binary
+*.pdb   binary
+*.vst3  binary
+
+###############################################################################
 # diff behavior for common document formats
 # 
 # Convert binary document formats to text before diffing them. This feature
