@@ -12,7 +12,7 @@ NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
           .withInput ("Input",  juce::AudioChannelSet::stereo(), true)
           .withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
-    // Initialise Pcs12 static maps (idempotent if already populated).
+    // Initialize Pcs12 static maps (idempotent if already populated).
     Pcs12::GenerateMaps();
 
     addParameter(meterNumerator   = new juce::AudioParameterInt("meterNumerator",   "Meter Numerator",   1, 16, 4));

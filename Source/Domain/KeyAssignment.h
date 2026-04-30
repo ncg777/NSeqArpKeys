@@ -81,7 +81,13 @@ struct KeyAssignment
             forte       = Pcs12::parseForte(str);
             forteString = str;
         }
-        catch (...) {}
+        catch (...)
+        {
+            // Silently keep the existing forte when the string is invalid.
+            // This is intentional: the UI may supply partial input while the
+            // user is still typing.  Errors will be visible because the
+            // forte display will not update.
+        }
     }
 
     bool hasValidForte() const { return !forte.isEmpty(); }
