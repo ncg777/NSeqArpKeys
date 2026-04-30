@@ -5,6 +5,12 @@
     <Filter Include="NSeqArpKeys\Source">
       <UniqueIdentifier>{6A8606C3-19A0-8F8B-2ABF-F35096A9D6A4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NSeqArpKeys\Source\Domain">
+      <UniqueIdentifier>{A1B2C3D4-E5F6-A1B2-C3D4-E5F6A1B2C3D4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NSeqArpKeys\Source\Engine">
+      <UniqueIdentifier>{B2C3D4E5-F6A1-B2C3-D4E5-F6A1B2C3D4E5}</UniqueIdentifier>
+    </Filter>
     <Filter Include="NSeqArpKeys">
       <UniqueIdentifier>{C6653A9B-3914-D127-5208-5E6C05A3AA4A}</UniqueIdentifier>
     </Filter>
@@ -576,6 +582,18 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Sequence.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Pcs12.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ForteCSV.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Engine\GateRunnerEngine.cpp">
+      <Filter>NSeqArpKeys\Source\Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Engine\PatternScheduler.cpp">
+      <Filter>NSeqArpKeys\Source\Engine</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\PluginProcessor.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
@@ -3011,6 +3029,15 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\PluginEditor.h">
       <Filter>NSeqArpKeys\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Domain\KeyAssignment.h">
+      <Filter>NSeqArpKeys\Source\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Engine\GateRunnerEngine.h">
+      <Filter>NSeqArpKeys\Source\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Engine\PatternScheduler.h">
+      <Filter>NSeqArpKeys\Source\Engine</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_audio_basics\audio_play_head\juce_AudioPlayHead.h">
       <Filter>JUCE Modules\juce_audio_basics\audio_play_head</Filter>
