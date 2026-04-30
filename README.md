@@ -27,8 +27,12 @@ the repository on every push to `master` or a `copilot/**` branch.
 ### Installation
 
 - **VST3**: Copy `dist/windows-x64/VST3/NSeqArpKeys.vst3` into your system
-  VST3 folder (typically `C:\Program Files\Common Files\VST3`).
+  VST3 folder (typically `C:\Program Files\Common Files\VST3`). The plugin is
+  exported as an instrument/synth and also emits its generated MIDI pattern
+  notes.
 - **Standalone**: Run `dist/windows-x64/Standalone/NSeqArpKeys.exe` directly.
+  The standalone build includes an internal preview synth so assigned patterns
+  can be auditioned without a separate host instrument.
 
 ## Rebuilding from Source
 

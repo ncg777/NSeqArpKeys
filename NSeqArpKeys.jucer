@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="E9fjjj" name="NSeqArpKeys" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1"
+              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
+              pluginVSTCategory="kPlugCategSynth" pluginVST3Category="Instrument,Synth"
+              pluginAUMainType="'aumu'">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="{43162544-3E87-CB29-D53B-D79E9C065FE7}" name="Source">
       <FILE id="m9Zsbe" name="csv.h" compile="0" resource="0" file="Source/csv.h"/>

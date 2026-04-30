@@ -61,8 +61,11 @@ public:
     void setChannelForKey (int key, int channel);
     void setOctaveForKey  (int key, int octave);
     void setGateForKey    (int key, float gate);
+    void queuePreviewMidiMessage(const juce::MidiMessage& message);
 
 private:
+    void initialisePreviewSynth();
+
     // -----------------------------------------------------------------------
     // Global parameters
     // -----------------------------------------------------------------------
@@ -78,6 +81,10 @@ private:
     // Runtime playback
     // -----------------------------------------------------------------------
     PatternScheduler m_scheduler;
+    juce::Synthesiser m_previewSynth;
+    juce::MidiBuffer m_pendingPreviewMidi;
+    juce::CriticalSection m_pendingPreviewMidiLock;
+    int m_nextPendingPreviewSamplePosition = 0;
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)

@@ -1,6 +1,104 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace
+{
+constexpr double previewVoiceTailOffDecay = 0.99;
+
+class PreviewSound final : public juce::SynthesiserSound
+{
+public:
+    bool appliesToNote(int) override      { return true; }
+    bool appliesToChannel(int) override   { return true; }
+};
+
+class PreviewVoice final : public juce::SynthesiserVoice
+{
+public:
+    bool canPlaySound(juce::SynthesiserSound* sound) override
+    {
+        return dynamic_cast<PreviewSound*>(sound) != nullptr;
+    }
+
+    void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound*, int) override
+    {
+        currentAngle = 0.0;
+        level = velocity * 0.15;
+        tailOff = 0.0;
+
+        const auto cyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        const auto cyclesPerSample = cyclesPerSecond / getSampleRate();
+        angleDelta = cyclesPerSample * juce::MathConstants<double>::twoPi;
+    }
+
+    void stopNote(float, bool allowTailOff) override
+    {
+        if (allowTailOff)
+        {
+            if (tailOff == 0.0)
+                tailOff = 1.0;
+        }
+        else
+        {
+            clearCurrentNote();
+            angleDelta = 0.0;
+        }
+    }
+
+    void pitchWheelMoved(int) override {}
+    void controllerMoved(int, int) override {}
+
+    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
+                         int startSample,
+                         int numSamples) override
+    {
+        if (angleDelta == 0.0)
+            return;
+
+        if (tailOff > 0.0)
+        {
+            while (--numSamples >= 0)
+            {
+                const auto currentSample = static_cast<float>(std::sin(currentAngle) * level * tailOff);
+
+                for (auto channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
+                    outputBuffer.addSample(channel, startSample, currentSample);
+
+                currentAngle += angleDelta;
+                ++startSample;
+                tailOff *= previewVoiceTailOffDecay;
+
+                if (tailOff <= 0.005)
+                {
+                    clearCurrentNote();
+                    angleDelta = 0.0;
+                    break;
+                }
+            }
+
+            return;
+        }
+
+        while (--numSamples >= 0)
+        {
+            const auto currentSample = static_cast<float>(std::sin(currentAngle) * level);
+
+            for (auto channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
+                outputBuffer.addSample(channel, startSample, currentSample);
+
+            currentAngle += angleDelta;
+            ++startSample;
+        }
+    }
+
+private:
+    double currentAngle = 0.0;
+    double angleDelta = 0.0;
+    double level = 0.0;
+    double tailOff = 0.0;
+};
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new NSeqArpKeysAudioProcessor();
@@ -9,7 +107,6 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 //==============================================================================
 NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
     : AudioProcessor(BusesProperties()
-          .withInput ("Input",  juce::AudioChannelSet::stereo(), true)
           .withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
     // Initialize Pcs12 static maps (idempotent if already populated).
@@ -17,6 +114,8 @@ NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
 
     addParameter(meterNumerator   = new juce::AudioParameterInt("meterNumerator",   "Meter Numerator",   1, 16, 4));
     addParameter(meterDenominator = new juce::AudioParameterInt("meterDenominator", "Meter Denominator", 1, 16, 4));
+
+    initialisePreviewSynth();
 }
 
 NSeqArpKeysAudioProcessor::~NSeqArpKeysAudioProcessor() {}
@@ -25,23 +124,46 @@ NSeqArpKeysAudioProcessor::~NSeqArpKeysAudioProcessor() {}
 void NSeqArpKeysAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
 {
     m_scheduler.prepare(sampleRate);
+    m_previewSynth.setCurrentPlaybackSampleRate(sampleRate);
 }
 
 void NSeqArpKeysAudioProcessor::releaseResources()
 {
     juce::MidiBuffer empty;
     m_scheduler.stopAll(empty);
+    m_previewSynth.allNotesOff(0, false);
+
+    const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+    m_pendingPreviewMidi.clear();
 }
 
-bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& /*layouts*/) const
+bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    return true;
+    // This processor is exported as a stereo-output instrument and deliberately
+    // has no audio input bus, so the runtime layout must mirror that contract.
+    return layouts.getMainInputChannelSet().isDisabled()
+        && layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
 
 //==============================================================================
 void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+                                             juce::MidiBuffer& midiMessages)
 {
+    // The plugin now runs as an instrument with no audio input bus, so each
+    // block starts silent before the preview synth renders generated notes.
+    buffer.clear();
+
+    {
+        const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+
+        for (const auto& metadata : m_pendingPreviewMidi)
+            midiMessages.addEvent(metadata.getMessage(),
+                                  juce::jlimit(0, juce::jmax(0, buffer.getNumSamples() - 1), metadata.samplePosition));
+
+        m_pendingPreviewMidi.clear();
+        m_nextPendingPreviewSamplePosition = 0;
+    }
+
     auto* playHead = getPlayHead();
     double bpm = 120.0;
     if (playHead != nullptr)
@@ -53,7 +175,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Collect incoming trigger notes before we clear the buffer.
     std::vector<std::pair<int, bool>> triggers; // (noteNumber, isNoteOn)
-    for (const auto metadata : midiMessages)
+    for (const auto& metadata : midiMessages)
     {
         auto msg = metadata.getMessage();
         if (msg.isNoteOn())
@@ -79,6 +201,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Let the scheduler generate pattern MIDI for this block.
     m_scheduler.processBlock(midiMessages, buffer.getNumSamples(), bpm, numerator, denominator);
+    m_previewSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -86,7 +209,7 @@ bool NSeqArpKeysAudioProcessor::hasEditor() const  { return true; }
 const juce::String NSeqArpKeysAudioProcessor::getName() const { return JucePlugin_Name; }
 bool NSeqArpKeysAudioProcessor::acceptsMidi()  const { return true; }
 bool NSeqArpKeysAudioProcessor::producesMidi() const { return true; }
-bool NSeqArpKeysAudioProcessor::isMidiEffect() const { return true; }
+bool NSeqArpKeysAudioProcessor::isMidiEffect() const { return false; }
 double NSeqArpKeysAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int NSeqArpKeysAudioProcessor::getNumPrograms()  { return 1; }
@@ -214,6 +337,23 @@ void NSeqArpKeysAudioProcessor::setGateForKey(int key, float gate)
 {
     if (key >= 0 && key < 128)
         m_assignments[static_cast<size_t>(key)].gate = juce::jlimit(0.0f, 1.0f, gate);
+}
+
+void NSeqArpKeysAudioProcessor::queuePreviewMidiMessage(const juce::MidiMessage& message)
+{
+    const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+    m_pendingPreviewMidi.addEvent(message, m_nextPendingPreviewSamplePosition++);
+}
+
+void NSeqArpKeysAudioProcessor::initialisePreviewSynth()
+{
+    m_previewSynth.clearVoices();
+
+    for (int i = 0; i < 16; ++i)
+        m_previewSynth.addVoice(new PreviewVoice());
+
+    m_previewSynth.clearSounds();
+    m_previewSynth.addSound(new PreviewSound());
 }
 
 juce::AudioProcessorEditor* NSeqArpKeysAudioProcessor::createEditor()
