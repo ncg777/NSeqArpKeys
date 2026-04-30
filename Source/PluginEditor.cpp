@@ -164,12 +164,13 @@ void NSeqArpKeysAudioProcessorEditor::resized()
 
 //==============================================================================
 void NSeqArpKeysAudioProcessorEditor::handleNoteOn(juce::MidiKeyboardState*,
-                                                    int /*midiChannel*/,
+                                                    int midiChannel,
                                                     int midiNoteNumber,
-                                                    float /*velocity*/)
+                                                    float velocity)
 {
     audioProcessor.setSelectedKey(midiNoteNumber);
     loadAssignmentForKey(midiNoteNumber);
+    audioProcessor.queuePreviewMidiMessage(juce::MidiMessage::noteOn(midiChannel, midiNoteNumber, velocity));
 
     juce::String name = juce::MidiMessage::getMidiNoteName(midiNoteNumber, true, true, 4);
     selectedKeyLabel.setText("Selected key: " + name
@@ -178,7 +179,12 @@ void NSeqArpKeysAudioProcessorEditor::handleNoteOn(juce::MidiKeyboardState*,
 }
 
 void NSeqArpKeysAudioProcessorEditor::handleNoteOff(juce::MidiKeyboardState*,
-                                                     int, int, float) {}
+                                                    int midiChannel,
+                                                    int midiNoteNumber,
+                                                    float /*velocity*/)
+{
+    audioProcessor.queuePreviewMidiMessage(juce::MidiMessage::noteOff(midiChannel, midiNoteNumber));
+}
 
 //==============================================================================
 void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
