@@ -58,17 +58,17 @@ public:
     }
 };
 
-std::function<std::string(const std::string&)> Parsers::stringParser = [](const std::string& s) { return s; };
-std::function<int(const std::string&)> Parsers::intParser = [](const std::string& value) { return std::stoi(value); };
-std::function<int(const std::string&)> Parsers::integerParser = [](const std::string& s) { return std::stoi(s); };
-std::function<double(const std::string&)> Parsers::doubleParser = [](const std::string& s) { return std::stod(s); };
-std::function<std::vector<int>(const std::string&)> Parsers::intArrayParser = [](const std::string& s) {
+inline std::function<std::string(const std::string&)> Parsers::stringParser = [](const std::string& s) { return s; };
+inline std::function<int(const std::string&)> Parsers::intParser = [](const std::string& value) { return std::stoi(value); };
+inline std::function<int(const std::string&)> Parsers::integerParser = [](const std::string& s) { return std::stoi(s); };
+inline std::function<double(const std::string&)> Parsers::doubleParser = [](const std::string& s) { return std::stod(s); };
+inline std::function<std::vector<int>(const std::string&)> Parsers::intArrayParser = [](const std::string& s) {
     std::istringstream iss(s);
     std::vector<int> result((std::istream_iterator<int>(iss)), std::istream_iterator<int>());
     return result;
     };
-std::function<Sequence(const std::string&)> Parsers::sequenceParser = [](const std::string& s) { return Sequence::parse(s); };
-std::function<HomoPair<int>(const std::string&)> Parsers::intPairParser = [](const std::string& s) {
+inline std::function<Sequence(const std::string&)> Parsers::sequenceParser = [](const std::string& s) { return Sequence::parse(s); };
+inline std::function<HomoPair<int>(const std::string&)> Parsers::intPairParser = [](const std::string& s) {
     Sequence ss = Sequence::parse(s);
     return HomoPair<int>::makeHomoPair(ss[0], ss[1]);
     };

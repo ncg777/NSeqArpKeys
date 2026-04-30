@@ -64,6 +64,6 @@ private:
     }
 };
 
-int Necklace::cnt = 0;
+inline int Necklace::cnt = 0;
 
 
