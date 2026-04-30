@@ -1,10 +1,10 @@
 #include "CollectionUtils.h"
 
-inline std::function<int(int)> CollectionUtils::getPermutationFunction(const std::vector<int>& permutation) {
+std::function<int(int)> CollectionUtils::getPermutationFunction(const std::vector<int>& permutation) {
     return [permutation](int i) { return permutation[i]; };
 }
 
-inline long CollectionUtils::getPermutationOrder(const std::vector<int>& permutation) {
+long CollectionUtils::getPermutationOrder(const std::vector<int>& permutation) {
     auto cs = getPermutationAsDisjointCycles(permutation);
 
     long o = 0;
@@ -20,7 +20,7 @@ inline long CollectionUtils::getPermutationOrder(const std::vector<int>& permuta
     return o;
 }
 
-inline std::set<Sequence> CollectionUtils::getPermutationAsDisjointCycles(const std::vector<int>& permutation) {
+std::set<Sequence> CollectionUtils::getPermutationAsDisjointCycles(const std::vector<int>& permutation) {
     std::set<Sequence> o;
     Sequence s(permutation.begin(), permutation.end());
 
@@ -43,7 +43,7 @@ inline std::set<Sequence> CollectionUtils::getPermutationAsDisjointCycles(const 
     return o;
 }
 
-inline std::vector<int> CollectionUtils::mapUsingPermutation(const std::vector<int>& s, const std::vector<int>& p) {
+std::vector<int> CollectionUtils::mapUsingPermutation(const std::vector<int>& s, const std::vector<int>& p) {
     std::map<int, int> i;
     for (size_t x = 0; x < p.size(); ++x) {
         i[x] = p[x];
@@ -51,7 +51,7 @@ inline std::vector<int> CollectionUtils::mapUsingPermutation(const std::vector<i
     return map(s, i);
 }
 
-inline std::vector<int> CollectionUtils::map(const std::vector<int>& s, const std::map<int, int>& i) {
+std::vector<int> CollectionUtils::map(const std::vector<int>& s, const std::map<int, int>& i) {
     std::vector<int> output(s.size());
     for (size_t x = 0; x < s.size(); ++x) {
         output[x] = i.count(s[x]) ? i.at(s[x]) : s[x];
@@ -59,12 +59,12 @@ inline std::vector<int> CollectionUtils::map(const std::vector<int>& s, const st
     return output;
 }
 
-inline int CollectionUtils::sizeOfCodomain(const std::vector<int>& s) {
+int CollectionUtils::sizeOfCodomain(const std::vector<int>& s) {
     std::set<int> t(s.begin(), s.end());
     return t.size();
 }
 
-inline Sequence CollectionUtils::calcIntervalVector(const std::bitset<128>& input, int n) {
+Sequence CollectionUtils::calcIntervalVector(const std::bitset<128>& input, int n) {
     int m = n / 2;
     Sequence s;
 
@@ -83,7 +83,7 @@ inline Sequence CollectionUtils::calcIntervalVector(const std::bitset<128>& inpu
     return s;
 }
 
-inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const std::vector<int>& input) {
+std::map<int, Sequence> CollectionUtils::calcIntervalVector(const std::vector<int>& input) {
     std::map<int, Sequence> output;
     std::set<int> t(input.begin(), input.end());
 
@@ -97,7 +97,7 @@ inline std::map<int, Sequence> CollectionUtils::calcIntervalVector(const std::ve
     return output;
 }
 
-inline std::vector<int> CollectionUtils::antidifference(const std::vector<int>& p_arr, int k) {
+std::vector<int> CollectionUtils::antidifference(const std::vector<int>& p_arr, int k) {
     std::vector<int> output(p_arr.size() + 1);
 
     output[0] = k;
@@ -108,7 +108,7 @@ inline std::vector<int> CollectionUtils::antidifference(const std::vector<int>& 
     return output;
 }
 
-inline std::vector<int> CollectionUtils::difference(const std::vector<int>& p_arr) {
+std::vector<int> CollectionUtils::difference(const std::vector<int>& p_arr) {
     std::vector<int> output(p_arr.size() - 1);
 
     for (size_t i = 1; i < p_arr.size(); ++i) {
@@ -117,7 +117,7 @@ inline std::vector<int> CollectionUtils::difference(const std::vector<int>& p_ar
     return output;
 }
 
-inline std::vector<int> CollectionUtils::cyclicalDifference(const std::vector<int>& p_arr) {
+std::vector<int> CollectionUtils::cyclicalDifference(const std::vector<int>& p_arr) {
     std::vector<int> output(p_arr.size());
 
     for (size_t i = 0; i < p_arr.size(); ++i) {
@@ -126,7 +126,7 @@ inline std::vector<int> CollectionUtils::cyclicalDifference(const std::vector<in
     return output;
 }
 
-inline std::vector<int> CollectionUtils::cyclicalAntidifference(const std::vector<int>& p_arr, int k) {
+std::vector<int> CollectionUtils::cyclicalAntidifference(const std::vector<int>& p_arr, int k) {
     std::vector<int> output(p_arr.size());
 
     output[p_arr.size() - 1] = k;
@@ -138,7 +138,7 @@ inline std::vector<int> CollectionUtils::cyclicalAntidifference(const std::vecto
     return output;
 }
 
-inline std::string CollectionUtils::segmentationString(const std::vector<double>& cs, const Composition& p) {
+std::string CollectionUtils::segmentationString(const std::vector<double>& cs, const Composition& p) {
     if (p.getTotal() != cs.size()) {
         throw std::invalid_argument("Invalid argument");
     }
@@ -167,19 +167,19 @@ inline std::string CollectionUtils::segmentationString(const std::vector<double>
     return oss.str();
 }
 
-inline std::vector<int> CollectionUtils::randomPermutation(int n) {
+std::vector<int> CollectionUtils::randomPermutation(int n) {
     std::vector<int> o(n);
     std::iota(o.begin(), o.end(), 0);
     std::shuffle(o.begin(), o.end(), std::mt19937{ std::random_device{}() });
     return o;
 }
 
-inline std::vector<int> CollectionUtils::reverse(const std::vector<int>& p_arr) {
+std::vector<int> CollectionUtils::reverse(const std::vector<int>& p_arr) {
     std::vector<int> output(p_arr.rbegin(), p_arr.rend());
     return output;
 }
 
-inline Sequence CollectionUtils::calcIntervalVector(const std::vector<bool>& input) {
+Sequence CollectionUtils::calcIntervalVector(const std::vector<bool>& input) {
     int n = input.size();
     int m = n / 2;
     Sequence s;
@@ -200,7 +200,7 @@ inline Sequence CollectionUtils::calcIntervalVector(const std::vector<bool>& inp
 }
 
 template<typename A>
-inline std::vector<int> CollectionUtils::getPermutationFromDisjointCycles(const std::set<std::vector<A>>& cs) {
+std::vector<int> CollectionUtils::getPermutationFromDisjointCycles(const std::set<std::vector<A>>& cs) {
     std::set<int> t;
     int sz = 0;
 
@@ -224,7 +224,7 @@ inline std::vector<int> CollectionUtils::getPermutationFromDisjointCycles(const 
 }
 
 template<typename A, typename B>
-inline std::set<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std::set<A>& a, const std::set<B>& b) {
+std::set<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std::set<A>& a, const std::set<B>& b) {
     std::set<HeteroPair<A, B>> o;
     for (const auto& x : a) {
         for (const auto& y : b) {
@@ -235,7 +235,7 @@ inline std::set<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std::s
 }
 
 template<typename A, typename B>
-inline std::vector<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std::vector<A>& a, const std::vector<B>& b) {
+std::vector<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std::vector<A>& a, const std::vector<B>& b) {
     std::vector<HeteroPair<A, B>> o;
     for (const auto& x : a) {
         for (const auto& y : b) {
@@ -246,7 +246,7 @@ inline std::vector<HeteroPair<A, B>> CollectionUtils::cartesianProduct(const std
 }
 
 template<typename T, typename Predicate>
-inline void CollectionUtils::filter(std::set<T>& s, Predicate p) {
+void CollectionUtils::filter(std::set<T>& s, Predicate p) {
     std::vector<T> x;
     for (const auto& a : s) {
         if (p(a)) {
@@ -258,7 +258,7 @@ inline void CollectionUtils::filter(std::set<T>& s, Predicate p) {
 }
 
 template<typename T>
-inline T CollectionUtils::chooseAtRandom(typename std::vector<T>::iterator i, int n) {
+T CollectionUtils::chooseAtRandom(typename std::vector<T>::iterator i, int n) {
     if (n <= 0) {
         throw std::runtime_error("CollectionUtils::chooseAtRandom Invalid arguments");
     }
@@ -277,7 +277,7 @@ inline T CollectionUtils::chooseAtRandom(typename std::vector<T>::iterator i, in
 }
 
 template<typename T>
-inline T CollectionUtils::chooseAtRandomWithWeights(typename std::vector<T>::iterator i, int n, const std::vector<double>& weights) {
+T CollectionUtils::chooseAtRandomWithWeights(typename std::vector<T>::iterator i, int n, const std::vector<double>& weights) {
     if (n <= 0 || weights.size() != n) {
         throw std::runtime_error("CollectionUtils::chooseAtRandom Invalid arguments");
     }
@@ -313,12 +313,12 @@ inline T CollectionUtils::chooseAtRandomWithWeights(typename std::vector<T>::ite
 }
 
 template<typename T>
-inline bool CollectionUtils::arrayEquals(const std::vector<T>& a, const std::vector<T>& b) {
+bool CollectionUtils::arrayEquals(const std::vector<T>& a, const std::vector<T>& b) {
     return a == b;
 }
 
 template<typename U, typename T>
-inline std::map<U, T> CollectionUtils::invertMap(const std::map<T, U>& map) {
+std::map<U, T> CollectionUtils::invertMap(const std::map<T, U>& map) {
     if (!mapIsBijective(map)) {
         throw std::runtime_error("The map is not bijective; it cannot be inverted.");
     }
@@ -330,13 +330,13 @@ inline std::map<U, T> CollectionUtils::invertMap(const std::map<T, U>& map) {
 }
 
 template<typename T>
-inline std::vector<T> CollectionUtils::reverse(const std::vector<T>& arr) {
+std::vector<T> CollectionUtils::reverse(const std::vector<T>& arr) {
     std::vector<T> o(arr.rbegin(), arr.rend());
     return o;
 }
 
 template<typename T>
-inline std::vector<T> CollectionUtils::permutate(const std::vector<int>& p, const std::vector<T>& arr) {
+std::vector<T> CollectionUtils::permutate(const std::vector<int>& p, const std::vector<T>& arr) {
     std::vector<T> o(arr.size());
     for (size_t i = 0; i < arr.size(); ++i) {
         o[i] = arr[p[i]];
@@ -345,18 +345,18 @@ inline std::vector<T> CollectionUtils::permutate(const std::vector<int>& p, cons
 }
 
 template<typename T>
-inline std::vector<T> CollectionUtils::permutateRandomly(const std::vector<T>& arr) {
+std::vector<T> CollectionUtils::permutateRandomly(const std::vector<T>& arr) {
     return permutate(randomPermutation(arr.size()), arr);
 }
 
 template<typename T>
-inline T CollectionUtils::chooseAtRandom(const std::vector<T>& t) {
+T CollectionUtils::chooseAtRandom(const std::vector<T>& t) {
     if (t.empty()) return T();
     return t[RandomNumberGenerator::nextInt(t.size())];
 }
 
 template<typename T, typename Equivalence>
-inline std::vector<std::set<T>> CollectionUtils::partition(const std::set<T>& s, Equivalence e) {
+std::vector<std::set<T>> CollectionUtils::partition(const std::set<T>& s, Equivalence e) {
     std::vector<std::set<T>> o;
     std::vector<T> t(s.begin(), s.end());
 
@@ -385,13 +385,13 @@ inline std::vector<std::set<T>> CollectionUtils::partition(const std::set<T>& s,
 }
 
 template<typename T, typename U>
-inline bool CollectionUtils::mapIsBijective(const std::map<T, U>& m) {
+bool CollectionUtils::mapIsBijective(const std::map<T, U>& m) {
     std::set<U> values(m.begin(), m.end());
     return m.size() == values.size();
 }
 
 template<typename T>
-inline std::vector<T> CollectionUtils::rotate(const std::vector<T>& arr, int n) {
+std::vector<T> CollectionUtils::rotate(const std::vector<T>& arr, int n) {
     std::vector<T> c(arr);
 
     int m = n;
@@ -409,6 +409,6 @@ inline std::vector<T> CollectionUtils::rotate(const std::vector<T>& arr, int n) 
 }
 
 template<typename T>
-inline int CollectionUtils::countkins(const T& k, const std::vector<T>& a) {
+int CollectionUtils::countkins(const T& k, const std::vector<T>& a) {
     return std::count(a.begin(), a.end(), k);
 }

@@ -1,6 +1,6 @@
 #include "Composition.h"
 
-inline Composition::Composition(const std::vector<bool>& comp) : Combination(comp.size()) {
+Composition::Composition(const std::vector<bool>& comp) : Combination(comp.size()) {
     for (int i = 0; i < m_n; ++i) {
         if (comp[i]) {
             this->set(i, comp[i]);
@@ -8,19 +8,19 @@ inline Composition::Composition(const std::vector<bool>& comp) : Combination(com
     }
 }
 
-inline Composition::Composition(int n) : Combination(n - 1) {}
+Composition::Composition(int n) : Combination(n - 1) {}
 
-inline Composition::Composition() : Combination(0) {}
+Composition::Composition() : Combination(0) {}
 
-inline Composition::Composition(const std::bitset<128>& x, int n) : Combination(x, n - 1) {}
+Composition::Composition(const std::bitset<128>& x, int n) : Combination(x, n - 1) {}
 
-inline Composition::Composition(const Combination& c) : Combination(c) {}
+Composition::Composition(const Combination& c) : Combination(c) {}
 
-inline int Composition::getTotal() const {
+int Composition::getTotal() const {
     return m_n + 1;
 }
 
-inline Sequence Composition::asSequence() const {
+Sequence Composition::asSequence() const {
     Sequence o;
     int n = 1;
     for (int i = 0; i < m_n; ++i) {
@@ -36,7 +36,7 @@ inline Sequence Composition::asSequence() const {
     return o;
 }
 
-inline Combination Composition::asCombination() const {
+Combination Composition::asCombination() const {
     Combination o(m_n + 1);
     o.set(0);
     for (int i = 1; i < m_n + 1; ++i) {
@@ -45,7 +45,7 @@ inline Combination Composition::asCombination() const {
     return o;
 }
 
-inline std::vector<std::string> Composition::segmentString(const std::string& str) const {
+std::vector<std::string> Composition::segmentString(const std::string& str) const {
     if (this->getTotal() != str.length()) throw std::invalid_argument("String length does not match composition size");
     std::vector<std::string> o;
     Sequence s = this->asSequence();
@@ -57,11 +57,11 @@ inline std::vector<std::string> Composition::segmentString(const std::string& st
     return o;
 }
 
-inline std::string Composition::toString() const {
+std::string Composition::toString() const {
     return asSequence().toString();
 }
 
-inline std::vector<Composition> Composition::refinements(const Composition& co) {
+std::vector<Composition> Composition::refinements(const Composition& co) {
     std::vector<Combination> c = Combination::refinements(co);
     if (c.empty()) {
         return {};
@@ -73,7 +73,7 @@ inline std::vector<Composition> Composition::refinements(const Composition& co) 
     return o;
 }
 
-inline Composition Composition::getCompositionFromCombination(const Combination& c) {
+Composition Composition::getCompositionFromCombination(const Combination& c) {
     int nsb = c.find_first();
     if (nsb == -1) {
         return Composition(c.getN());
@@ -89,7 +89,7 @@ inline Composition Composition::getCompositionFromCombination(const Combination&
 }
 
 template<typename T>
-inline std::vector<std::vector<T>> Composition::segmentList(const std::vector<T>& s) const {
+std::vector<std::vector<T>> Composition::segmentList(const std::vector<T>& s) const {
     if (this->getTotal() != s.size()) throw std::invalid_argument("List size does not match composition size");
     std::vector<std::vector<T>> o;
     Sequence cs = this->asSequence();

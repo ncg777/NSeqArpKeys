@@ -1,13 +1,13 @@
 #include "Sequence.h"
 #include "CollectionUtils.h"
 
-inline bool Sequence::isNatural() const {
+bool Sequence::isNatural() const {
     return std::all_of(this->begin(), this->end(), [](int n) { return n >= 0; });
 }
 
-inline Sequence::Sequence(const std::vector<int>& p_arr) : std::vector<int>(p_arr) {}
+Sequence::Sequence(const std::vector<int>& p_arr) : std::vector<int>(p_arr) {}
 
-inline std::vector<double> Sequence::getSymmetries() const {
+std::vector<double> Sequence::getSymmetries() const {
     std::vector<double> o;
     int n = this->size();
     for (int i = 0; i < n * 2; ++i) {
@@ -36,7 +36,7 @@ inline std::vector<double> Sequence::getSymmetries() const {
     return o;
 }
 
-inline Sequence Sequence::arp(ArpType arpType, int k, bool repeatBottom, bool repeatTop) {
+Sequence Sequence::arp(ArpType arpType, int k, bool repeatBottom, bool repeatTop) {
     if (k < 2) {
         throw std::runtime_error("k<2");
     }
@@ -94,7 +94,7 @@ inline Sequence Sequence::arp(ArpType arpType, int k, bool repeatBottom, bool re
     return o;
 }
 
-inline Sequence Sequence::parse(const std::string& s) {
+Sequence Sequence::parse(const std::string& s) {
     std::string str0 = s;
     str0.erase(std::remove_if(str0.begin(), str0.end(), ::isspace), str0.end());
     if (str0.front() == '[' && str0.back() == ']') {
@@ -111,7 +111,7 @@ inline Sequence Sequence::parse(const std::string& s) {
     return output;
 }
 
-inline Sequence Sequence::stair(int o, int l, int a) {
+Sequence Sequence::stair(int o, int l, int a) {
     Sequence s;
     for (int i = 0; i < l; ++i) {
         s.push_back(o + i * a);
@@ -119,11 +119,11 @@ inline Sequence Sequence::stair(int o, int l, int a) {
     return s;
 }
 
-inline Sequence Sequence::tri(int o, int l, int a) {
+Sequence Sequence::tri(int o, int l, int a) {
     return stair(o, l, a).juxtapose(stair(o + l * a, l, -a));
 }
 
-inline Sequence Sequence::getMininumRotation() const {
+Sequence Sequence::getMininumRotation() const {
     Sequence s = *this;
     for (int i = 0; i < s.size(); ++i) {
         Sequence t = this->rotate(i);
@@ -134,7 +134,7 @@ inline Sequence Sequence::getMininumRotation() const {
     return s;
 }
 
-inline Sequence Sequence::convolveWith(const Sequence& impulse) const {
+Sequence Sequence::convolveWith(const Sequence& impulse) const {
     Sequence o(this->size(), 0);
     for (int i = 0; i < this->size(); ++i) {
         for (int j = 0; j < impulse.size(); ++j) {
@@ -145,13 +145,13 @@ inline Sequence Sequence::convolveWith(const Sequence& impulse) const {
     return o;
 }
 
-inline Sequence Sequence::juxtapose(const Sequence& j) const {
+Sequence Sequence::juxtapose(const Sequence& j) const {
     Sequence s = *this;
     s.insert(s.end(), j.begin(), j.end());
     return s;
 }
 
-inline Sequence Sequence::wrapseq(int p_min, int p_amp) const {
+Sequence Sequence::wrapseq(int p_min, int p_amp) const {
     if (p_amp == 0) {
         throw std::runtime_error("Sequence.wrapseq: amp must be non-zero");
     }
@@ -180,7 +180,7 @@ inline Sequence Sequence::wrapseq(int p_min, int p_amp) const {
     return this->map(map);
 }
 
-inline Sequence Sequence::bounceseq(int p_min, int p_amp) const {
+Sequence Sequence::bounceseq(int p_min, int p_amp) const {
     if (p_amp == 0) {
         throw std::runtime_error("Sequence.bounceseq: amp must be non-zero");
     }
@@ -209,11 +209,11 @@ inline Sequence Sequence::bounceseq(int p_min, int p_amp) const {
     return this->map(map);
 }
 
-inline Sequence Sequence::flip() const {
+Sequence Sequence::flip() const {
     return subFlip(*this, this->getMin(), this->getMax());
 }
 
-inline Sequence Sequence::subFlip(const Sequence& s, int l, int h) {
+Sequence Sequence::subFlip(const Sequence& s, int l, int h) {
     Sequence o;
     for (int i = 0; i < s.size(); ++i) {
         o.push_back(h - (s[i] - l));
@@ -221,7 +221,7 @@ inline Sequence Sequence::subFlip(const Sequence& s, int l, int h) {
     return o;
 }
 
-inline std::map<int, int> Sequence::frequencyMap() const {
+std::map<int, int> Sequence::frequencyMap() const {
     std::map<int, int> o;
     for (int i : this->distinct()) {
         o[i] = this->count(i);
@@ -229,7 +229,7 @@ inline std::map<int, int> Sequence::frequencyMap() const {
     return o;
 }
 
-inline double Sequence::entropy() const {
+double Sequence::entropy() const {
     double o = 0.0;
     std::map<int, int> freqs = this->frequencyMap();
     for (const auto& [key, value] : freqs) {
@@ -239,7 +239,7 @@ inline double Sequence::entropy() const {
     return (o == 0.0 ? 0.0 : -o);
 }
 
-inline int Sequence::sumOfPairwiseDistances() const {
+int Sequence::sumOfPairwiseDistances() const {
     int o = 0;
     for (int i = 0; i < this->size(); ++i) {
         for (int j = i; j < this->size(); ++j) {
@@ -249,7 +249,7 @@ inline int Sequence::sumOfPairwiseDistances() const {
     return o;
 }
 
-inline Sequence Sequence::signs() const {
+Sequence Sequence::signs() const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         if ((*this)[i] > 0) {
@@ -265,7 +265,7 @@ inline Sequence Sequence::signs() const {
     return s;
 }
 
-inline Sequence Sequence::multiply(int k) const {
+Sequence Sequence::multiply(int k) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         s.push_back((*this)[i] * k);
@@ -273,7 +273,7 @@ inline Sequence Sequence::multiply(int k) const {
     return s;
 }
 
-inline Sequence Sequence::applyMin(int k) const {
+Sequence Sequence::applyMin(int k) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         s.push_back(std::min((*this)[i], k));
@@ -281,7 +281,7 @@ inline Sequence Sequence::applyMin(int k) const {
     return s;
 }
 
-inline Sequence Sequence::applyMax(int k) const {
+Sequence Sequence::applyMax(int k) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         s.push_back(std::max((*this)[i], k));
@@ -289,7 +289,7 @@ inline Sequence Sequence::applyMax(int k) const {
     return s;
 }
 
-inline Sequence Sequence::apply(const std::function<int(int)>& f) const {
+Sequence Sequence::apply(const std::function<int(int)>& f) const {
     Sequence o;
     for (int i = 0; i < this->size(); ++i) {
         o.push_back(f((*this)[i]));
@@ -297,7 +297,7 @@ inline Sequence Sequence::apply(const std::function<int(int)>& f) const {
     return o;
 }
 
-inline Sequence Sequence::powExp(int power) const {
+Sequence Sequence::powExp(int power) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         s.push_back(std::pow((*this)[i], power));
@@ -305,7 +305,7 @@ inline Sequence Sequence::powExp(int power) const {
     return s;
 }
 
-inline Sequence Sequence::addToEach(const Sequence& s) const {
+Sequence Sequence::addToEach(const Sequence& s) const {
     int n = this->size() * s.size();
     Sequence o;
     for (int i = 0; i < n; ++i) {
@@ -314,7 +314,7 @@ inline Sequence Sequence::addToEach(const Sequence& s) const {
     return o;
 }
 
-inline Sequence Sequence::addToEach(int k) const {
+Sequence Sequence::addToEach(int k) const {
     Sequence output;
     for (int i : *this) {
         output.push_back(i + k);
@@ -322,7 +322,7 @@ inline Sequence Sequence::addToEach(int k) const {
     return output;
 }
 
-inline Sequence Sequence::powBase(int base) const {
+Sequence Sequence::powBase(int base) const {
     Sequence s;
     for (int i = 0; i < this->size(); ++i) {
         s.push_back(std::pow(base, (*this)[i]));
@@ -330,7 +330,7 @@ inline Sequence Sequence::powBase(int base) const {
     return s;
 }
 
-inline Sequence Sequence::reverse() const {
+Sequence Sequence::reverse() const {
     Sequence r;
     for (int i = this->size() - 1; i >= 0; --i) {
         r.push_back((*this)[i]);
@@ -338,35 +338,35 @@ inline Sequence Sequence::reverse() const {
     return r;
 }
 
-inline Sequence Sequence::rotateRight() const {
+Sequence Sequence::rotateRight() const {
     return this->rotate(1);
 }
 
-inline Sequence Sequence::rotateLeft() const {
+Sequence Sequence::rotateLeft() const {
     return this->rotate(-1);
 }
 
-inline Sequence Sequence::rotate(int n) const {
+Sequence Sequence::rotate(int n) const {
     return Sequence::from(CollectionUtils::rotate(*this, n));
 }
 
-inline std::vector<int> Sequence::getArray() const {
+std::vector<int> Sequence::getArray() const {
     return std::vector<int>(this->begin(), this->end());
 }
 
-inline int Sequence::getMin() const {
+int Sequence::getMin() const {
     return *std::min_element(this->begin(), this->end());
 }
 
-inline int Sequence::getMax() const {
+int Sequence::getMax() const {
     return *std::max_element(this->begin(), this->end());
 }
 
-inline double Sequence::getMean() const {
+double Sequence::getMean() const {
     return std::accumulate(this->begin(), this->end(), 0.0) / this->size();
 }
 
-inline double Sequence::getStdDev() const {
+double Sequence::getStdDev() const {
     double m = getMean();
     double s = 0;
     for (int i : *this) {
@@ -376,49 +376,49 @@ inline double Sequence::getStdDev() const {
     return std::sqrt(s / this->size());
 }
 
-inline Sequence Sequence::difference() const {
+Sequence Sequence::difference() const {
     return Sequence::from(CollectionUtils::difference(this->getArray()));
 }
 
-inline Sequence Sequence::cyclicalDifference() const {
+Sequence Sequence::cyclicalDifference() const {
     return Sequence::from(CollectionUtils::cyclicalDifference(this->getArray()));
 }
 
-inline Sequence Sequence::antidifference(int k) const {
+Sequence Sequence::antidifference(int k) const {
     return Sequence::from(CollectionUtils::antidifference(this->getArray(), k));
 }
 
-inline Sequence Sequence::cyclicalAntidifference(int k) const {
+Sequence Sequence::cyclicalAntidifference(int k) const {
     return Sequence::from(CollectionUtils::cyclicalAntidifference(this->getArray(), k));
 }
 
-inline Sequence Sequence::from(const std::vector<int>& p_arr) {
+Sequence Sequence::from(const std::vector<int>& p_arr) {
     return Sequence(p_arr);
 }
 
-inline std::set<int> Sequence::distinct() const {
+std::set<int> Sequence::distinct() const {
     return std::set<int>(this->begin(), this->end());
 }
 
-inline int Sequence::count(int n) const {
+int Sequence::count(int n) const {
     return std::count(this->begin(), this->end(), n);
 }
 
-inline bool Sequence::operator==(const Sequence& other) const {
+bool Sequence::operator==(const Sequence& other) const {
     return static_cast<const std::vector<int>&>(*this) == static_cast<const std::vector<int>&>(other);
 }
 
-inline bool Sequence::operator!=(const Sequence& other) const {
+bool Sequence::operator!=(const Sequence& other) const {
     return !(*this == other);
 }
-inline bool Sequence::operator<(const Sequence& other) const {
+bool Sequence::operator<(const Sequence& other) const {
     return std::lexicographical_compare(this->begin(), this->end(), other.begin(), other.end());
 }
-inline int Sequence::compareTo(const Sequence& o) const {
+int Sequence::compareTo(const Sequence& o) const {
     return std::lexicographical_compare(this->begin(), this->end(), o.begin(), o.end()) ? -1 : 1;
 }
 
-inline std::string Sequence::toString(bool asJson) const {
+std::string Sequence::toString(bool asJson) const {
     std::ostringstream oss;
     if (asJson) {
         oss << "[";
@@ -441,11 +441,11 @@ inline std::string Sequence::toString(bool asJson) const {
     return oss.str();
 }
 
-inline int Sequence::sum() const {
+int Sequence::sum() const {
     return std::accumulate(this->begin(), this->end(), 0);
 }
 
-inline int Sequence::getPeriod() const {
+int Sequence::getPeriod() const {
     int p = this->size();
     for (int i = 1; i < this->size(); ++i) {
         if (this->compareTo(this->rotate(i)) == 0) {
@@ -456,7 +456,7 @@ inline int Sequence::getPeriod() const {
     return p;
 }
 
-inline Sequence Sequence::circularHoldNonZero() const {
+Sequence Sequence::circularHoldNonZero() const {
     Sequence o = *this;
     int last_non_zero = -1;
     for (int i = o.size(); i >= 0; --i) {
@@ -484,11 +484,11 @@ inline Sequence Sequence::circularHoldNonZero() const {
     return o;
 }
 
-inline int Sequence::rangeSize() const {
+int Sequence::rangeSize() const {
     return this->getMax() - this->getMin() + 1;
 }
 
-inline std::map<int, int> Sequence::mapOrdinalsUnipolar() const {
+std::map<int, int> Sequence::mapOrdinalsUnipolar() const {
     std::map<int, int> o;
     std::set<int> d = this->distinct();
     int k = 1;
@@ -498,11 +498,11 @@ inline std::map<int, int> Sequence::mapOrdinalsUnipolar() const {
     return o;
 }
 
-inline Sequence Sequence::asOrdinalsUnipolar() const {
+Sequence Sequence::asOrdinalsUnipolar() const {
     return this->map(this->mapOrdinalsUnipolar());
 }
 
-inline std::map<int, int> Sequence::mapOrdinalsBipolar() const {
+std::map<int, int> Sequence::mapOrdinalsBipolar() const {
     std::map<int, int> o;
     o[0] = 0;
     std::set<int> d = this->distinct();
@@ -520,12 +520,12 @@ inline std::map<int, int> Sequence::mapOrdinalsBipolar() const {
     return o;
 }
 
-inline Sequence Sequence::asOrdinalsBipolar() const {
+Sequence Sequence::asOrdinalsBipolar() const {
     return this->map(this->mapOrdinalsBipolar());
 }
 
 
-inline Sequence Sequence::map(const Sequence& s) const {
+Sequence Sequence::map(const Sequence& s) const {
     std::map<int, int> t;
     for (int i = 0; i < s.size(); ++i) {
         t[i] = s[i];
@@ -536,11 +536,11 @@ inline Sequence Sequence::map(const Sequence& s) const {
     return Sequence::map(*this, t);
 }
 
-inline Sequence Sequence::map(const std::map<int, int>& i) const {
+Sequence Sequence::map(const std::map<int, int>& i) const {
     return Sequence::map(*this, i);
 }
 
-inline Sequence Sequence::permutate(const Sequence& s) const {
+Sequence Sequence::permutate(const Sequence& s) const {
     Sequence o;
     for (int i = 0; i < s.size(); ++i) {
         o.push_back((*this)[s[i]]);
@@ -548,16 +548,16 @@ inline Sequence Sequence::permutate(const Sequence& s) const {
     return o;
 }
 
-inline void Sequence::addAtRandom(int v) {
+void Sequence::addAtRandom(int v) {
     int p = RandomNumberGenerator::nextInt(this->size() + 1);
     this->insert(this->begin() + p, v);
 }
 
-inline Sequence Sequence::copy() const {
+Sequence Sequence::copy() const {
     return *this;
 }
 
-inline Sequence Sequence::rndRemove(int n) const {
+Sequence Sequence::rndRemove(int n) const {
     Sequence o = this->copy();
     if (n <= 0) {
         return o;
@@ -569,7 +569,7 @@ inline Sequence Sequence::rndRemove(int n) const {
     return o;
 }
 
-inline Sequence Sequence::rndAdd(int n) const {
+Sequence Sequence::rndAdd(int n) const {
     Sequence o = this->copy();
     if (n <= 0) {
         return o;
@@ -584,7 +584,7 @@ inline Sequence Sequence::rndAdd(int n) const {
     return o;
 }
 
-inline Sequence Sequence::map(const Sequence& s, const std::map<int, int>& m) {
+Sequence Sequence::map(const Sequence& s, const std::map<int, int>& m) {
     Sequence output;
     for (int x : s) {
         output.push_back(m.at(x));
@@ -592,7 +592,7 @@ inline Sequence Sequence::map(const Sequence& s, const std::map<int, int>& m) {
     return output;
 }
 
-inline int Sequence::equivalenceShift(const Sequence& a, const Sequence& b) {
+int Sequence::equivalenceShift(const Sequence& a, const Sequence& b) {
     if (a.size() != b.size()) {
         return -1;
     }
@@ -604,11 +604,11 @@ inline int Sequence::equivalenceShift(const Sequence& a, const Sequence& b) {
     return -1;
 }
 
-inline bool Sequence::equivalentUnderRotation(const Sequence& a, const Sequence& b) {
+bool Sequence::equivalentUnderRotation(const Sequence& a, const Sequence& b) {
     return equivalenceShift(a, b) != -1;
 }
 
-inline int Sequence::ReverseComparator::operator()(const Sequence& o1, const Sequence& o2) const {
+int Sequence::ReverseComparator::operator()(const Sequence& o1, const Sequence& o2) const {
     return -std::lexicographical_compare(o1.rbegin(), o1.rend(), o2.rbegin(), o2.rend());
 }
 

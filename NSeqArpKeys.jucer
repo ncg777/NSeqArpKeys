@@ -72,6 +72,7 @@
   </MAINGROUP>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
             useGlobalPath="1"/>
     <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -100,6 +101,7 @@
         <MODULEPATH id="juce_gui_extra" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_midi_ci" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_basics" path="../../../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_processors" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_utils" path="../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_audio_plugin_client" path="../../../../../JUCE/modules"/>
