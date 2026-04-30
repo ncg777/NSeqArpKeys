@@ -1,11 +1,11 @@
 #include "Combination.h"
 #include "CollectionUtils.h"
 
-inline Combination::Combination(const Combination& c) : std::bitset<128>(c), m_n(c.m_n) {}
+Combination::Combination(const Combination& c) : std::bitset<128>(c), m_n(c.m_n) {}
 
-inline Combination::Combination(int n) : m_n(n) {}
-inline Combination::Combination() : m_n(0) {}
-inline int Combination::find_first(const std::bitset<128>& bitset, int n) {
+Combination::Combination(int n) : m_n(n) {}
+Combination::Combination() : m_n(0) {}
+int Combination::find_first(const std::bitset<128>& bitset, int n) {
     for (int i = 0; i < n; ++i) {
         if (bitset.test(i)) {
             return i;
@@ -14,7 +14,7 @@ inline int Combination::find_first(const std::bitset<128>& bitset, int n) {
     return -1;
 }
 
-inline int Combination::find_next(const std::bitset<128>& bitset, int pos, int n) {
+int Combination::find_next(const std::bitset<128>& bitset, int pos, int n) {
     for (int i = pos + 1; i < n; ++i) {
         if (bitset.test(i)) {
             return i;
@@ -23,7 +23,7 @@ inline int Combination::find_next(const std::bitset<128>& bitset, int pos, int n
     return -1;
 }
 
-inline int Combination::find_last(const std::bitset<128>& bitset, int n) {
+int Combination::find_last(const std::bitset<128>& bitset, int n) {
     for (int i = n - 1; i >= 0; --i) {
         if (bitset.test(i)) {
             return i;
@@ -32,7 +32,7 @@ inline int Combination::find_last(const std::bitset<128>& bitset, int n) {
     return -1;
 }
 
-inline int Combination::find_first() const {
+int Combination::find_first() const {
     for (int i = 0; i < m_n; ++i) {
         if (this->test(i)) {
             return i;
@@ -41,7 +41,7 @@ inline int Combination::find_first() const {
     return -1;
 }
 
-inline int Combination::find_next(int pos) const {
+int Combination::find_next(int pos) const {
     for (int i = pos + 1; i < m_n; ++i) {
         if (this->test(i)) {
             return i;
@@ -50,7 +50,7 @@ inline int Combination::find_next(int pos) const {
     return -1;
 }
 
-inline int Combination::find_last() const {
+int Combination::find_last() const {
     for (int i = m_n - 1; i >= 0; --i) {
         if (this->test(i)) {
             return i;
@@ -59,31 +59,31 @@ inline int Combination::find_last() const {
     return -1;
 }
 
-inline int Combination::getN() const {
+int Combination::getN() const {
     return m_n;
 }
 
-inline int Combination::getK() const {
+int Combination::getK() const {
     return this->count();
 }
 
-inline int Combination::calcSpan() const {
+int Combination::calcSpan() const {
     return getN() - Composition::getCompositionFromCombination(*this).asSequence().getMax();
 }
 
-inline Sequence Combination::getIntervalVector() const {
+Sequence Combination::getIntervalVector() const {
     return CollectionUtils::calcIntervalVector(*this, m_n);
 }
 
-inline Combination::Combination(int n, const std::set<int>& s) : Combination(n) {
+Combination::Combination(int n, const std::set<int>& s) : Combination(n) {
     for (int i = 0; i < n; ++i) {
         this->set(i, s.find(i) != s.end());
     }
 }
 
-inline Combination::Combination(const std::bitset<128>& c, int n) : std::bitset<128>(c), m_n(n) {}
+Combination::Combination(const std::bitset<128>& c, int n) : std::bitset<128>(c), m_n(n) {}
 
-inline Combination Combination::reverse() const {
+Combination Combination::reverse() const {
     Combination o(this->getN());
     for (int i = 0; i < o.getN(); ++i) {
         if (this->test(i)) o.set(-1 + o.getN() - i);
@@ -91,7 +91,7 @@ inline Combination Combination::reverse() const {
     return o;
 }
 
-inline double Combination::calcNormalizedDistanceWith(const Combination& other) const {
+double Combination::calcNormalizedDistanceWith(const Combination& other) const {
     int maxn = std::max(this->getN(), other.getN());
     int acc = 0;
     for (int i = 0; i < maxn; ++i) {
@@ -100,7 +100,7 @@ inline double Combination::calcNormalizedDistanceWith(const Combination& other) 
     return static_cast<double>(acc) / static_cast<double>(maxn);
 }
 
-inline Combination Combination::symmetricDifference(const Combination& y) const {
+Combination Combination::symmetricDifference(const Combination& y) const {
     int n = std::max(this->getN(), y.getN());
     Combination x = Combination(n);
     x |= *this;
@@ -109,7 +109,7 @@ inline Combination Combination::symmetricDifference(const Combination& y) const 
     return x;
 }
 
-inline std::string Combination::toBinaryString() const {
+std::string Combination::toBinaryString() const {
     std::ostringstream oss;
     for (int i = 0; i < m_n; ++i) {
         oss << (this->test(i) ? "1" : "0");
@@ -117,7 +117,7 @@ inline std::string Combination::toBinaryString() const {
     return oss.str();
 }
 
-inline Combination Combination::fromBinaryString(const std::string& s) {
+Combination Combination::fromBinaryString(const std::string& s) {
     std::string trimmed = s;
     trimmed.erase(trimmed.find_last_not_of(" \n\r\t") + 1);
     int n = trimmed.length();
@@ -128,7 +128,7 @@ inline Combination Combination::fromBinaryString(const std::string& s) {
     return o;
 }
 
-inline Combination Combination::mergeAll(const std::vector<Combination>& r) {
+Combination Combination::mergeAll(const std::vector<Combination>& r) {
     Sequence sizes;
     for (const auto& comb : r) {
         sizes.push_back(comb.getN());
@@ -146,7 +146,7 @@ inline Combination Combination::mergeAll(const std::vector<Combination>& r) {
     return b;
 }
 
-inline std::string Combination::toString() const {
+std::string Combination::toString() const {
     std::ostringstream oss;
     oss << "{";
     for (int i = this->find_first(); i >= 0; i = this->find_next(i)) {
@@ -159,7 +159,7 @@ inline std::string Combination::toString() const {
     return oss.str();
 }
 
-inline Sequence Combination::asSequence() const {
+Sequence Combination::asSequence() const {
     Sequence o;
     for (int i = this->find_first(); i >= 0; i = this->find_next(i + 1)) {
         o.push_back(i);
@@ -167,7 +167,7 @@ inline Sequence Combination::asSequence() const {
     return o;
 }
 
-inline std::set<int> Combination::asSet() const {
+std::set<int> Combination::asSet() const {
     std::set<int> o;
     for (int i = this->find_first(); i >= 0; i = this->find_next(i + 1)) {
         o.insert(i);
@@ -175,7 +175,7 @@ inline std::set<int> Combination::asSet() const {
     return o;
 }
 
-inline Sequence Combination::asBinarySequence() const {
+Sequence Combination::asBinarySequence() const {
     Sequence o;
     for (int i = 0; i < getN(); ++i) {
         o.push_back(this->test(i) ? 1 : 0);
@@ -183,7 +183,7 @@ inline Sequence Combination::asBinarySequence() const {
     return o;
 }
 
-inline Combination Combination::fromBinarySequence(const Sequence& s) {
+Combination Combination::fromBinarySequence(const Sequence& s) {
     Combination c(s.size());
     for (int i = 0; i < s.size(); ++i) {
         if (s[i] != 0) c.set(i, true);
@@ -191,7 +191,7 @@ inline Combination Combination::fromBinarySequence(const Sequence& s) {
     return c;
 }
 
-inline int Combination::compareTo(const Combination& o) const {
+int Combination::compareTo(const Combination& o) const {
     if (this->m_n < o.m_n) {
         return -1;
     }
@@ -214,7 +214,7 @@ inline int Combination::compareTo(const Combination& o) const {
 bool Combination::operator<(const Combination& other) const {
     return compareTo(other) < 0;
 }
-inline std::vector<Combination> Combination::refinements(const Combination& c) {
+std::vector<Combination> Combination::refinements(const Combination& c) {
     int n = c.getN() - c.getK();
     if (n == 0) {
         return {};
@@ -233,14 +233,14 @@ inline std::vector<Combination> Combination::refinements(const Combination& c) {
     return o;
 }
 
-inline Combination Combination::merge(const Combination& a, const Combination& b) {
+Combination Combination::merge(const Combination& a, const Combination& b) {
     Combination x = Combination(std::max(a.getN(), b.getN()));
     x |= a;
     x |= b;
     return x;
 }
 
-inline Combination Combination::rotate(int t) const {
+Combination Combination::rotate(int t) const {
     int k = -t;
     while (k < 0) {
         k += m_n;
@@ -255,7 +255,7 @@ inline Combination Combination::rotate(int t) const {
     return x;
 }
 
-inline Combination Combination::intersect(const Combination& c) const {
+Combination Combination::intersect(const Combination& c) const {
     int n = std::min(this->getN(), c.getN());
     Combination b = Combination(n);
     b |= *this;
@@ -263,7 +263,7 @@ inline Combination Combination::intersect(const Combination& c) const {
     return b;
 }
 
-inline Combination Combination::minus(const Combination& c) const {
+Combination Combination::minus(const Combination& c) const {
     Combination o(*this);
     int n = std::min(getN(), c.getN());
     for (int i = 0; i < n; ++i) {
@@ -274,12 +274,12 @@ inline Combination Combination::minus(const Combination& c) const {
     return o;
 }
 
-inline std::vector<Combination> Combination::partition(const Sequence& p0) const {
+std::vector<Combination> Combination::partition(const Sequence& p0) const {
     std::vector<int> p(p0.begin(), p0.end());
     return partition(p);
 }
 
-inline std::vector<Combination> Combination::partition(const std::vector<int>& partition) const {
+std::vector<Combination> Combination::partition(const std::vector<int>& partition) const {
     if (partition.size() != this->getK()) {
         throw std::invalid_argument("Partition size does not match combination size");
     }
@@ -307,11 +307,11 @@ inline std::vector<Combination> Combination::partition(const std::vector<int>& p
     return o;
 }
 
-inline Combination Combination::genRnd(int n) {
+Combination Combination::genRnd(int n) {
     return genRnd(n, RandomNumberGenerator::nextInt(n + 1));
 }
 
-inline Combination Combination::genRnd(int n, int k) {
+Combination Combination::genRnd(int n, int k) {
     Combination o(n);
     int c = 0;
     int i = 0;

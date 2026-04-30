@@ -1,11 +1,11 @@
 #include "Numbers.h"
 #include <string>
 
-inline bool Numbers::divides(int k, int n) {
+bool Numbers::divides(int k, int n) {
     return n % k == 0;
 }
 
-inline std::set<int> Numbers::factors(int n) {
+std::set<int> Numbers::factors(int n) {
     if (n < 1) throw std::runtime_error("factors:: invalid n");
     std::set<int> o;
     o.insert(1);
@@ -21,7 +21,7 @@ inline std::set<int> Numbers::factors(int n) {
     return o;
 }
 
-inline long Numbers::qFactorial(int q, int n) {
+long Numbers::qFactorial(int q, int n) {
     if (n < 0 || q <= 0) {
         throw std::invalid_argument("n must be non-negative and q must be positive.");
     }
@@ -48,7 +48,7 @@ inline long Numbers::qFactorial(int q, int n) {
     return qFactorial;
 }
 
-inline long Numbers::qBinomial(int q, int n, int k) {
+long Numbers::qBinomial(int q, int n, int k) {
     if (n < 0 || k < 0 || k > n || q <= 0) {
         throw std::invalid_argument("Invalid inputs: ensure n >= 0, 0 <= k <= n, and q > 0.");
     }
@@ -65,15 +65,15 @@ inline long Numbers::qBinomial(int q, int n, int k) {
     }
 }
 
-inline long Numbers::repunitBin(int n) {
+long Numbers::repunitBin(int n) {
     return qBinomial(2, n, 1);
 }
 
-inline bool Numbers::isPowerOfTwo(int n) {
+bool Numbers::isPowerOfTwo(int n) {
     return (static_cast<int>(std::round(std::pow(2.0, std::round(std::log(n) / std::log(2.0))))) == n);
 }
 
-inline int Numbers::minDistMod12(int a, int b) {
+int Numbers::minDistMod12(int a, int b) {
     int d1 = a - b;
     if (d1 < 0) d1 += 12;
     int d2 = b - a;
@@ -81,7 +81,7 @@ inline int Numbers::minDistMod12(int a, int b) {
     return std::min(d1, d2);
 }
 
-inline int Numbers::correctMod(int a, int b) {
+int Numbers::correctMod(int a, int b) {
     if (b < 0) throw std::runtime_error("Natural.CorrectMod: invalid parameters.");
     if (a >= 0) return a % b;
 
@@ -90,7 +90,7 @@ inline int Numbers::correctMod(int a, int b) {
     return a0 % b;
 }
 
-inline bool Numbers::prime(int n0) {
+bool Numbers::prime(int n0) {
     int n = std::abs(n0);
     if (n < 2) {
         return false;
@@ -104,7 +104,7 @@ inline bool Numbers::prime(int n0) {
     return true;
 }
 
-inline long Numbers::gcd(long a0, long b0) {
+long Numbers::gcd(long a0, long b0) {
     long a = a0;
     long b = b0;
     long t = 0;
@@ -116,11 +116,11 @@ inline long Numbers::gcd(long a0, long b0) {
     return a;
 }
 
-inline long Numbers::lcm(long a, long b) {
+long Numbers::lcm(long a, long b) {
     return (a * b) / gcd(a, b);
 }
 
-inline long Numbers::catalan(int n) {
+long Numbers::catalan(int n) {
     if (n < 0) {
         throw std::invalid_argument("n must be non-negative.");
     }
@@ -145,7 +145,7 @@ inline long Numbers::catalan(int n) {
     return catalan[n];
 }
 
-inline long Numbers::bell(int n) {
+long Numbers::bell(int n) {
     std::vector<std::vector<long>> bellTriangle(n + 1, std::vector<long>(n + 1, 0));
 
     bellTriangle[0][0] = 1;
@@ -161,7 +161,7 @@ inline long Numbers::bell(int n) {
     return bellTriangle[n][0];
 }
 
-inline long Numbers::binomial(int n, int k) {
+long Numbers::binomial(int n, int k) {
     if (n < 0) {
         throw std::invalid_argument("n must be non-negative.");
     }
@@ -190,7 +190,7 @@ inline long Numbers::binomial(int n, int k) {
     return result;
 }
 
-inline long Numbers::multinomial(const std::vector<int>& n) {
+long Numbers::multinomial(const std::vector<int>& n) {
     if (n.empty()) {
         throw std::invalid_argument("Invalid input: n is empty.");
     }
@@ -211,7 +211,7 @@ inline long Numbers::multinomial(const std::vector<int>& n) {
     return nf;
 }
 
-inline long Numbers::factorial(int n) {
+long Numbers::factorial(int n) {
     if (n < 0) {
         throw std::invalid_argument("Invalid input: n must be non-negative.");
     }
@@ -222,10 +222,10 @@ inline long Numbers::factorial(int n) {
     return o;
 }
 
-inline long Numbers::triangularNumber(int n) {
+long Numbers::triangularNumber(int n) {
     return binomial(n + 1, 2);
 }
 
-inline long Numbers::reverseTriangularNumber(int n) {
+long Numbers::reverseTriangularNumber(int n) {
     return static_cast<long>(std::floor((std::sqrt(1.0 + 8.0 * n) - 1.0) / 2.0));
 }
