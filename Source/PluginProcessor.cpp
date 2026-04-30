@@ -156,10 +156,12 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     {
         const juce::ScopedLock lock(m_pendingPreviewMidiLock);
 
-        for (const auto metadata : m_pendingPreviewMidi)
-            midiMessages.addEvent(metadata.getMessage(), metadata.samplePosition);
+        for (const auto& metadata : m_pendingPreviewMidi)
+            midiMessages.addEvent(metadata.getMessage(),
+                                  juce::jlimit(0, juce::jmax(0, buffer.getNumSamples() - 1), metadata.samplePosition));
 
         m_pendingPreviewMidi.clear();
+        m_nextPendingPreviewSamplePosition = 0;
     }
 
     auto* playHead = getPlayHead();
@@ -173,7 +175,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Collect incoming trigger notes before we clear the buffer.
     std::vector<std::pair<int, bool>> triggers; // (noteNumber, isNoteOn)
-    for (const auto metadata : midiMessages)
+    for (const auto& metadata : midiMessages)
     {
         auto msg = metadata.getMessage();
         if (msg.isNoteOn())
@@ -340,7 +342,7 @@ void NSeqArpKeysAudioProcessor::setGateForKey(int key, float gate)
 void NSeqArpKeysAudioProcessor::queuePreviewMidiMessage(const juce::MidiMessage& message)
 {
     const juce::ScopedLock lock(m_pendingPreviewMidiLock);
-    m_pendingPreviewMidi.addEvent(message, 0);
+    m_pendingPreviewMidi.addEvent(message, m_nextPendingPreviewSamplePosition++);
 }
 
 void NSeqArpKeysAudioProcessor::initialisePreviewSynth()

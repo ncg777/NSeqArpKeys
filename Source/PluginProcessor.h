@@ -84,6 +84,7 @@ private:
     juce::Synthesiser m_previewSynth;
     juce::MidiBuffer m_pendingPreviewMidi;
     juce::CriticalSection m_pendingPreviewMidiLock;
+    int m_nextPendingPreviewSamplePosition = 0;
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)
