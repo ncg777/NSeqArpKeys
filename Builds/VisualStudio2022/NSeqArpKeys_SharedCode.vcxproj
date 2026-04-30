@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\CollectionUtils.cpp"/>
+    <ClCompile Include="..\..\Source\Printers.cpp"/>
     <ClCompile Include="..\..\Source\Numbers.cpp"/>
     <ClCompile Include="..\..\Source\Composition.cpp"/>
     <ClCompile Include="..\..\Source\Combination.cpp"/>
