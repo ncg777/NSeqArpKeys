@@ -111,7 +111,7 @@ std::vector<int> CollectionUtils::getPermutationFromDisjointCycles(const std::se
         t.insert(c.begin(), c.end());
     }
 
-    if (sz != (int)t.size() || *t.begin() != 0 || *t.rbegin() != sz - 1) {
+    if (sz != t.size() || *t.begin() != 0 || *t.rbegin() != sz - 1) {
         throw std::runtime_error("CollectionUtils::getPermutationFromDisjointCycles - invalid argument.");
     }
 
@@ -252,7 +252,10 @@ std::vector<std::set<T>> CollectionUtils::partition(const std::set<T>& s, Equiva
 
 template<typename T, typename U>
 bool CollectionUtils::mapIsBijective(const std::map<T, U>& m) {
-    std::set<U> values(m.begin(), m.end());
+    std::set<U> values;
+    for (const auto& e : m) {
+        values.insert(e.second);
+    }
     return m.size() == values.size();
 }
 
