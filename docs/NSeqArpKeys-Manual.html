@@ -26,6 +26,7 @@
     strong { color: #172f4b; }
     .cover { min-height: 245mm; padding-top: 28mm; break-after: page; display: flex; flex-direction: column; }
     .eyebrow { color: #1d6c9e; font-size: 9pt; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10mm; }
+    .cover-logo { display: block; width: 136mm; max-width: 100%; height: auto; margin: 0 0 7mm; }
     .subtitle { font-size: 16pt; color: #54677d; max-width: 130mm; line-height: 1.4; }
     .rule { height: 4mm; width: 43mm; background: #209ac8; margin: 17mm 0 13mm; }
     .cover-note { font-size: 10.5pt; color: #334a62; max-width: 145mm; }
@@ -59,11 +60,11 @@
 <body><main>
   <section class="cover">
     <div class="eyebrow">Standalone instrument + VST3 / AU plug-ins</div>
-    <h1>NSeqArpKeys</h1>
+    <img class="cover-logo" src="../assets/brand/logo.svg" alt="NSeqArpKeys logo">
     <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
     <div class="rule"></div>
     <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate and Fixed Steps, then save the complete setup as a preset.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.1.0 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.1.1 | September 2026</span></div>
   </section>
 
   <section>
@@ -175,7 +176,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.1.0 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.1.1 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
   </section>
 </main></body>
 </html>

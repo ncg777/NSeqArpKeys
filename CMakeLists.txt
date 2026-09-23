@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.1.0 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.1.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -28,6 +28,8 @@ juce_add_plugin(NSeqArpKeys
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     COPY_PLUGIN_AFTER_BUILD FALSE
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/assets/brand/icon-512.png"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/assets/brand/icon-128.png"
     FORMATS ${plugin_formats}
     PRODUCT_NAME "NSeqArpKeys")
 

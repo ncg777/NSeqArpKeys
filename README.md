@@ -1,5 +1,7 @@
 # NSeqArpKeys
 
+![NSeqArpKeys logo](assets/brand/logo.svg)
+
 NSeqArpKeys is a pattern instrument for Windows, Linux, and macOS. It builds as
 a standalone app and a VST3; macOS also has an Audio Unit. Each MIDI trigger
 key has its own pattern, Forte pitch-class set, channel, octave, Gate, and
@@ -85,7 +87,7 @@ and verifies the ZIP. Archives are written to `release/`.
 
 [The GitHub Actions workflow](.github/workflows/build-release.yml) builds and
 runs this packaging script on Windows, Linux, and macOS. Every run uploads the
-three ZIPs as workflow artifacts. Pushing a `v1.1.0` tag publishes them as a
+three ZIPs as workflow artifacts. Pushing a `v1.1.1` tag publishes them as a
 GitHub release after all three builds succeed.
 
 ## Repository map
@@ -95,6 +97,7 @@ GitHub release after all three builds succeed.
 | `Source/` | Processor, editor, sequencing, Forte data, and preset code |
 | `CMakeLists.txt` | Cross-platform JUCE build |
 | `NSeqArpKeys.jucer` | JUCE project definition for the generated Windows solution |
+| `assets/brand/` | Source logo, app icon, and platform icon assets |
 | `docs/NSeqArpKeys-Manual.html` | Editable user manual |
 | `output/pdf/NSeqArpKeys-Manual.pdf` | Printable user manual |
 | `scripts/package-release.py` | Native distribution packaging and verification |

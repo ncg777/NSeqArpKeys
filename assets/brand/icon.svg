@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NSeqArpKeys app icon">
+<rect x="8" y="8" width="496" height="496" rx="92" fill="#142943"/>
+<path d="M104 211 L210 139 L306 196 L409 112" fill="none" stroke="#39c6d6" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+<g fill="#f6fbfd"><circle cx="104" cy="211" r="22"/><circle cx="210" cy="139" r="22"/><circle cx="306" cy="196" r="22"/></g>
+<circle cx="409" cy="112" r="26" fill="#39c6d6"/>
+<g fill="#f6fbfd"><rect x="93" y="285" width="59" height="143" rx="9"/><rect x="160" y="285" width="59" height="143" rx="9"/><rect x="227" y="285" width="59" height="143" rx="9"/><rect x="294" y="285" width="59" height="143" rx="9"/><rect x="361" y="285" width="59" height="143" rx="9"/></g>
+<rect x="227" y="285" width="59" height="143" rx="9" fill="#39c6d6"/>
+<g fill="#142943"><rect x="143" y="285" width="35" height="76" rx="5"/><rect x="277" y="285" width="35" height="76" rx="5"/><rect x="344" y="285" width="35" height="76" rx="5"/></g>
+</svg>
