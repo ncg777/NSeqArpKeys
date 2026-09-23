@@ -35,9 +35,11 @@ public:
     }
 
     FiniteRelation(const std::vector<X>& domain, const std::vector<Y>& codomain, std::function<bool(X, Y)> rel) {
-        for (const auto& p : HeterogeneousPairEnumeration<X, Y>(domain, codomain)) {
-            if (rel(p.first, p.second)) {
-                add(p.first, p.second);
+        for (const auto& x : domain) {
+            for (const auto& y : codomain) {
+                if (rel(x, y)) {
+                    add(x, y);
+                }
             }
         }
     }
@@ -326,18 +328,27 @@ public:
 
     static void writeToCSV(const FiniteRelation<X, Y>& finiteBinaryRelation, std::function<std::string(X)> xToString, std::function<std::string(Y)> yToString, const std::string& path) {
         std::ofstream p(path);
-        io::CSVWriter<2> w(p);
+        if (!p) throw std::runtime_error("Cannot open CSV file: " + path);
+        auto quote = [](const std::string& value) {
+            if (value.find_first_of(",\"\r\n") == std::string::npos) return value;
+            std::string result = "\"";
+            for (char c : value) {
+                if (c == '"') result += '"';
+                result += c;
+            }
+            return result + '"';
+        };
         auto xp = [xToString](X x) { return x == X() ? "null" : xToString(x); };
         auto yp = [yToString](Y y) { return y == Y() ? "null" : yToString(y); };
 
         for (const auto& t : finiteBinaryRelation.pairs) {
-            w << xp(t.first) << yp(t.second);
+            p << quote(xp(t.getFirst())) << ',' << quote(yp(t.getSecond())) << '\n';
         }
     }
 
 
     void writeToCSV(std::function<std::string(X)> xToString, std::function<std::string(Y)> yToString, const std::string& path) const {
-        writeToCSV(*this, xToString, yToString, path, false);
+        writeToCSV(*this, xToString, yToString, path);
     }
 
     static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, std::istream& is) {

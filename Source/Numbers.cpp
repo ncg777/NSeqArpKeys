@@ -1,4 +1,5 @@
 #include "Numbers.h"
+#include <climits>
 #include <string>
 
 bool Numbers::divides(int k, int n) {
