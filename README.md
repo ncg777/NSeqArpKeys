@@ -1,85 +1,94 @@
 # NSeqArpKeys
 
-A JUCE audio plug-in built with Visual Studio 2022 targeting Windows x64.
+NSeqArpKeys is a Windows x64 pattern instrument available as a standalone app
+and a VST3. Each MIDI trigger key can have its own step pattern, Forte
+pitch-class set, channel, octave, and gate. Hold a key to play its pattern, or
+turn on Latch to keep it playing while you edit. The app produces MIDI notes and
+has an internal preview sound.
 
-## Windows x64 Binaries
+## Download and install
 
-Pre-built Windows 64-bit (x64) Release binaries are committed under:
+The ready-to-share archive is in [`release/`](release/). It contains:
 
+```text
+NSeqArpKeys.exe
+NSeqArpKeys.vst3/
+  Contents/
+    Resources/moduleinfo.json
+    x86_64-win/NSeqArpKeys.vst3
+NSeqArpKeys-Manual.pdf
+START-HERE.txt
+SHA256SUMS.txt
 ```
-dist/
-└── windows-x64/
-    ├── VST3/
-    │   └── NSeqArpKeys.vst3/          ← VST3 plugin bundle
-    │       └── Contents/
-    │           ├── Resources/
-    │           │   └── moduleinfo.json
-    │           └── x86_64-win/
-    │               └── NSeqArpKeys.vst3   ← the DLL inside the bundle
-    └── Standalone/
-        └── NSeqArpKeys.exe            ← standalone application
-```
 
-These binaries are produced automatically by the **Build Windows x64** GitHub
-Actions workflow (`.github/workflows/build-windows.yml`) and committed back to
-the repository on every push to `master` or a `copilot/**` branch.
+- **Standalone:** Extract the ZIP and run `NSeqArpKeys.exe`. Choose an audio
+  device from **Options** if necessary.
+- **VST3:** Copy the entire `NSeqArpKeys.vst3` folder to
+  `C:\Program Files\Common Files\VST3`, rescan plug-ins in your DAW, and insert
+  NSeqArpKeys as an instrument. Keep the bundle's internal folders intact.
 
-### Installation
+Start with the **Single Note Pulse** factory preset and hold C4 (MIDI 60). The
+pattern stops when the key is released. Turn on **Latch (keep playing)** to
+hear it while editing, and use **Stop Key** or **Stop All** to end playback.
 
-- **VST3**: Copy `dist/windows-x64/VST3/NSeqArpKeys.vst3` into your system
-  VST3 folder (typically `C:\Program Files\Common Files\VST3`). The plugin is
-  exported as an instrument/synth and also emits its generated MIDI pattern
-  notes.
-- **Standalone**: Run `dist/windows-x64/Standalone/NSeqArpKeys.exe` directly.
-  The standalone build includes an internal preview synth so assigned patterns
-  can be auditioned without a separate host instrument.
+For all controls, pattern notation, gate timing, Forte sets, presets, and
+troubleshooting, read the [user manual](output/pdf/NSeqArpKeys-Manual.pdf).
+The editable [HTML source](docs/NSeqArpKeys-Manual.html) is also in the repo.
 
 ## Presets
 
-Use **Browse Presets** to search the library by name, category, tag, or
-description. Filter by category or favourites, then select a preset and click
-**Load**. The `<` and `>` buttons step through the library. The preset name at
-the top shows `*` when the current setup has changed since it was loaded or
-saved.
+The preset browser has six factory examples plus searchable user presets.
+Presets capture the complete setup, including all 128 key assignments. You can
+save, update, duplicate, favourite, import, export, and delete user presets.
+They are shared by the standalone app and VST3 at
+`%APPDATA%\NSeqArpKeys\Presets`. DAW projects also retain their current plug-in
+state. To share a preset separately, export a `.nseqpreset` file.
 
-The browser includes six factory starting points. To keep a setup, enter a
-name and optional category, tags, and description, then click **Save New**.
-**Save** on the main page updates the current user preset; for a factory
-preset it opens the browser to make a copy. **Update** changes the selected
-user preset's details and stores the current setup. You can also duplicate,
-delete, favourite, import, and export presets. Factory presets cannot be
-overwritten or deleted.
+## Build from source
 
-A preset stores all 128 key assignments, the meter, the selected key, and the
-latch setting. User presets are `.nseqpreset` files in
-`%APPDATA%\NSeqArpKeys\Presets` and are shared by the standalone app and
-VST3. A host project also retains its current plugin state and preset name.
+Requirements:
 
-## Rebuilding from Source
+- Visual Studio 2022 with the v143 C++ toolset and Windows SDK
+- JUCE 8.0.6 installed at `C:\JUCE` (the generated projects use
+  `C:\JUCE\modules`)
 
-### Requirements
+Open `Builds/VisualStudio2022/NSeqArpKeys.sln` and build **Release | x64**,
+or run:
 
-| Tool | Version |
-|------|---------|
-| Visual Studio | 2022 (Build Tools v143, Windows SDK 10.0) |
-| JUCE | 8.0.6 |
-
-JUCE must be cloned/installed to **`C:\JUCE`** so that the path
-`C:\JUCE\modules` is valid. The vcxproj files reference this path directly.
-
-```cmd
-git clone --depth=1 --branch=8.0.6 https://github.com/juce-framework/JUCE.git C:\JUCE
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe' `
+    Builds/VisualStudio2022/NSeqArpKeys.sln `
+    /p:Configuration=Release /p:Platform=x64 /m
 ```
 
-### Build steps
+Build outputs land under `Builds/VisualStudio2022/x64/Release/`. The GitHub
+Actions workflow in `.github/workflows/build-windows.yml` builds and stages
+the Windows binaries under `dist/windows-x64/`. If building locally, update
+those staged binaries before packaging.
 
-Open `Builds/VisualStudio2022/NSeqArpKeys.sln` in Visual Studio 2022 and
-build the **Release | x64** configuration, **or** run MSBuild from the
-command line:
+## Make a distribution ZIP
 
-```cmd
-msbuild Builds\VisualStudio2022\NSeqArpKeys.sln ^
-        /p:Configuration=Release /p:Platform=x64 /m
+The package script reads the staged binaries from `dist/windows-x64/` and the
+manual PDF from `output/pdf/`. It checks that the files and VST3 manifest are
+present, uses the manifest version in the ZIP name, adds installation notes and
+SHA-256 hashes, and verifies the completed archive.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 ```
 
-Output artifacts land in `Builds/VisualStudio2022/x64/Release/`.
+The result is `release/NSeqArpKeys-<version>-windows-x64.zip`. Pass
+`-OutputDirectory <path>` to write it elsewhere. The script packages existing
+staged binaries; it does not compile the plug-in.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `Source/` | Processor, editor, sequencing, Forte data, and preset code |
+| `NSeqArpKeys.jucer` | JUCE project definition |
+| `Builds/VisualStudio2022/` | Generated Visual Studio solution |
+| `dist/windows-x64/` | Staged standalone and VST3 binaries |
+| `docs/NSeqArpKeys-Manual.html` | Editable user manual |
+| `output/pdf/NSeqArpKeys-Manual.pdf` | Printable user manual |
+| `scripts/package-windows.ps1` | Distribution packaging and verification |

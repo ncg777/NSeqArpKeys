@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NSeqArpKeys - User Manual</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    @page {
+      size: A4;
+      margin: 17mm 18mm 18mm;
+      @bottom-left { content: "NSEQARPKEYS  /  USER MANUAL"; color: #64758a; font: 8pt Arial, sans-serif; }
+      @bottom-right { content: counter(page); color: #64758a; font: 8pt Arial, sans-serif; }
+    }
+    body { margin: 0; color: #182436; background: white; font: 10.5pt/1.48 Arial, "Segoe UI", sans-serif; }
+    main { max-width: 900px; margin: auto; }
+    h1, h2, h3 { color: #142943; line-height: 1.18; break-after: avoid; }
+    h1 { font-size: 38pt; letter-spacing: -1.5px; margin: 0 0 10mm; }
+    h2 { font-size: 20pt; border-bottom: 2px solid #c6d8e7; padding-bottom: 3mm; margin: 0 0 7mm; }
+    h3 { font-size: 12.5pt; margin: 6mm 0 2mm; }
+    p { margin: 0 0 3.6mm; }
+    ul, ol { margin: 2mm 0 5mm; padding-left: 6mm; }
+    li { padding-left: 1mm; margin-bottom: 2mm; }
+    code { font: 9pt Consolas, "Courier New", monospace; background: #edf3f8; padding: 0.2mm 1mm; border-radius: 2px; }
+    strong { color: #172f4b; }
+    .cover { min-height: 245mm; padding-top: 28mm; break-after: page; display: flex; flex-direction: column; }
+    .eyebrow { color: #1d6c9e; font-size: 9pt; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10mm; }
+    .subtitle { font-size: 16pt; color: #54677d; max-width: 130mm; line-height: 1.4; }
+    .rule { height: 4mm; width: 43mm; background: #209ac8; margin: 17mm 0 13mm; }
+    .cover-note { font-size: 10.5pt; color: #334a62; max-width: 145mm; }
+    .cover-bottom { margin-top: auto; padding-top: 10mm; border-top: 1px solid #c9d8e5; display: flex; justify-content: space-between; color: #64758a; font-size: 9pt; }
+    .page { break-before: page; }
+    .lead { font-size: 12pt; color: #385673; margin-bottom: 7mm; }
+    .callout { border-left: 4px solid #209ac8; background: #edf6fa; padding: 4mm 5mm; margin: 5mm 0 6mm; break-inside: avoid; }
+    .warn { border-left-color: #dc9246; background: #fff6ed; }
+    .step-list { counter-reset: step; list-style: none; padding: 0; margin: 3mm 0 6mm; }
+    .step-list li { counter-increment: step; position: relative; padding: 0 0 4mm 11mm; margin: 0; }
+    .step-list li::before { content: counter(step); position: absolute; left: 0; top: 0; color: white; background: #236e98; width: 7mm; height: 7mm; border-radius: 50%; text-align: center; line-height: 7mm; font-size: 9pt; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 4mm 0 6mm; font-size: 9.5pt; break-inside: avoid; }
+    th { text-align: left; background: #1c405e; color: white; font-weight: bold; }
+    td, th { padding: 2.3mm 3mm; border: 1px solid #d7e0e9; vertical-align: top; }
+    tr:nth-child(even) td { background: #f6f9fb; }
+    .mono { font: 10pt Consolas, "Courier New", monospace; }
+    .example { border: 1px solid #cfdfeb; background: #f5f9fc; padding: 4mm 5mm; margin: 4mm 0 6mm; break-inside: avoid; }
+    .example .mono { display: block; font-size: 12pt; margin: 1mm 0 3mm; color: #123b5d; }
+    .small { color: #516478; font-size: 9pt; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+    .mini-card { border: 1px solid #d5e2eb; padding: 4mm; break-inside: avoid; }
+    .mini-card h3 { margin-top: 0; }
+    .footer-note { border-top: 1px solid #c9d8e5; padding-top: 4mm; color: #63788d; font-size: 9pt; }
+    @media screen {
+      body { background: #e9eff4; padding: 20px; }
+      main { background: white; box-shadow: 0 4px 24px #8799a644; padding: 35px 48px; }
+    }
+    @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+  </style>
+</head>
+<body><main>
+  <section class="cover">
+    <div class="eyebrow">Standalone instrument + VST3 plug-in</div>
+    <h1>NSeqArpKeys</h1>
+    <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
+    <div class="rule"></div>
+    <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate, then save the complete setup as a preset.</p>
+    <div class="cover-bottom"><span>Windows x64</span><span>Version 1.0.0 | September 2026</span></div>
+  </section>
+
+  <section>
+    <h2>1. Get started</h2>
+    <p class="lead">You can use NSeqArpKeys on its own or load the VST3 in a compatible DAW.</p>
+    <h3>Install</h3>
+    <div class="two-col">
+      <div class="mini-card"><h3>Standalone</h3><p>Extract the distribution ZIP and run <code>NSeqArpKeys.exe</code>. Use the <strong>Options</strong> button in its window to select an audio output device if needed.</p></div>
+      <div class="mini-card"><h3>VST3</h3><p>Copy the entire <code>NSeqArpKeys.vst3</code> folder to <code>C:\Program Files\Common Files\VST3</code>. Rescan plug-ins in your DAW and insert NSeqArpKeys as an instrument.</p></div>
+    </div>
+    <div class="callout"><strong>Keep the VST3 bundle intact.</strong> The file inside <code>Contents\x86_64-win</code> and the <code>Resources</code> folder belong together. Copy the outer <code>NSeqArpKeys.vst3</code> folder, not just its inner file.</div>
+    <h3>Make your first pattern</h3>
+    <ol class="step-list">
+      <li>Open <strong>Browse Presets</strong>, choose <strong>Single Note Pulse</strong>, and click <strong>Load</strong>. This assigns a playable example to C4 (MIDI 60).</li>
+      <li>Hold C4 on the on-screen keyboard or send MIDI note 60 to the plug-in. The pattern plays while that key is held.</li>
+      <li>Release C4 to stop. To keep it running while editing, turn on <strong>Latch (keep playing)</strong>, trigger C4 once, and release it.</li>
+      <li>Click the same key again, or use <strong>Stop Key</strong> or <strong>Stop All</strong>, to stop a latched pattern.</li>
+    </ol>
+    <p class="small">A blank key needs both a nonzero Pattern step and a Forte Set before it produces notes. The Init preset is deliberately silent.</p>
+  </section>
+
+  <section class="page">
+    <h2>2. Work in the editor</h2>
+    <p>The keyboard selects a trigger note. The controls below it edit the assignment for the currently selected key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, and gate.</p>
+    <table>
+      <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Preset name / &lt; / &gt;</strong></td><td>Shows the loaded preset and steps through the preset library. An asterisk means the current setup has changed.</td></tr>
+        <tr><td><strong>Browse Presets / Save</strong></td><td>Opens the library. Save updates the current user preset, or opens the browser to save a new copy.</td></tr>
+        <tr><td><strong>Keyboard</strong></td><td>Triggers a pattern and selects the MIDI key whose assignment is shown.</td></tr>
+        <tr><td><strong>Latch / Stop Key / Stop All</strong></td><td>Keeps patterns running after release, stops the selected key, or stops every active key.</td></tr>
+        <tr><td><strong>Meter Num / Meter Den</strong></td><td>Global meter settings. Meter Den controls the duration of one pattern step at the current tempo.</td></tr>
+        <tr><td><strong>Channel / Octave / Gate</strong></td><td>Sets the selected key's MIDI output channel, pitch region, and note length.</td></tr>
+        <tr><td><strong>Pattern</strong></td><td>Space-separated step values. Zero creates a rest and extends the previous sounding step's available gate span.</td></tr>
+        <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
+      </tbody>
+    </table>
+    <h3>Change a running pattern</h3>
+    <p>With Latch on, trigger a key and release it. Edit Pattern, Gate, Forte Set, Channel, or Octave while listening. The active pattern restarts with the new assignment on the next audio block.</p>
+    <div class="callout warn"><strong>Selected key matters.</strong> Stop Key applies to the key shown in the selected-key label. Stop All ends every currently playing pattern.</div>
+  </section>
+
+  <section class="page">
+    <h2>3. Patterns, pitch, and timing</h2>
+    <h3>Pattern values</h3>
+    <p>Enter whole numbers separated by spaces. Each number is one step. Positive numbers are bit masks over ascending notes of the selected Forte set. Negative numbers select in the opposite direction from the Octave base. Zero starts no new note.</p>
+    <div class="example"><strong>Example - four steps</strong><span class="mono">1 2 3 0</span><p><code>1</code> plays the first available note, <code>2</code> the next, and <code>3</code> plays both together. <code>0</code> creates a rest after the chord.</p></div>
+    <p>Octave moves the base position used by these bit masks. Channel sets the outgoing MIDI channel from 1 to 16. Notes outside MIDI's 0-127 range are ignored.</p>
+    <h3>Gate across zero steps</h3>
+    <p>A sounding step owns the zero steps that follow it, including zero steps at the end of a looping pattern. Gate is a percentage of that entire span, from the note onset to the next sounding step.</p>
+    <div class="example"><strong>Example - a three-step span</strong><span class="mono">1 0 0 2</span><p>The first note has three steps available: its own step and two following zeros. At 50% Gate it sounds for 1.5 steps; at 100% it reaches the next sounding step. A zero step does not retrigger the note.</p></div>
+    <p>Gate ranges from 0% to 100%. A very short gate can be silent or nearly silent; a full gate can touch the next note onset. Releasing the trigger key stops the pattern immediately when Latch is off, even if its gate span has not ended.</p>
+    <h3>Tempo and meter</h3>
+    <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x Meter Den)</code> seconds: at 120 BPM and Meter Den 4, a step lasts 0.125 seconds. Meter Num is saved with the setup but does not currently change step duration or pattern length.</p>
+  </section>
+
+  <section class="page">
+    <h2>4. Forte sets</h2>
+    <p>A Forte set supplies the pitch classes from which Pattern values choose notes. Each menu match shows its Forte ID, any common name, and its pitch classes in brackets.</p>
+    <ol>
+      <li>Select the MIDI key you want to configure.</li>
+      <li>Type part of an ID, a common name such as <code>diatonic</code>, or pitch classes in <strong>Find Set</strong>.</li>
+      <li>Open <strong>Forte Set</strong> and choose a match. The selected set is shown underneath.</li>
+    </ol>
+    <div class="example"><strong>Example</strong><p><code>7-35.11 - diatonic scale [0 2 4 5 7 9 11]</code> contains seven pitch classes. With this set, <code>1 2 4 8</code> walks upward through its first four scale positions.</p></div>
+    <p>Choose <strong>(No set)</strong> to clear the selected key's set. A pattern without a set is silent. Changing the search text only filters the menu; choose a result to change the assignment.</p>
+    <h3>Live performance</h3>
+    <p>Normally, a pattern runs only while its trigger note is held. Latch changes note release behavior: the first trigger keeps the pattern running, and another trigger of the same key switches it off. Turning Latch off stops patterns whose trigger keys are no longer held.</p>
+    <p>The plug-in emits generated MIDI notes and also has an internal preview sound. In a DAW, generated MIDI routing depends on the host. In standalone mode, check <strong>Options</strong> for the audio output device if you cannot hear the preview.</p>
+  </section>
+
+  <section class="page">
+    <h2>5. Presets</h2>
+    <p>A preset captures the meter, latch setting, selected key, and all 128 key assignments. The library has six factory examples and can hold your own presets.</p>
+    <h3>Browse and load</h3>
+    <p>Open <strong>Browse Presets</strong>. Search names, categories, tags, and descriptions; narrow results with the Category menu or <strong>Favourites only</strong>. Select a row to inspect its details, then click <strong>Load</strong>. Loading replaces the current setup and stops any active patterns.</p>
+    <h3>Save and manage</h3>
+    <table>
+      <thead><tr><th>Action</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Save New</strong></td><td>Stores the current setup under the name, category, tags, and description shown on the right.</td></tr>
+        <tr><td><strong>Save</strong></td><td>Updates the currently loaded user preset. For a factory preset, opens the browser with a suggested copy name.</td></tr>
+        <tr><td><strong>Update</strong></td><td>Writes the current setup and edited details to the selected user preset. Factory presets cannot be updated.</td></tr>
+        <tr><td><strong>Duplicate</strong></td><td>Creates and loads a user copy of the selected preset.</td></tr>
+        <tr><td><strong>Favourite / Unfavourite</strong></td><td>Adds or removes the selected preset from the favourites filter.</td></tr>
+        <tr><td><strong>Delete</strong></td><td>After confirmation, removes a user preset from disk. Factory presets cannot be deleted.</td></tr>
+        <tr><td><strong>Import / Export</strong></td><td>Copies a <code>.nseqpreset</code> file into the library, or saves the selected library preset to a file. Import selects the new row; click Load to apply it.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>Where presets live:</strong> <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows. The standalone app and VST3 share this folder. A DAW project also stores its current plug-in state; sharing a preset with someone else requires exporting its <code>.nseqpreset</code> file.</div>
+  </section>
+
+  <section class="page">
+    <h2>6. If something is not working</h2>
+    <table>
+      <thead><tr><th>What you notice</th><th>What to check</th></tr></thead>
+      <tbody>
+        <tr><td>No notes when a key is held</td><td>Select the key, enter at least one nonzero Pattern value, and choose a Forte Set. Try the Single Note Pulse factory preset on C4.</td></tr>
+        <tr><td>The pattern stops when you release the key</td><td>That is the default behavior. Turn on Latch before triggering the key if you want it to continue during edits.</td></tr>
+        <tr><td>A pattern keeps playing</td><td>Click its trigger key again while Latch is on, use Stop Key for the selected key, or use Stop All.</td></tr>
+        <tr><td>No sound in standalone mode</td><td>Open Options and select an active audio output device. Confirm the selected key has a playable assignment.</td></tr>
+        <tr><td>VST3 does not appear in the DAW</td><td>Keep the outer <code>NSeqArpKeys.vst3</code> folder intact in the VST3 directory and rescan plug-ins in the DAW.</td></tr>
+        <tr><td>A preset does not appear</td><td>Check the browser's search, category, and Favourites only filters. User files must be valid <code>.nseqpreset</code> files in the preset folder.</td></tr>
+      </tbody>
+    </table>
+    <h3>Quick reference</h3>
+    <div class="two-col">
+      <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
+      <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
+    </div>
+    <p class="footer-note">NSeqArpKeys 1.0.0 | Windows x64 | This manual describes the standalone application and VST3 included in the distribution archive.</p>
+  </section>
+</main></body>
+</html>
