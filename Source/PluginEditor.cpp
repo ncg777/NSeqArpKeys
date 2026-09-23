@@ -153,11 +153,23 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     addAndMakeVisible(gateLabel);
 
     addAndMakeVisible(gateSlider);
-    gateSlider.setRange(0.0, 1.0, 0.01);
+    gateSlider.setRange(0.0, 2.0, 0.01);
     gateSlider.onValueChange = [this]
     {
         audioProcessor.setGateForKey(audioProcessor.getSelectedKey(),
                                      static_cast<float>(gateSlider.getValue()));
+    };
+
+    fixedLengthStepsLabel.setText("Fixed Steps", juce::dontSendNotification);
+    fixedLengthStepsLabel.setTooltip("Adds this many Meter Den steps to the gated note length.");
+    addAndMakeVisible(fixedLengthStepsLabel);
+    addAndMakeVisible(fixedLengthStepsSlider);
+    fixedLengthStepsSlider.setRange(0.0, 16.0, 0.01);
+    fixedLengthStepsSlider.setTooltip("0 to 16 steps added to Gate; each step is set by Meter Den and tempo.");
+    fixedLengthStepsSlider.onValueChange = [this]
+    {
+        audioProcessor.setFixedLengthStepsForKey(audioProcessor.getSelectedKey(),
+            static_cast<float>(fixedLengthStepsSlider.getValue()));
     };
 
     // ----- Per-key: Pattern ---------------------------------------------------
@@ -409,6 +421,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     makeRow(channelLabel, channelSlider);
     makeRow(octaveLabel,  octaveSlider);
     makeRow(gateLabel,    gateSlider);
+    makeRow(fixedLengthStepsLabel, fixedLengthStepsSlider);
     makeRow(patternLabel, patternTextEditor);
     makeRow(forteSearchLabel, forteSearchEditor);
     makeRow(forteLabel,   forteNumberSelector);
@@ -452,6 +465,7 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     channelSlider.setValue(a.channel, juce::dontSendNotification);
     octaveSlider .setValue(a.octave,  juce::dontSendNotification);
     gateSlider   .setValue(static_cast<double>(a.gate), juce::dontSendNotification);
+    fixedLengthStepsSlider.setValue(static_cast<double>(a.fixedLengthSteps), juce::dontSendNotification);
 
     forteSearchEditor.setText(a.forteString, false);
     updateForteSearchResults();
@@ -534,8 +548,9 @@ juce::String NSeqArpKeysAudioProcessorEditor::normalisedStateXml(const juce::Str
     {
         assignment->setAttribute("gate", static_cast<double>(static_cast<float>(
             assignment->getDoubleAttribute("gate", 0.5))));
-        assignment->setAttribute("lengthFactor", static_cast<double>(static_cast<float>(
-            assignment->getDoubleAttribute("lengthFactor", 1.0))));
+        assignment->removeAttribute("lengthFactor");
+        assignment->setAttribute("fixedLengthSteps", static_cast<double>(static_cast<float>(
+            assignment->getDoubleAttribute("fixedLengthSteps", 0.0))));
     }
     return state->toString();
 }
@@ -562,7 +577,7 @@ void NSeqArpKeysAudioProcessorEditor::loadPresetLibrary()
             assignment->setAttribute("channel", 1);
             assignment->setAttribute("octave", 4);
             assignment->setAttribute("gate", gate);
-            assignment->setAttribute("lengthFactor", 1.0);
+            assignment->setAttribute("fixedLengthSteps", 0.0);
         }
         PresetEntry preset;
         preset.id = "factory:" + id;
@@ -768,6 +783,7 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
                                         &meterDenominatorLabel, &meterDenominatorSlider,
                                         &channelLabel, &channelSlider, &octaveLabel,
                                         &octaveSlider, &gateLabel, &gateSlider,
+                                        &fixedLengthStepsLabel, &fixedLengthStepsSlider,
                                         &patternLabel, &patternTextEditor, &forteSearchLabel,
                                         &forteSearchEditor, &forteLabel, &forteNumberSelector,
                                         &forteSelectionLabel })

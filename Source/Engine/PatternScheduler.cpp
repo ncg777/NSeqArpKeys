@@ -35,8 +35,9 @@ void PatternScheduler::triggerKey(int key,
     if (existing != m_activePatterns.end())
     {
         auto& old = existing->second;
-        for (int note : old.currentlyActiveNotes)
-            midiMessages.addEvent(juce::MidiMessage::noteOff(old.channel, note), 0);
+        for (int note = 0; note < 128; ++note)
+            if (old.activeNoteCounts[static_cast<size_t>(note)] > 0)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(old.channel, note), 0);
     }
 
     // Precompute step notes via the GateRunner engine.
@@ -44,6 +45,7 @@ void PatternScheduler::triggerKey(int key,
     pat.elapsedSamples = 0.0;
     pat.channel        = assignment.channel;
     pat.gate           = assignment.gate;
+    pat.fixedLengthSteps = assignment.fixedLengthSteps;
     pat.stepNotes      = GateRunnerEngine::computeAllSteps(assignment);
     pat.numSteps       = static_cast<int>(pat.stepNotes.size());
     pat.noteLengthSteps.assign(pat.numSteps, 1);
@@ -79,8 +81,9 @@ void PatternScheduler::stopKey(int key, juce::MidiBuffer& midiMessages)
     if (it == m_activePatterns.end())
         return;
 
-    for (int note : it->second.currentlyActiveNotes)
-        midiMessages.addEvent(juce::MidiMessage::noteOff(it->second.channel, note), 0);
+    for (int note = 0; note < 128; ++note)
+        if (it->second.activeNoteCounts[static_cast<size_t>(note)] > 0)
+            midiMessages.addEvent(juce::MidiMessage::noteOff(it->second.channel, note), 0);
 
     m_activePatterns.erase(it);
 }
@@ -95,8 +98,9 @@ bool PatternScheduler::isKeyActive(int key) const
 void PatternScheduler::stopAll(juce::MidiBuffer& midiMessages)
 {
     for (auto& [key, pat] : m_activePatterns)
-        for (int note : pat.currentlyActiveNotes)
-            midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, note), 0);
+        for (int note = 0; note < 128; ++note)
+            if (pat.activeNoteCounts[static_cast<size_t>(note)] > 0)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, note), 0);
 
     m_activePatterns.clear();
 }
@@ -120,62 +124,58 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
         double blockStart = pat.elapsedSamples;
         double blockEnd   = blockStart + static_cast<double>(numSamples);
 
-        // We need to find every step i whose note-on or note-off falls in
-        // [blockStart, blockEnd).
-        //
-        // Note-on  for step i: noteOnTime  = i * stepDur
-        // Note-off for step i: noteOffTime = i * stepDur
-        //                        + gate * noteLengthSteps[stepIdx] * stepDur
-        //
-        // Search back far enough to include the longest possible held note.
-        int firstStep = juce::jmax(0, static_cast<int>(blockStart / stepDur)
-                                     - pat.maxNoteLengthSteps);
+        // Look back by the longest possible duration, including both terms.
+        const double maxLength = pat.fixedLengthSteps + pat.gate * pat.maxNoteLengthSteps;
+        const int firstStep = juce::jmax(0, static_cast<int>(blockStart / stepDur)
+                                            - static_cast<int>(std::ceil(maxLength)) - 1);
+        const int lastStep = static_cast<int>(blockEnd / stepDur) + 1;
 
-        // Highest step index whose note-on could fall in this block:
-        int lastStep  = static_cast<int>(blockEnd / stepDur) + 1;
-
+        auto& events = pat.pendingEvents;
+        events.clear();
         for (int i = firstStep; i <= lastStep; ++i)
         {
-            int stepIdx = i % pat.numSteps;
-            const auto& notes = pat.stepNotes[stepIdx];
+            const int stepIdx = i % pat.numSteps;
+            const double noteOnTime = static_cast<double>(i) * stepDur;
+            const double noteOffTime = noteOnTime
+                + (pat.fixedLengthSteps + pat.gate * pat.noteLengthSteps[stepIdx]) * stepDur;
 
-            double noteOnTime  = static_cast<double>(i) * stepDur;
-            double noteOffTime = noteOnTime
-                               + pat.gate * pat.noteLengthSteps[stepIdx] * stepDur;
-
-            // -- Note-on -------------------------------------------------------
-            if (noteOnTime >= blockStart && noteOnTime < blockEnd)
+            for (int note : pat.stepNotes[stepIdx])
             {
-                int sampleAt = static_cast<int>(noteOnTime - blockStart);
-                sampleAt = juce::jmax(0, juce::jmin(numSamples - 1, sampleAt));
-
-                for (int note : notes)
-                {
-                    if (note >= 0 && note < 128)
-                    {
-                        midiMessages.addEvent(
-                            juce::MidiMessage::noteOn(pat.channel, note, static_cast<juce::uint8>(100)),
-                            sampleAt);
-                        pat.currentlyActiveNotes.insert(note);
-                    }
-                }
+                if (note < 0 || note >= 128)
+                    continue;
+                if (noteOnTime >= blockStart && noteOnTime < blockEnd)
+                    events.push_back({ noteOnTime, i, note, true });
+                if (noteOffTime >= blockStart && noteOffTime < blockEnd)
+                    events.push_back({ noteOffTime, i, note, false });
             }
+        }
 
-            // -- Note-off ------------------------------------------------------
-            if (noteOffTime >= blockStart && noteOffTime < blockEnd)
+        // Sort by time, then origin step. At a shared boundary an older note
+        // ends before the next begins; a zero-duration note begins before it ends.
+        std::sort(events.begin(), events.end(), [](const ActivePattern::NoteEvent& a,
+                                                   const ActivePattern::NoteEvent& b)
+        {
+            if (a.time != b.time) return a.time < b.time;
+            if (a.step != b.step) return a.step < b.step;
+            return a.on && !b.on;
+        });
+
+        for (const auto& event : events)
+        {
+            const int sampleAt = juce::jlimit(0, numSamples - 1,
+                static_cast<int>(event.time - blockStart));
+            if (event.on)
             {
-                int sampleAt = static_cast<int>(noteOffTime - blockStart);
-                sampleAt = juce::jmax(0, juce::jmin(numSamples - 1, sampleAt));
-
-                for (int note : notes)
+                midiMessages.addEvent(juce::MidiMessage::noteOn(pat.channel, event.note,
+                    static_cast<juce::uint8>(100)), sampleAt);
+                ++pat.activeNoteCounts[static_cast<size_t>(event.note)];
+            }
+            else
+            {
+                auto& count = pat.activeNoteCounts[static_cast<size_t>(event.note)];
+                if (count > 0 && --count == 0)
                 {
-                    if (note >= 0 && note < 128)
-                    {
-                        midiMessages.addEvent(
-                            juce::MidiMessage::noteOff(pat.channel, note),
-                            sampleAt);
-                        pat.currentlyActiveNotes.erase(note);
-                    }
+                    midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, event.note), sampleAt);
                 }
             }
         }

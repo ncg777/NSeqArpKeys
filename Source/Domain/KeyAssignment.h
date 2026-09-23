@@ -31,11 +31,11 @@ struct KeyAssignment
      *  base position in the expanded scale = octave * forte.getK(). */
     int   octave     = 4;
 
-    /** Gate fraction (0–1): how much of each step duration the note is held on. */
+    /** Gate fraction (0–2) of the span through following rests. */
     float gate       = 0.5f;
 
-    /** Length factor (1–400, expressed as a fraction here, i.e. 1.0 = 100 %). */
-    float lengthFactor = 1.0f;
+    /** Duration added to the gated span, in denominator-based steps (0–16). */
+    float fixedLengthSteps = 0.0f;
 
     KeyAssignment()
         : sequence(16, 0)

@@ -332,7 +332,7 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
                          && a.channel == 1
                          && a.octave  == 4
                          && a.gate    == 0.5f
-                         && a.lengthFactor == 1.0f);
+                         && a.fixedLengthSteps == 0.0f);
         // Check if all sequence values are zero.
         bool seqAllZero = true;
         for (int v : a.sequence) if (v != 0) { seqAllZero = false; break; }
@@ -346,7 +346,7 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         child->setAttribute("channel",      a.channel);
         child->setAttribute("octave",       a.octave);
         child->setAttribute("gate",         static_cast<double>(a.gate));
-        child->setAttribute("lengthFactor", static_cast<double>(a.lengthFactor));
+        child->setAttribute("fixedLengthSteps", static_cast<double>(a.fixedLengthSteps));
     }
 
     juce::AudioProcessor::copyXmlToBinary(*state, destData);
@@ -385,8 +385,9 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
         a.setForteFromString   (child->getStringAttribute("forte").toStdString());
         a.channel      = child->getIntAttribute   ("channel",      1);
         a.octave       = child->getIntAttribute   ("octave",       4);
-        a.gate         = static_cast<float>(child->getDoubleAttribute("gate",         0.5));
-        a.lengthFactor = static_cast<float>(child->getDoubleAttribute("lengthFactor", 1.0));
+        a.gate = juce::jlimit(0.0f, 2.0f, static_cast<float>(child->getDoubleAttribute("gate", 0.5)));
+        a.fixedLengthSteps = juce::jlimit(0.0f, 16.0f,
+            static_cast<float>(child->getDoubleAttribute("fixedLengthSteps", 0.0)));
         m_pendingAssignmentUpdates.insert(k);
     }
     m_stateRestoreRevision.fetch_add(1);
@@ -458,7 +459,17 @@ void NSeqArpKeysAudioProcessor::setGateForKey(int key, float gate)
     if (key >= 0 && key < 128)
     {
         const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].gate = juce::jlimit(0.0f, 1.0f, gate);
+        m_assignments[static_cast<size_t>(key)].gate = juce::jlimit(0.0f, 2.0f, gate);
+        m_pendingAssignmentUpdates.insert(key);
+    }
+}
+
+void NSeqArpKeysAudioProcessor::setFixedLengthStepsForKey(int key, float steps)
+{
+    if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
+        m_assignments[static_cast<size_t>(key)].fixedLengthSteps = juce::jlimit(0.0f, 16.0f, steps);
         m_pendingAssignmentUpdates.insert(key);
     }
 }

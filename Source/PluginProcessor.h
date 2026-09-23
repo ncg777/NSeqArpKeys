@@ -63,6 +63,7 @@ public:
     void setChannelForKey (int key, int channel);
     void setOctaveForKey  (int key, int octave);
     void setGateForKey    (int key, float gate);
+    void setFixedLengthStepsForKey(int key, float steps);
     void queuePreviewMidiMessage(const juce::MidiMessage& message);
     void requestStopKey(int key);
     void requestStopAll();

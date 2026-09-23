@@ -87,6 +87,7 @@ private:
     juce::Slider       channelSlider;
     juce::Slider       octaveSlider;
     juce::Slider       gateSlider;
+    juce::Slider       fixedLengthStepsSlider;
     juce::TextEditor   patternTextEditor;
     juce::TextEditor   forteSearchEditor;
     juce::ComboBox     forteNumberSelector;
@@ -99,6 +100,7 @@ private:
     juce::Label channelLabel;
     juce::Label octaveLabel;
     juce::Label gateLabel;
+    juce::Label fixedLengthStepsLabel;
     juce::Label patternLabel;
     juce::Label forteLabel;
     juce::Label forteSearchLabel;

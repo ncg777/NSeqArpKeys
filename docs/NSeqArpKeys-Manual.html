@@ -58,23 +58,23 @@
 </head>
 <body><main>
   <section class="cover">
-    <div class="eyebrow">Standalone instrument + VST3 plug-in</div>
+    <div class="eyebrow">Standalone instrument + VST3 / AU plug-ins</div>
     <h1>NSeqArpKeys</h1>
     <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
     <div class="rule"></div>
-    <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate, then save the complete setup as a preset.</p>
-    <div class="cover-bottom"><span>Windows x64</span><span>Version 1.0.0 | September 2026</span></div>
+    <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate and Fixed Steps, then save the complete setup as a preset.</p>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.1.0 | September 2026</span></div>
   </section>
 
   <section>
     <h2>1. Get started</h2>
-    <p class="lead">You can use NSeqArpKeys on its own or load the VST3 in a compatible DAW.</p>
+    <p class="lead">You can use NSeqArpKeys on its own or load a plug-in in a compatible DAW.</p>
     <h3>Install</h3>
     <div class="two-col">
-      <div class="mini-card"><h3>Standalone</h3><p>Extract the distribution ZIP and run <code>NSeqArpKeys.exe</code>. Use the <strong>Options</strong> button in its window to select an audio output device if needed.</p></div>
-      <div class="mini-card"><h3>VST3</h3><p>Copy the entire <code>NSeqArpKeys.vst3</code> folder to <code>C:\Program Files\Common Files\VST3</code>. Rescan plug-ins in your DAW and insert NSeqArpKeys as an instrument.</p></div>
+      <div class="mini-card"><h3>Standalone</h3><p>Extract your OS archive and run <code>NSeqArpKeys.exe</code> on Windows, <code>NSeqArpKeys</code> on Linux, or <code>NSeqArpKeys.app</code> on macOS. Use <strong>Options</strong> to select an audio device if needed.</p></div>
+      <div class="mini-card"><h3>Plug-in</h3><p>Copy the complete <code>NSeqArpKeys.vst3</code> bundle to your VST3 folder and rescan in your DAW. The macOS archive also includes <code>NSeqArpKeys.component</code> for Audio Units.</p></div>
     </div>
-    <div class="callout"><strong>Keep the VST3 bundle intact.</strong> The file inside <code>Contents\x86_64-win</code> and the <code>Resources</code> folder belong together. Copy the outer <code>NSeqArpKeys.vst3</code> folder, not just its inner file.</div>
+    <div class="callout"><strong>Keep plug-in bundles intact.</strong> VST3 folders: Windows <code>C:\Program Files\Common Files\VST3</code>, Linux <code>~/.vst3</code>, macOS <code>~/Library/Audio/Plug-Ins/VST3</code>. For Audio Units on macOS, use <code>~/Library/Audio/Plug-Ins/Components</code>.</div>
     <h3>Make your first pattern</h3>
     <ol class="step-list">
       <li>Open <strong>Browse Presets</strong>, choose <strong>Single Note Pulse</strong>, and click <strong>Load</strong>. This assigns a playable example to C4 (MIDI 60).</li>
@@ -87,7 +87,7 @@
 
   <section class="page">
     <h2>2. Work in the editor</h2>
-    <p>The keyboard selects a trigger note. The controls below it edit the assignment for the currently selected key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, and gate.</p>
+    <p>The keyboard selects a trigger note. The controls below it edit the assignment for the currently selected key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, and fixed step length.</p>
     <table>
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
       <tbody>
@@ -96,13 +96,14 @@
         <tr><td><strong>Keyboard</strong></td><td>Triggers a pattern and selects the MIDI key whose assignment is shown.</td></tr>
         <tr><td><strong>Latch / Stop Key / Stop All</strong></td><td>Keeps patterns running after release, stops the selected key, or stops every active key.</td></tr>
         <tr><td><strong>Meter Num / Meter Den</strong></td><td>Global meter settings. Meter Den controls the duration of one pattern step at the current tempo.</td></tr>
-        <tr><td><strong>Channel / Octave / Gate</strong></td><td>Sets the selected key's MIDI output channel, pitch region, and note length.</td></tr>
+        <tr><td><strong>Channel / Octave</strong></td><td>Sets the selected key's MIDI output channel and pitch region.</td></tr>
+        <tr><td><strong>Gate / Fixed Steps</strong></td><td>Adds a gated fraction of the span through rests and a fixed duration in steps.</td></tr>
         <tr><td><strong>Pattern</strong></td><td>Space-separated step values. Zero creates a rest and extends the previous sounding step's available gate span.</td></tr>
         <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
       </tbody>
     </table>
     <h3>Change a running pattern</h3>
-    <p>With Latch on, trigger a key and release it. Edit Pattern, Gate, Forte Set, Channel, or Octave while listening. The active pattern restarts with the new assignment on the next audio block.</p>
+    <p>With Latch on, trigger a key and release it. Edit Pattern, Gate, Fixed Steps, Forte Set, Channel, or Octave while listening. The active pattern restarts with the new assignment on the next audio block.</p>
     <div class="callout warn"><strong>Selected key matters.</strong> Stop Key applies to the key shown in the selected-key label. Stop All ends every currently playing pattern.</div>
   </section>
 
@@ -115,7 +116,7 @@
     <h3>Gate across zero steps</h3>
     <p>A sounding step owns the zero steps that follow it, including zero steps at the end of a looping pattern. Gate is a percentage of that entire span, from the note onset to the next sounding step.</p>
     <div class="example"><strong>Example - a three-step span</strong><span class="mono">1 0 0 2</span><p>The first note has three steps available: its own step and two following zeros. At 50% Gate it sounds for 1.5 steps; at 100% it reaches the next sounding step. A zero step does not retrigger the note.</p></div>
-    <p>Gate ranges from 0% to 100%. A very short gate can be silent or nearly silent; a full gate can touch the next note onset. Releasing the trigger key stops the pattern immediately when Latch is off, even if its gate span has not ended.</p>
+    <p>Gate ranges from 0% to 200%. Values above 100% can overlap later notes. Fixed Steps ranges from 0 to 16 in increments of 0.01. The two lengths add: <code>note length = Fixed Steps + Gate x sounding span</code>. For example, a three-step span with Gate 50% and Fixed Steps 0.5 lasts 2 steps. Releasing the trigger key stops the pattern immediately when Latch is off.</p>
     <h3>Tempo and meter</h3>
     <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x Meter Den)</code> seconds: at 120 BPM and Meter Den 4, a step lasts 0.125 seconds. Meter Num is saved with the setup but does not currently change step duration or pattern length.</p>
   </section>
@@ -153,7 +154,7 @@
         <tr><td><strong>Import / Export</strong></td><td>Copies a <code>.nseqpreset</code> file into the library, or saves the selected library preset to a file. Import selects the new row; click Load to apply it.</td></tr>
       </tbody>
     </table>
-    <div class="callout"><strong>Where presets live:</strong> <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows. The standalone app and VST3 share this folder. A DAW project also stores its current plug-in state; sharing a preset with someone else requires exporting its <code>.nseqpreset</code> file.</div>
+    <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The standalone app and plug-ins share this folder on each OS.</div>
   </section>
 
   <section class="page">
@@ -174,7 +175,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.0.0 | Windows x64 | This manual describes the standalone application and VST3 included in the distribution archive.</p>
+    <p class="footer-note">NSeqArpKeys 1.1.0 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
   </section>
 </main></body>
 </html>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <map>
-#include <set>
+#include <array>
 #include <vector>
 #include <JuceHeader.h>
 #include "../Domain/KeyAssignment.h"
@@ -10,6 +10,7 @@
 /** Runtime state for one currently-active pattern instance. */
 struct ActivePattern
 {
+    struct NoteEvent { double time; int step; int note; bool on; };
     /** Total samples elapsed since this pattern was triggered.
      *  Used together with the current step duration to find which steps
      *  and note-offs fall inside the current processBlock() window. */
@@ -18,15 +19,16 @@ struct ActivePattern
     int   numSteps = 0;
     int   channel  = 1;
     float gate     = 0.5f;
+    float fixedLengthSteps = 0.0f;
 
     /** Precomputed note lists for every step (indexed by step % numSteps). */
     std::vector<std::vector<int>> stepNotes;
     std::vector<int> noteLengthSteps;
     int maxNoteLengthSteps = 1;
 
-    /** Notes currently sounding – used to send clean note-offs when the
-     *  pattern is stopped / retriggered. */
-    std::set<int> currentlyActiveNotes;
+    /** Active instances per pitch, used to avoid cutting off overlaps early. */
+    std::array<int, 128> activeNoteCounts {};
+    std::vector<NoteEvent> pendingEvents;
 };
 
 // ---------------------------------------------------------------------------

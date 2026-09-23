@@ -1,0 +1,108 @@
+name: Build and release
+
+on:
+  push:
+    branches:
+      - master
+      - 'copilot/**'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: windows-x64
+          - runner: ubuntu-24.04
+            platform: linux-x64
+          - runner: macos-15-intel
+            platform: macos-universal
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev ladspa-sdk \
+            libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev \
+            libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev \
+            libxrender-dev libxi-dev libglu1-mesa-dev mesa-common-dev libegl-dev
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_ARCHITECTURES='x86_64;arm64' \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          else
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          fi
+
+      - name: Build native formats
+        shell: bash
+        run: |
+          cmake --build build --config Release --target NSeqArpKeys_Standalone --parallel 2
+          cmake --build build --config Release --target NSeqArpKeys_VST3 --parallel 2
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            cmake --build build --config Release --target NSeqArpKeys_AU --parallel 2
+          fi
+
+      - name: Test note timing
+        shell: bash
+        run: |
+          cmake --build build --config Release --target NSeqArpKeysTests --parallel 2
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package release archive
+        run: python scripts/package-release.py --build-dir build --platform ${{ matrix.platform }}
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: release/NSeqArpKeys-*.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release tag
+        run: |
+          expected="$(sed -n 's/^project(NSeqArpKeys VERSION \([0-9.]*\).*/v\1/p' CMakeLists.txt)"
+          if [[ "$GITHUB_REF_NAME" != "$expected" ]]; then
+            echo "Release tag $GITHUB_REF_NAME does not match project version $expected." >&2
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-x64'
+          path: release
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-universal
+          path: release
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/*.zip --verify-tag --generate-notes
