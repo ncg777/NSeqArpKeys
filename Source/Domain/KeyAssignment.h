@@ -59,7 +59,7 @@ struct KeyAssignment
 
     /** Parse a space-separated integer string and store as the sequence.
      *  Allows negative numbers (they invert the GateRunner bit-mapping direction).
-     *  If parsing yields an empty result the existing sequence is preserved. */
+     *  Whitespace-only input clears the sequence. Invalid input is ignored. */
     void setSequenceFromString(const std::string& s)
     {
         std::istringstream iss(s);
@@ -69,13 +69,20 @@ struct KeyAssignment
             result.push_back(n);
         if (!result.empty())
             sequence = result;
+        else if (s.find_first_not_of(" \t\r\n") == std::string::npos)
+            sequence.clear();
     }
 
     /** Parse a Forte-number string (e.g. "5-35.05") and update forte / forteString.
      *  Silently keeps the existing forte when the string is invalid. */
     void setForteFromString(const std::string& str)
     {
-        if (str.empty()) return;
+        if (str.empty())
+        {
+            forte = Pcs12();
+            forteString.clear();
+            return;
+        }
         try
         {
             forte       = Pcs12::parseForte(str);

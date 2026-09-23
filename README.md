@@ -34,6 +34,27 @@ the repository on every push to `master` or a `copilot/**` branch.
   The standalone build includes an internal preview synth so assigned patterns
   can be auditioned without a separate host instrument.
 
+## Presets
+
+Use **Browse Presets** to search the library by name, category, tag, or
+description. Filter by category or favourites, then select a preset and click
+**Load**. The `<` and `>` buttons step through the library. The preset name at
+the top shows `*` when the current setup has changed since it was loaded or
+saved.
+
+The browser includes six factory starting points. To keep a setup, enter a
+name and optional category, tags, and description, then click **Save New**.
+**Save** on the main page updates the current user preset; for a factory
+preset it opens the browser to make a copy. **Update** changes the selected
+user preset's details and stores the current setup. You can also duplicate,
+delete, favourite, import, and export presets. Factory presets cannot be
+overwritten or deleted.
+
+A preset stores all 128 key assignments, the meter, the selected key, and the
+latch setting. User presets are `.nseqpreset` files in
+`%APPDATA%\NSeqArpKeys\Presets` and are shared by the standalone app and
+VST3. A host project also retains its current plugin state and preset name.
+
 ## Rebuilding from Source
 
 ### Requirements

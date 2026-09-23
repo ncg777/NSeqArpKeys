@@ -125,6 +125,8 @@ void NSeqArpKeysAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPe
 {
     m_scheduler.prepare(sampleRate);
     m_previewSynth.setCurrentPlaybackSampleRate(sampleRate);
+    m_heldTriggerKeys.fill(false);
+    m_latchWasEnabled = m_latchEnabled.load();
 }
 
 void NSeqArpKeysAudioProcessor::releaseResources()
@@ -135,6 +137,9 @@ void NSeqArpKeysAudioProcessor::releaseResources()
 
     const juce::ScopedLock lock(m_pendingPreviewMidiLock);
     m_pendingPreviewMidi.clear();
+    m_pendingStopKeys.clear();
+    m_pendingStopAll = false;
+    m_heldTriggerKeys.fill(false);
 }
 
 bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -149,10 +154,10 @@ bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layout
 void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                              juce::MidiBuffer& midiMessages)
 {
-    // The plugin now runs as an instrument with no audio input bus, so each
-    // block starts silent before the preview synth renders generated notes.
     buffer.clear();
 
+    std::set<int> stopKeys;
+    bool stopAllRequested = false;
     {
         const juce::ScopedLock lock(m_pendingPreviewMidiLock);
 
@@ -162,6 +167,9 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         m_pendingPreviewMidi.clear();
         m_nextPendingPreviewSamplePosition = 0;
+        stopKeys.swap(m_pendingStopKeys);
+        stopAllRequested = m_pendingStopAll;
+        m_pendingStopAll = false;
     }
 
     auto* playHead = getPlayHead();
@@ -173,34 +181,118 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     int numerator   = meterNumerator->get();
     int denominator = meterDenominator->get();
 
-    // Collect incoming trigger notes before we clear the buffer.
-    std::vector<std::pair<int, bool>> triggers; // (noteNumber, isNoteOn)
+    struct TriggerEvent { int sample; int note; bool noteOn; };
+    std::vector<TriggerEvent> triggers;
     for (const auto& metadata : midiMessages)
     {
-        auto msg = metadata.getMessage();
+        const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
-            triggers.push_back({ msg.getNoteNumber(), true });
+            triggers.push_back({ metadata.samplePosition, msg.getNoteNumber(), true });
         else if (msg.isNoteOff())
-            triggers.push_back({ msg.getNoteNumber(), false });
+            triggers.push_back({ metadata.samplePosition, msg.getNoteNumber(), false });
     }
 
-    // Output only scheduled pattern notes (consume the trigger MIDI).
     midiMessages.clear();
 
-    // Apply note-on triggers to the scheduler.
-    // Note-offs are ignored in latch mode (patterns run until retriggered).
-    for (auto [note, isOn] : triggers)
+    auto appendAt = [&](const juce::MidiBuffer& events, int offset)
     {
-        if (isOn)
+        for (const auto& metadata : events)
+            midiMessages.addEvent(metadata.getMessage(), offset + metadata.samplePosition);
+    };
+
+    auto emitStopKey = [&](int key, int offset)
+    {
+        juce::MidiBuffer events;
+        m_scheduler.stopKey(key, events);
+        appendAt(events, offset);
+    };
+
+    auto emitTrigger = [&](int key, int offset, const KeyAssignment& assignment)
+    {
+        if (assignment.sequence.empty())
+            return;
+        juce::MidiBuffer events;
+        m_scheduler.triggerKey(key, assignment, bpm, numerator, denominator, events);
+        appendAt(events, offset);
+    };
+
+    std::vector<std::pair<int, KeyAssignment>> updates;
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
+        for (int key : m_pendingAssignmentUpdates)
+            updates.emplace_back(key, m_assignments[static_cast<size_t>(key)]);
+        m_pendingAssignmentUpdates.clear();
+    }
+    for (const auto& [key, assignment] : updates)
+        if (m_scheduler.isKeyActive(key))
         {
-            const auto& assignment = m_assignments[note];
-            if (!assignment.sequence.empty())
-                m_scheduler.triggerKey(note, assignment, bpm, numerator, denominator, midiMessages);
+            if (assignment.sequence.empty())
+                emitStopKey(key, 0);
+            else
+                emitTrigger(key, 0, assignment);
+        }
+
+    const bool latch = m_latchEnabled.load();
+    if (m_latchWasEnabled && !latch)
+        for (int key = 0; key < 128; ++key)
+            if (!m_heldTriggerKeys[static_cast<size_t>(key)])
+                emitStopKey(key, 0);
+    m_latchWasEnabled = latch;
+
+    if (stopAllRequested)
+    {
+        juce::MidiBuffer events;
+        m_scheduler.stopAll(events);
+        appendAt(events, 0);
+    }
+    else
+        for (int key : stopKeys)
+            emitStopKey(key, 0);
+
+    int cursor = 0;
+    auto processUntil = [&](int end)
+    {
+        if (end <= cursor)
+            return;
+        juce::MidiBuffer events;
+        m_scheduler.processBlock(events, end - cursor, bpm, numerator, denominator);
+        appendAt(events, cursor);
+        cursor = end;
+    };
+
+    for (const auto& event : triggers)
+    {
+        const int position = juce::jlimit(0, juce::jmax(0, buffer.getNumSamples() - 1), event.sample);
+        processUntil(position);
+
+        if (event.noteOn)
+        {
+            const bool wasHeld = m_heldTriggerKeys[static_cast<size_t>(event.note)];
+            m_heldTriggerKeys[static_cast<size_t>(event.note)] = true;
+
+            if (latch && !wasHeld && m_scheduler.isKeyActive(event.note))
+            {
+                emitStopKey(event.note, position);
+            }
+            else
+            {
+                KeyAssignment assignment;
+                {
+                    const juce::ScopedLock lock(m_assignmentsLock);
+                    assignment = m_assignments[static_cast<size_t>(event.note)];
+                }
+                emitTrigger(event.note, position, assignment);
+            }
+        }
+        else
+        {
+            m_heldTriggerKeys[static_cast<size_t>(event.note)] = false;
+            if (!latch)
+                emitStopKey(event.note, position);
         }
     }
 
-    // Let the scheduler generate pattern MIDI for this block.
-    m_scheduler.processBlock(midiMessages, buffer.getNumSamples(), bpm, numerator, denominator);
+    processUntil(buffer.getNumSamples());
     m_previewSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
@@ -227,7 +319,10 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state->setAttribute("selectedKey",      m_selectedKey);
     state->setAttribute("meterNumerator",   meterNumerator->get());
     state->setAttribute("meterDenominator", meterDenominator->get());
+    state->setAttribute("latchEnabled", isLatchEnabled());
 
+    const juce::ScopedLock lock(m_assignmentsLock);
+    state->setAttribute("currentPresetId", m_currentPresetId);
     for (int k = 0; k < 128; ++k)
     {
         const auto& a = m_assignments[k];
@@ -263,13 +358,19 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
     if (state == nullptr || !state->hasTagName("NSeqArpKeys"))
         return;
 
-    m_selectedKey = state->getIntAttribute("selectedKey", 60);
+    m_selectedKey = juce::jlimit(0, 127, state->getIntAttribute("selectedKey", 60));
 
     if (auto* p = dynamic_cast<juce::AudioParameterInt*>(getParameters()[0]))
         p->setValueNotifyingHost(p->convertTo0to1(state->getIntAttribute("meterNumerator", 4)));
     if (auto* p = dynamic_cast<juce::AudioParameterInt*>(getParameters()[1]))
         p->setValueNotifyingHost(p->convertTo0to1(state->getIntAttribute("meterDenominator", 4)));
 
+    setLatchEnabled(state->getBoolAttribute("latchEnabled", false));
+    requestStopAll();
+    const juce::ScopedLock lock(m_assignmentsLock);
+    m_assignments.fill(KeyAssignment{});
+    m_pendingAssignmentUpdates.clear();
+    m_currentPresetId = state->getStringAttribute("currentPresetId");
     for (auto* child : state->getChildIterator())
     {
         if (!child->hasTagName("Assignment"))
@@ -286,7 +387,9 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
         a.octave       = child->getIntAttribute   ("octave",       4);
         a.gate         = static_cast<float>(child->getDoubleAttribute("gate",         0.5));
         a.lengthFactor = static_cast<float>(child->getDoubleAttribute("lengthFactor", 1.0));
+        m_pendingAssignmentUpdates.insert(k);
     }
+    m_stateRestoreRevision.fetch_add(1);
 }
 
 //==============================================================================
@@ -303,46 +406,111 @@ void NSeqArpKeysAudioProcessor::setSelectedKey(int key)
         m_selectedKey = key;
 }
 
-const KeyAssignment& NSeqArpKeysAudioProcessor::getAssignmentForKey(int key) const
+KeyAssignment NSeqArpKeysAudioProcessor::getAssignmentForKey(int key) const
 {
     jassert(key >= 0 && key < 128);
+    const juce::ScopedLock lock(m_assignmentsLock);
     return m_assignments[static_cast<size_t>(key)];
 }
 
 void NSeqArpKeysAudioProcessor::setPatternForKey(int key, const std::string& text)
 {
     if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
         m_assignments[static_cast<size_t>(key)].setSequenceFromString(text);
+        m_pendingAssignmentUpdates.insert(key);
+    }
 }
 
 void NSeqArpKeysAudioProcessor::setForteForKey(int key, const std::string& forteStr)
 {
     if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
         m_assignments[static_cast<size_t>(key)].setForteFromString(forteStr);
+        m_pendingAssignmentUpdates.insert(key);
+    }
 }
 
 void NSeqArpKeysAudioProcessor::setChannelForKey(int key, int channel)
 {
     if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
         m_assignments[static_cast<size_t>(key)].channel = juce::jlimit(1, 16, channel);
+        m_pendingAssignmentUpdates.insert(key);
+    }
 }
 
 void NSeqArpKeysAudioProcessor::setOctaveForKey(int key, int octave)
 {
     if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
         m_assignments[static_cast<size_t>(key)].octave = juce::jlimit(0, 10, octave);
+        m_pendingAssignmentUpdates.insert(key);
+    }
 }
 
 void NSeqArpKeysAudioProcessor::setGateForKey(int key, float gate)
 {
     if (key >= 0 && key < 128)
+    {
+        const juce::ScopedLock lock(m_assignmentsLock);
         m_assignments[static_cast<size_t>(key)].gate = juce::jlimit(0.0f, 1.0f, gate);
+        m_pendingAssignmentUpdates.insert(key);
+    }
 }
 
 void NSeqArpKeysAudioProcessor::queuePreviewMidiMessage(const juce::MidiMessage& message)
 {
     const juce::ScopedLock lock(m_pendingPreviewMidiLock);
     m_pendingPreviewMidi.addEvent(message, m_nextPendingPreviewSamplePosition++);
+}
+
+void NSeqArpKeysAudioProcessor::requestStopKey(int key)
+{
+    if (key < 0 || key >= 128)
+        return;
+    const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+    juce::MidiBuffer remaining;
+    for (const auto& metadata : m_pendingPreviewMidi)
+        if (metadata.getMessage().getNoteNumber() != key)
+            remaining.addEvent(metadata.getMessage(), metadata.samplePosition);
+    m_pendingPreviewMidi.swapWith(remaining);
+    m_pendingStopKeys.insert(key);
+}
+
+void NSeqArpKeysAudioProcessor::requestStopAll()
+{
+    const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+    m_pendingPreviewMidi.clear();
+    m_nextPendingPreviewSamplePosition = 0;
+    m_pendingStopAll = true;
+    m_pendingStopKeys.clear();
+}
+
+void NSeqArpKeysAudioProcessor::setLatchEnabled(bool enabled)
+{
+    m_latchEnabled.store(enabled);
+}
+
+bool NSeqArpKeysAudioProcessor::isLatchEnabled() const
+{
+    return m_latchEnabled.load();
+}
+
+juce::String NSeqArpKeysAudioProcessor::getCurrentPresetId() const
+{
+    const juce::ScopedLock lock(m_assignmentsLock);
+    return m_currentPresetId;
+}
+
+void NSeqArpKeysAudioProcessor::setCurrentPresetId(const juce::String& id)
+{
+    const juce::ScopedLock lock(m_assignmentsLock);
+    m_currentPresetId = id;
 }
 
 void NSeqArpKeysAudioProcessor::initialisePreviewSynth()

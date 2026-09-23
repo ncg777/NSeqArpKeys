@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 #include <array>
+#include <atomic>
+#include <set>
 
 #include "Domain/KeyAssignment.h"
 #include "Engine/PatternScheduler.h"
@@ -54,7 +56,7 @@ public:
     // -----------------------------------------------------------------------
     // Per-key assignment API used by the editor
     // -----------------------------------------------------------------------
-    const KeyAssignment& getAssignmentForKey(int key) const;
+    KeyAssignment getAssignmentForKey(int key) const;
 
     void setPatternForKey (int key, const std::string& text);
     void setForteForKey   (int key, const std::string& forteStr);
@@ -62,6 +64,13 @@ public:
     void setOctaveForKey  (int key, int octave);
     void setGateForKey    (int key, float gate);
     void queuePreviewMidiMessage(const juce::MidiMessage& message);
+    void requestStopKey(int key);
+    void requestStopAll();
+    void setLatchEnabled(bool enabled);
+    bool isLatchEnabled() const;
+    juce::String getCurrentPresetId() const;
+    void setCurrentPresetId(const juce::String& id);
+    uint64_t getStateRestoreRevision() const { return m_stateRestoreRevision.load(); }
 
 private:
     void initialisePreviewSynth();
@@ -76,6 +85,10 @@ private:
     // Domain state – one KeyAssignment per MIDI note (0–127)
     // -----------------------------------------------------------------------
     std::array<KeyAssignment, 128> m_assignments;
+    mutable juce::CriticalSection m_assignmentsLock;
+    std::set<int> m_pendingAssignmentUpdates;
+    juce::String m_currentPresetId;
+    std::atomic<uint64_t> m_stateRestoreRevision { 0 };
 
     // -----------------------------------------------------------------------
     // Runtime playback
@@ -85,6 +98,11 @@ private:
     juce::MidiBuffer m_pendingPreviewMidi;
     juce::CriticalSection m_pendingPreviewMidiLock;
     int m_nextPendingPreviewSamplePosition = 0;
+    std::set<int> m_pendingStopKeys;
+    bool m_pendingStopAll = false;
+    std::atomic<bool> m_latchEnabled { false };
+    bool m_latchWasEnabled = false;
+    std::array<bool, 128> m_heldTriggerKeys {};
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)

@@ -6,7 +6,9 @@
 
 //==============================================================================
 class NSeqArpKeysAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                         private juce::MidiKeyboardStateListener
+                                         private juce::MidiKeyboardStateListener,
+                                         private juce::ListBoxModel,
+                                         private juce::Timer
 {
 public:
     explicit NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudioProcessor&);
@@ -22,6 +24,48 @@ private:
 
     // Refresh the UI controls to show the assignment for the given key.
     void loadAssignmentForKey(int key);
+    void updateForteSearchResults();
+    void updateSelectedForteLabel();
+    void timerCallback() override;
+
+    struct PresetEntry
+    {
+        juce::String id, name, category, tags, description, stateXml;
+        juce::File file;
+        bool factory = false;
+        bool favourite = false;
+    };
+
+    int getNumRows() override;
+    void paintListBoxItem(int row, juce::Graphics& g, int width, int height,
+                          bool rowIsSelected) override;
+    void selectedRowsChanged(int row) override;
+    void loadPresetLibrary();
+    void refreshPresetFilters();
+    void refreshPresetCategories();
+    void updatePresetDisplay();
+    void setBrowserOpen(bool open);
+    void loadPreset(int index);
+    void saveNewPreset();
+    void updateSelectedPreset();
+    void duplicateSelectedPreset();
+    void deleteSelectedPreset();
+    void toggleSelectedFavourite();
+    void importPreset();
+    void exportSelectedPreset();
+    void selectPresetById(const juce::String& id);
+    void navigatePreset(int direction);
+    juce::String captureStateXml() const;
+    juce::String normalisedStateXml(const juce::String& xml) const;
+    bool writePreset(PresetEntry& preset);
+    void saveFavourites() const;
+    void showPresetStatus(const juce::String& message, bool error = false);
+
+    struct ForteSearchEntry
+    {
+        juce::String id;
+        juce::String display;
+    };
 
     // -------------------------------------------------------------------------
     NSeqArpKeysAudioProcessor& audioProcessor;
@@ -32,13 +76,22 @@ private:
     // Global parameters
     juce::Slider meterNumeratorSlider;
     juce::Slider meterDenominatorSlider;
+    juce::ToggleButton latchButton;
+    juce::TextButton stopKeyButton;
+    juce::TextButton stopAllButton;
+    juce::Label presetNameLabel;
+    juce::TextButton previousPresetButton, nextPresetButton;
+    juce::TextButton browsePresetsButton, savePresetButton;
 
     // Per-key assignment controls
     juce::Slider       channelSlider;
     juce::Slider       octaveSlider;
     juce::Slider       gateSlider;
     juce::TextEditor   patternTextEditor;
+    juce::TextEditor   forteSearchEditor;
     juce::ComboBox     forteNumberSelector;
+    std::vector<ForteSearchEntry> forteSearchEntries;
+    std::vector<juce::String> visibleForteIds;
 
     // Labels
     juce::Label meterNumeratorLabel;
@@ -48,7 +101,32 @@ private:
     juce::Label gateLabel;
     juce::Label patternLabel;
     juce::Label forteLabel;
+    juce::Label forteSearchLabel;
+    juce::Label forteSelectionLabel;
     juce::Label selectedKeyLabel;
+
+    std::vector<PresetEntry> presets;
+    std::vector<int> filteredPresets;
+    int selectedPresetIndex = -1;
+    bool browserOpen = false;
+    juce::String loadedPresetSnapshot;
+    juce::String lastObservedState;
+    juce::String lastDisplayedPresetId;
+    uint64_t lastStateRestoreRevision = 0;
+    std::unique_ptr<juce::FileChooser> presetChooser;
+
+    juce::TextEditor presetSearchEditor, presetNameEditor, presetCategoryEditor;
+    juce::TextEditor presetTagsEditor, presetDescriptionEditor;
+    juce::ComboBox presetCategoryFilter;
+    juce::ToggleButton favouritesOnlyButton;
+    juce::ListBox presetList;
+    juce::Label presetDetailsLabel, presetStatusLabel;
+    juce::TextButton loadPresetButton, saveNewPresetButton, updatePresetButton;
+    juce::TextButton duplicatePresetButton, deletePresetButton, favouritePresetButton;
+    juce::TextButton importPresetButton, exportPresetButton;
+    juce::Label presetSearchLabel, presetCategoryFilterLabel;
+    juce::Label presetNameFieldLabel, presetCategoryFieldLabel, presetTagsFieldLabel;
+    juce::Label presetDescriptionFieldLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NSeqArpKeysAudioProcessorEditor)
 };

@@ -341,7 +341,7 @@ public:
     }
 
     static FiniteRelation<X, Y> readFromCSV(std::function<X(std::string)> xParser, std::function<Y(std::string)> yParser, std::istream& is) {
-        io::CSVReader<2> r(is);
+        io::CSVReader<2, io::trim_chars<' ', '\t'>, io::double_quote_escape<',', '"'>> r("", is);
         FiniteRelation<X, Y> o;
 
         std::string x, y;

@@ -96,18 +96,15 @@ Sequence Sequence::arp(ArpType arpType, int k, bool repeatBottom, bool repeatTop
 
 Sequence Sequence::parse(const std::string& s) {
     std::string str0 = s;
-    str0.erase(std::remove_if(str0.begin(), str0.end(), ::isspace), str0.end());
-    if (str0.front() == '[' && str0.back() == ']') {
+    if (str0.size() >= 2 && str0.front() == '[' && str0.back() == ']') {
         str0 = str0.substr(1, str0.length() - 2);
     }
+    std::replace(str0.begin(), str0.end(), ',', ' ');
     std::istringstream iss(str0);
     Sequence output;
-    std::string token;
-    while (std::getline(iss, token, ',')) {
-        if (!token.empty()) {
-            output.push_back(std::stoi(token));
-        }
-    }
+    int note;
+    while (iss >> note)
+        output.push_back(note);
     return output;
 }
 

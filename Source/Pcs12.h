@@ -217,8 +217,9 @@ public:
         ForteNumbersDict.clear();
         ForteNumbersRotationDict.clear();
         ForteNumbersToPCS12Dict.clear();
+        std::istringstream forteInput(ForteCSV::FORTE_NUMBERS);
         FiniteRelation<std::string, Sequence> r = FiniteRelation<std::string, Sequence>::readFromCSV(
-            Parsers::stringParser, Parsers::sequenceParser, std::istringstream(ForteCSV::FORTE_NUMBERS));
+            Parsers::stringParser, Parsers::sequenceParser, forteInput);
 
         for (const auto& p : r) {
             Pcs12 ch = Pcs12::identify(p.getSecond());
@@ -233,8 +234,9 @@ public:
             }
         }
 
+        std::istringstream namesInput(ForteCSV::COMMON_NAMES);
         FiniteRelation<std::string, std::string> r2 = FiniteRelation<std::string, std::string>::readFromCSV(
-            Parsers::stringParser, Parsers::stringParser, std::istringstream(ForteCSV::COMMON_NAMES));
+            Parsers::stringParser, Parsers::stringParser, namesInput);
 
         ForteNumbersCommonNames.clear();
         for (const auto& p : r2) {
@@ -260,6 +262,12 @@ public:
 
     static Pcs12 parseForte(const std::string& input) {
         return ForteNumbersToPCS12Dict.at(input);
+    }
+
+    static std::string getCommonNameForForte(const std::string& input) {
+        const auto base = input.substr(0, input.find('.'));
+        const auto found = ForteNumbersCommonNames.find(base);
+        return found == ForteNumbersCommonNames.end() ? std::string() : found->second;
     }
 
     std::string getForteAB() const {

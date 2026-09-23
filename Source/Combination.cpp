@@ -161,7 +161,7 @@ std::string Combination::toString() const {
 
 Sequence Combination::asSequence() const {
     Sequence o;
-    for (int i = this->find_first(); i >= 0; i = this->find_next(i + 1)) {
+    for (int i = this->find_first(); i >= 0; i = this->find_next(i)) {
         o.push_back(i);
     }
     return o;
@@ -169,7 +169,7 @@ Sequence Combination::asSequence() const {
 
 std::set<int> Combination::asSet() const {
     std::set<int> o;
-    for (int i = this->find_first(); i >= 0; i = this->find_next(i + 1)) {
+    for (int i = this->find_first(); i >= 0; i = this->find_next(i)) {
         o.insert(i);
     }
     return o;
@@ -290,7 +290,7 @@ std::vector<Combination> Combination::partition(const std::vector<int>& partitio
     }
     std::vector<int> set(this->getK());
     int k = 0;
-    for (int i = this->find_first(); i > -1; i = this->find_next(i + 1)) {
+    for (int i = this->find_first(); i > -1; i = this->find_next(i)) {
         set[k++] = i;
     }
     std::vector<Combination> o(max + 1);

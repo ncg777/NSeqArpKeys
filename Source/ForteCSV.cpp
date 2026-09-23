@@ -1,7 +1,6 @@
 #include "ForteCSV.h"
 
-const std::string ForteCSV::COMMON_NAMES = R"(
-"0-1","empty set"
+const std::string ForteCSV::COMMON_NAMES = R"("0-1","empty set"
 "1-1","PU, P8"
 "2-1","m2, M7"
 "2-2","M2,m7"
@@ -73,8 +72,7 @@ const std::string ForteCSV::COMMON_NAMES = R"(
 "6-z47B","blues scale"
 )";
 
-const std::string ForteCSV::FORTE_NUMBERS = R"(
-"0-1",
+const std::string ForteCSV::FORTE_NUMBERS = R"("0-1"," "
 "1-1","0"
 "2-1","0 1"
 "2-2","0 2"

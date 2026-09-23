@@ -34,6 +34,23 @@ jobs:
         run: |
           msbuild NSeqArpKeys.sln /p:Configuration=Release /p:Platform=x64 /m /nologo
 
+      - name: Smoke-test standalone startup
+        shell: pwsh
+        run: |
+          $exe = 'Builds\VisualStudio2022\x64\Release\Standalone Plugin\NSeqArpKeys.exe'
+          $process = Start-Process -FilePath (Resolve-Path $exe).Path -PassThru
+          try {
+            Start-Sleep -Seconds 3
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "Standalone exited during startup (exit code $($process.ExitCode))"
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
+            }
+          }
+
       - name: Stage Windows x64 artifacts
         shell: pwsh
         run: |
@@ -47,6 +64,14 @@ jobs:
 
           if (Test-Path $vst3Src) {
             Copy-Item -Recurse -Force $vst3Src $distVST3
+            # JUCE 8.0.6's manifest helper emits trailing commas. Hosts expect
+            # moduleinfo.json to be strict JSON.
+            $moduleInfo = Join-Path $distVST3 'NSeqArpKeys.vst3\Contents\Resources\moduleinfo.json'
+            $json = [System.IO.File]::ReadAllText((Resolve-Path $moduleInfo).Path)
+            $json = $json -replace ',(?=\s*[}\]])', ''
+            $null = $json | ConvertFrom-Json
+            [System.IO.File]::WriteAllText((Resolve-Path $moduleInfo).Path,
+                                           $json, [System.Text.UTF8Encoding]::new($false))
             Write-Host "VST3 bundle staged to $distVST3"
           } else {
             Write-Error "VST3 bundle not found at $vst3Src"

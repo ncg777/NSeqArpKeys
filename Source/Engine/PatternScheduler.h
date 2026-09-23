@@ -21,6 +21,8 @@ struct ActivePattern
 
     /** Precomputed note lists for every step (indexed by step % numSteps). */
     std::vector<std::vector<int>> stepNotes;
+    std::vector<int> noteLengthSteps;
+    int maxNoteLengthSteps = 1;
 
     /** Notes currently sounding – used to send clean note-offs when the
      *  pattern is stopped / retriggered. */
@@ -66,6 +68,8 @@ public:
 
     /** Stop all active patterns and send note-offs into @p midiMessages. */
     void stopAll(juce::MidiBuffer& midiMessages);
+    void stopKey(int key, juce::MidiBuffer& midiMessages);
+    bool isKeyActive(int key) const;
 
     /**
      * Advance all active patterns by @p numSamples.
