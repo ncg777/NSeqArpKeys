@@ -140,4 +140,68 @@ int main()
     scheduler.stopKey(61, releaseLast);
     require(releaseFirst.isEmpty() && releaseLast.getNumEvents() == 1,
             "Releasing one trigger must not silence another on the same output pitch");
+
+    // A short note from one key must not cut off another key's longer note,
+    // regardless of the order in which trigger keys are stored.
+    for (bool swapKeys : { false, true })
+    {
+        scheduler.prepare(1000.0);
+        auto shortNote = assignmentWith({ 1, 0, 0, 0 }, 0.125f, 0.0f);
+        auto longNote = shortNote;
+        longNote.gate = 0.375f;
+        scheduler.triggerKey(swapKeys ? 61 : 60, shortNote, 60.0, 4, 1, trigger);
+        scheduler.triggerKey(swapKeys ? 60 : 61, longNote, 60.0, 4, 1, trigger);
+        const auto shared = process(scheduler, 2);
+        require(shared.size() == 3 && shared[0].on && shared[1].on
+                && !shared[2].on && shared[2].sample == 1500,
+                "Shared-pitch ownership must follow event time across all keys");
+    }
+
+    scheduler.prepare(1000.0);
+    auto muted = assignmentWith({ 1, 1 }, 2.0f, 0.5f);
+    muted.velocitySteps = { 127, 0 };
+    scheduler.triggerKey(60, muted, 60.0, 4, 1, trigger);
+    const auto silentSteps = process(scheduler, 4);
+    require(silentSteps.size() == 2 && silentSteps[0].on && silentSteps[1].on,
+            "A muted step's off must not release an overlapping sounding step");
+    stopped.clear();
+    scheduler.stopAll(stopped);
+    require(stopped.getNumEvents() == 1, "Muted-step overlap must remain owned until stopped");
+
+    // Both expression lanes restart with the sequence and cycle inside it.
+    scheduler.prepare(1000.0);
+    auto expression = assignmentWith({ 1, 1, 1 }, 0.1f, 0.0f);
+    expression.velocity = 127;
+    expression.velocitySteps = { 127, 64 };
+    expression.pitchSteps = { 0, 12 };
+    scheduler.triggerKey(60, expression, 60.0, 4, 1, trigger);
+    const auto lanes = process(scheduler, 4);
+    require(lanes.size() == 8 && lanes[0].velocity == 127 && lanes[2].velocity == 64
+            && lanes[4].velocity == 127 && lanes[6].velocity == 127
+            && lanes[6].note == lanes[0].note, "Pitch and velocity lanes must share loop boundaries");
+
+    for (int change = 0; change < 3; ++change)
+    {
+        scheduler.prepare(1000.0);
+        scheduler.triggerKey(60, assignmentWith({ 1 }, 0.5f, 0.0f), 60.0, 4, 1, trigger);
+        juce::MidiBuffer before, after;
+        scheduler.processBlock(before, 250, 60.0, 4, 1);
+        if (change == 2) scheduler.setSubdivision(60, 2);
+        scheduler.processBlock(after, 600, change == 0 ? 120.0 : 60.0, 4, change == 1 ? 2 : 1);
+        std::vector<Event> events;
+        for (const auto metadata : after)
+            events.push_back({ metadata.samplePosition, metadata.getMessage().isNoteOn(), 0, 0 });
+        require(events.size() == 2 && !events[0].on && events[0].sample == 125
+                && events[1].on && events[1].sample == 375,
+                "Tempo/global/per-key rate changes must preserve phase and pending note-offs");
+    }
+
+    scheduler.prepare(1000.0);
+    auto quiet = assignmentWith({ 1 }, 0.5f, 0.0f);
+    quiet.velocity = 1;
+    quiet.velocitySteps = { 1 };
+    scheduler.triggerKey(60, quiet, 60.0, 4, 1, trigger, 1);
+    const auto soft = process(scheduler, 1);
+    require(soft.size() == 2 && soft[0].velocity == 1,
+            "Nonzero expression must produce a quiet note, not an accidental mute");
 }

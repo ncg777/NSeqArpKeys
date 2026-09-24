@@ -90,6 +90,7 @@ private:
     std::array<KeyAssignment, 128> m_assignments;
     mutable juce::CriticalSection m_assignmentsLock;
     std::set<int> m_pendingAssignmentUpdates;
+    std::set<int> m_pendingTimingUpdates;
     juce::String m_currentPresetId;
     std::atomic<uint64_t> m_stateRestoreRevision { 0 };
 
@@ -106,11 +107,12 @@ private:
     std::atomic<bool> m_latchEnabled { false };
     bool m_latchWasEnabled = false;
     std::array<bool, 128> m_heldTriggerKeys {};
+    std::array<int, 128> m_triggerVelocities {};
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)
     // -----------------------------------------------------------------------
-    int m_selectedKey = 60;
+    std::atomic<int> m_selectedKey { 60 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NSeqArpKeysAudioProcessor)
 };

@@ -63,11 +63,12 @@ jobs:
             cmake --build build --config Release --target NSeqArpKeys_AU --parallel 2
           fi
 
-      - name: Test note timing
+      - name: Test pattern timing, editing and state
         shell: bash
         run: |
           cmake --build build --config Release --target NSeqArpKeysTests --parallel 2
           cmake --build build --config Release --target NSeqArpKeysDomainTests --parallel 2
+          cmake --build build --config Release --target NSeqArpKeysStateTests --parallel 2
           ctest --test-dir build -C Release --output-on-failure
 
       - name: Package release archive

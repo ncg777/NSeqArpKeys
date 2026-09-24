@@ -56,6 +56,7 @@ target_compile_definitions(NSeqArpKeys PUBLIC
 target_link_libraries(NSeqArpKeys PRIVATE
     juce::juce_audio_utils
     juce::juce_midi_ci
+    PUBLIC
     juce::juce_recommended_config_flags)
 
 include(CTest)
@@ -72,6 +73,13 @@ if (BUILD_TESTING)
     juce_add_console_app(NSeqArpKeysDomainTests PRODUCT_NAME "NSeqArpKeys Domain Tests")
     juce_generate_juce_header(NSeqArpKeysDomainTests)
     target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
-    target_link_libraries(NSeqArpKeysDomainTests PRIVATE NSeqArpKeys juce::juce_audio_utils)
+    target_link_libraries(NSeqArpKeysDomainTests PRIVATE
+        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
+    juce_add_console_app(NSeqArpKeysStateTests PRODUCT_NAME "NSeqArpKeys State Tests")
+    juce_generate_juce_header(NSeqArpKeysStateTests)
+    target_sources(NSeqArpKeysStateTests PRIVATE tests/ProcessorStateTests.cpp)
+    target_link_libraries(NSeqArpKeysStateTests PRIVATE
+        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
+    add_test(NAME ProcessorState COMMAND NSeqArpKeysStateTests)
 endif()

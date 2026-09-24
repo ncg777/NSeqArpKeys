@@ -13,13 +13,13 @@
       @bottom-left { content: "NSEQARPKEYS  /  USER MANUAL"; color: #64758a; font: 8pt Arial, sans-serif; }
       @bottom-right { content: counter(page); color: #64758a; font: 8pt Arial, sans-serif; }
     }
-    body { margin: 0; color: #182436; background: white; font: 10.5pt/1.48 Arial, "Segoe UI", sans-serif; }
+    body { margin: 0; color: #182436; background: white; font: 10.5pt/1.4 Arial, "Segoe UI", sans-serif; }
     main { max-width: 900px; margin: auto; }
     h1, h2, h3 { color: #142943; line-height: 1.18; break-after: avoid; }
     h1 { font-size: 38pt; letter-spacing: -1.5px; margin: 0 0 10mm; }
     h2 { font-size: 20pt; border-bottom: 2px solid #c6d8e7; padding-bottom: 3mm; margin: 0 0 7mm; }
-    h3 { font-size: 12.5pt; margin: 6mm 0 2mm; }
-    p { margin: 0 0 3.6mm; }
+    h3 { font-size: 12.5pt; margin: 4.5mm 0 2mm; }
+    p { margin: 0 0 3mm; }
     ul, ol { margin: 2mm 0 5mm; padding-left: 6mm; }
     li { padding-left: 1mm; margin-bottom: 2mm; }
     code { font: 9pt Consolas, "Courier New", monospace; background: #edf3f8; padding: 0.2mm 1mm; border-radius: 2px; }
@@ -43,8 +43,10 @@
     th { text-align: left; background: #1c405e; color: white; font-weight: bold; }
     td, th { padding: 1.5mm 3mm; border: 1px solid #d7e0e9; vertical-align: top; }
     tr:nth-child(even) td { background: #f6f9fb; }
+    .controls-table { font-size: 9pt; line-height: 1.28; }
+    .controls-table td, .controls-table th { padding: 1.1mm 2.5mm; }
     .mono { font: 10pt Consolas, "Courier New", monospace; }
-    .example { border: 1px solid #cfdfeb; background: #f5f9fc; padding: 4mm 5mm; margin: 4mm 0 6mm; break-inside: avoid; }
+    .example { border: 1px solid #cfdfeb; background: #f5f9fc; padding: 3mm 5mm; margin: 3mm 0 4mm; break-inside: avoid; }
     .example .mono { display: block; font-size: 12pt; margin: 1mm 0 3mm; color: #123b5d; }
     .small { color: #516478; font-size: 9pt; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
@@ -90,7 +92,7 @@
   <section class="page">
     <h2>2. Work in the editor</h2>
     <p>The keyboard selects a trigger note. The controls below it edit the assignment for that key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, subdivision and expression.</p>
-    <table>
+    <table class="controls-table">
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
       <tbody>
         <tr><td><strong>Preset name / &lt; / &gt;</strong></td><td>Shows the loaded preset and steps through the preset library. An asterisk means the current setup has changed.</td></tr>
@@ -111,8 +113,9 @@
         <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
       </tbody>
     </table>
+    <p>Integer fields accept up to 4096 space-separated values. Invalid input is outlined in red and is not applied. Blank Pattern clears the sequence; blank lanes use their default values.</p>
     <h3>Change a running pattern</h3>
-    <p>With Latch on, trigger and release a key, then edit its controls while listening. The active pattern restarts with the new assignment on the next audio block.</p>
+    <p>With Latch on, trigger and release a key, then edit its controls while listening. Most edits restart that key on the next audio block, preserving trigger velocity. Changes to tempo or Steps/QN preserve musical phase and pending note-offs.</p>
     <div class="callout warn"><strong>Selected key matters.</strong> Stop Key applies to the key shown in the selected-key label. Stop All ends every currently playing pattern.</div>
   </section>
 
@@ -130,7 +133,7 @@
     <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x effective Steps/QN)</code> seconds: at 120 BPM and Steps/QN 4, a step lasts 0.125 seconds. A per-key value of 0 inherits the global setting. Meter Num is saved but does not currently change step duration or pattern length.</p>
     <h3>Rhythmic mode and variation</h3>
     <p>In rhythmic mode, bit 0 plays the first Drum note, bit 1 the second, and so on to bit 15. Pattern <code>5 0</code> triggers bits 0 and 2, then rests. Nonpositive masks are silent. The usual output channel is 10 when switching from channel 1.</p>
-    <p>Output velocity scales with incoming key velocity. The velocity lane cycles when shorter than the pattern; zero silences a step. Pitch offsets cycle in semitones. Rotate and Reverse reorder the integer steps, leaving the lanes in place.</p>
+    <p>Output velocity scales with incoming key velocity. Velocity values are 0-127; zero silences a step. Pitch offsets are -127 to 127 semitones. Both lanes cycle within the pattern and restart at every pattern loop. Rotate and Reverse reorder the integer steps, leaving the lanes in place.</p>
   </section>
 
   <section class="page">
@@ -167,8 +170,8 @@
       </tbody>
     </table>
     <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The standalone app and plug-ins share this folder on each OS.</div>
-    <h3>Individual pattern bank</h3>
-    <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Whole presets embed every assignment, so they can travel without the pattern bank. Loading a pattern replaces the selected key's assignment and restarts active playback.</p>
+    <h3>Individual pattern files</h3>
+    <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Whole presets embed every assignment, so they can travel without the pattern bank. Loading a pattern replaces only the selected key and restarts it if active. Other keys keep playing. Pattern loading and range copies can be undone. Undo/Redo lasts for the editor session and resets when loading a whole preset or project.</p>
   </section>
 
   <section class="page">

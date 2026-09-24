@@ -46,13 +46,15 @@ Choose **Melodic** for Forte-mapped integer bitsets or **Rhythmic** for bits
 0–15 mapped to the 16 editable drum MIDI notes (default channel 10 when
 switching from channel 1). A velocity value scales with how hard the key is
 struck. The velocity lane has values 0–127 (0 silences that event), and the
-pitch lane offsets each step in semitones; shorter lanes cycle. **Rotate**
+pitch lane offsets each step in semitones. Shorter lanes cycle within the
+pattern, and both lanes restart at each pattern loop. **Rotate**
 shifts the integer sequence in time; **Reverse** reverses its order. The lanes
 do not reverse or rotate with it. **Copy**, **Paste**, and **Duplicate to next
 key** work on complete independent assignments. **Assign range** copies the
 selected key into the inclusive MIDI range; **Transpose by key** offsets each
 copy by its distance from the source key. A range assignment is an independent
-copy that can be edited afterward.
+copy that can be edited afterward. Assign range is one Undo action. Undo/Redo
+last for the current editor session and reset when a whole preset/project is loaded.
 
 The Euclidean controls generate evenly spaced bit-0 drum triggers from a hit
 count and step count (up to 64). Edit the generated integer sequence afterward
@@ -61,7 +63,18 @@ or use Rotate to shift its phase.
 **Save pattern** and **Load pattern** use `.nseqpattern` files, separate from
 whole performance `.nseqpreset` files. They open in the pattern-bank folder
 under the application-data directory. Loading a pattern replaces the selected
-key's assignment and restarts playback, including any held notes.
+key's assignment and restarts that key if active, preserving trigger velocity.
+Other keys keep playing. Loading a pattern can be undone.
+
+Changes to tempo, Global Steps/QN or a key's Steps/QN preserve musical phase;
+other edits restart the affected key. Invalid integer input is outlined in red
+and leaves the last valid value playing. Patterns and lanes accept up to 4096
+space-separated integers.
+
+The [release roadmap](docs/1.2.0-roadmap.md) defines the 1.2.0 feature set and
+keeps the pattern-bank browser, linked ranges, advanced rhythm, modulation and
+performance milestones for future releases. See the
+[implementation status](docs/1.2.0-implementation-status.md) for validation.
 
 ## Note lengths
 
@@ -95,6 +108,8 @@ CMake fetch the pinned JUCE version.
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --target NSeqArpKeys_Standalone
 cmake --build build --config Release --target NSeqArpKeys_VST3
+cmake --build build --config Release --target NSeqArpKeysTests NSeqArpKeysDomainTests NSeqArpKeysStateTests
+ctest --test-dir build -C Release --output-on-failure
 ```
 
 On macOS, also build `NSeqArpKeys_AU`. For a universal macOS build, configure

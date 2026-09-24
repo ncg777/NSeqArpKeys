@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginProcessor.h"
+#include "Domain/AssignmentHistory.h"
 
 //==============================================================================
 class NSeqArpKeysAudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -30,6 +31,10 @@ private:
     void recordKeyEdit();
     void undoKeyEdit();
     void redoKeyEdit();
+    void syncEditHistory();
+    void updateTimingDisplay();
+    bool validateIntegerInput(juce::TextEditor&, std::vector<int>&, int minimum, int maximum,
+                              int exactCount = -1);
     void updateForteSearchResults();
     void updateSelectedForteLabel();
     void timerCallback() override;
@@ -75,6 +80,7 @@ private:
 
     // -------------------------------------------------------------------------
     NSeqArpKeysAudioProcessor& audioProcessor;
+    juce::TooltipWindow tooltipWindow { this, 500 };
 
     juce::MidiKeyboardState     keyboardState;
     juce::MidiKeyboardComponent keyboardComponent;
@@ -107,7 +113,7 @@ private:
     juce::TextButton euclidButton;
     juce::ToggleButton transposeRangeButton;
     std::unique_ptr<KeyAssignment> copiedPattern;
-    std::vector<std::pair<int, KeyAssignment>> undoHistory, redoHistory;
+    AssignmentHistory editHistory;
     juce::TextEditor   forteSearchEditor;
     juce::ComboBox     forteNumberSelector;
     std::vector<ForteSearchEntry> forteSearchEntries;

@@ -7,11 +7,8 @@
 // ---------------------------------------------------------------------------
 std::vector<int> GateRunnerEngine::parseSequence(const std::string& text)
 {
-    std::istringstream iss(text);
     std::vector<int> result;
-    int n;
-    while (iss >> n)
-        result.push_back(n);
+    KeyAssignment::parseIntegerSequence(text, result);
     return result;
 }
 
@@ -49,13 +46,15 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
     if (scale.empty() || pitchClassCount <= 0 || stepValue == 0)
         return notes;
 
-    int absVal     = std::abs(stepValue);
+    // Unsigned arithmetic also represents the magnitude of INT_MIN safely.
+    const auto absVal = stepValue < 0 ? 0u - static_cast<unsigned int>(stepValue)
+                                     : static_cast<unsigned int>(stepValue);
     int sign       = (stepValue > 0) ? 1 : -1;
     int baseOffset = octave * pitchClassCount;
 
     // Build bit array: bits[0] = LSB of absVal (matching generate.ts .reverse())
     std::vector<int> bits;
-    int tmp = absVal;
+    auto tmp = absVal;
     while (tmp > 0)
     {
         bits.push_back(tmp & 1);
