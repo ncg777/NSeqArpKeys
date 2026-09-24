@@ -1,6 +1,5 @@
 #include "PluginEditor.h"
 #include "Engine/GateRunnerEngine.h"
-#include "Domain/RhythmGenerators.h"
 #include "Domain/AssignmentState.h"
 
 namespace
@@ -341,28 +340,6 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     transposeRangeButton.setButtonText("Transpose by key");
     transposeRangeButton.setToggleState(true, juce::dontSendNotification);
     addAndMakeVisible(transposeRangeButton);
-    addLabel(euclidLabel, "Euclidean");
-    addAndMakeVisible(euclidHitsSlider);
-    addAndMakeVisible(euclidStepsSlider);
-    euclidHitsSlider.setRange(0, 64, 1);
-    euclidStepsSlider.setRange(1, 64, 1);
-    euclidHitsSlider.setValue(5);
-    euclidStepsSlider.setValue(13);
-    euclidButton.setButtonText("Generate bit 0");
-    addAndMakeVisible(euclidButton);
-    euclidButton.onClick = [this]
-    {
-        const auto values = makeEuclideanRhythm(static_cast<int>(euclidHitsSlider.getValue()),
-                                                 static_cast<int>(euclidStepsSlider.getValue()));
-        auto assignment = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
-        recordKeyEdit();
-        assignment.mode = KeyAssignment::Mode::rhythmic;
-        if (assignment.channel == 1) assignment.channel = 10;
-        assignment.sequence = values;
-        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), assignment);
-        loadAssignmentForKey(audioProcessor.getSelectedKey());
-    };
-
     // ----- Per-key: searchable Forte set --------------------------------------
     forteSearchLabel.setText("Find Set", juce::dontSendNotification);
     addAndMakeVisible(forteSearchLabel);
@@ -638,11 +615,6 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     rangeLastSlider.setBounds(rangeRow.removeFromLeft(140));
     transposeRangeButton.setBounds(rangeRow.removeFromLeft(160));
     applyRangeButton.setBounds(rangeRow.removeFromLeft(130));
-    auto euclidRow = area.removeFromTop(rowH);
-    euclidLabel.setBounds(euclidRow.removeFromLeft(lblW));
-    euclidHitsSlider.setBounds(euclidRow.removeFromLeft(140));
-    euclidStepsSlider.setBounds(euclidRow.removeFromLeft(140));
-    euclidButton.setBounds(euclidRow.removeFromLeft(145));
     makeRow(forteSearchLabel, forteSearchEditor);
     makeRow(forteLabel,   forteNumberSelector);
     forteSelectionLabel.setBounds(area.removeFromTop(rowH));
@@ -1172,10 +1144,6 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
                                         &savePatternButton, &loadPatternButton,
                                         &rangeLabel, &rangeFirstSlider, &rangeLastSlider,
                                         &transposeRangeButton, &applyRangeButton })
-        component->setVisible(!open);
-    for (juce::Component* component : std::initializer_list<juce::Component*> {
-                                        &euclidLabel, &euclidHitsSlider,
-                                        &euclidStepsSlider, &euclidButton })
         component->setVisible(!open);
     for (juce::Component* component : std::initializer_list<juce::Component*> { &presetSearchLabel, &presetSearchEditor,
                                         &presetCategoryFilterLabel, &presetCategoryFilter,

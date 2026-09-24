@@ -56,10 +56,6 @@ copy by its distance from the source key. A range assignment is an independent
 copy that can be edited afterward. Assign range is one Undo action. Undo/Redo
 last for the current editor session and reset when a whole preset/project is loaded.
 
-The Euclidean controls generate evenly spaced bit-0 drum triggers from a hit
-count and step count (up to 64). Edit the generated integer sequence afterward
-or use Rotate to shift its phase.
-
 **Save pattern** and **Load pattern** use `.nseqpattern` files, separate from
 whole performance `.nseqpreset` files. They open in the pattern-bank folder
 under the application-data directory. Loading a pattern replaces the selected

@@ -1,5 +1,4 @@
 #include "../Source/Engine/GateRunnerEngine.h"
-#include "../Source/Domain/RhythmGenerators.h"
 
 #include "../Source/Domain/AssignmentHistory.h"
 #include <stdexcept>
@@ -40,13 +39,6 @@ int main()
     require(pattern.effectiveSubdivision(4) == 4);
     pattern.subdivision = 3;
     require(pattern.effectiveSubdivision(4) == 3);
-
-    const auto euclid = makeEuclideanRhythm(5, 13);
-    require(euclid.size() == 13);
-    require(std::count(euclid.begin(), euclid.end(), 1) == 5);
-    for (int i = 0; i < 13; ++i)
-        require(makeEuclideanRhythm(5, 13, 3)[static_cast<size_t>((i + 3) % 13)]
-               == euclid[static_cast<size_t>(i)]);
 
     // Parsing is atomic: malformed or oversized input keeps the last valid pattern.
     pattern.sequence = { 1, 2, 3 };

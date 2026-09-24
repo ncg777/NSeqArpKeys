@@ -109,8 +109,6 @@ private:
     juce::TextButton savePatternButton, loadPatternButton, applyRangeButton;
     juce::TextButton undoButton, redoButton;
     juce::Slider rangeFirstSlider, rangeLastSlider;
-    juce::Slider euclidHitsSlider, euclidStepsSlider;
-    juce::TextButton euclidButton;
     juce::ToggleButton transposeRangeButton;
     std::unique_ptr<KeyAssignment> copiedPattern;
     AssignmentHistory editHistory;
@@ -130,7 +128,6 @@ private:
     juce::Label patternNameLabel, modeLabel, subdivisionLabel, velocityLabel;
     juce::Label transposeLabel, rotationLabel, velocityStepsLabel, pitchStepsLabel;
     juce::Label drumNotesLabel, rangeLabel;
-    juce::Label euclidLabel;
     juce::Label forteLabel;
     juce::Label forteSearchLabel;
     juce::Label forteSelectionLabel;
