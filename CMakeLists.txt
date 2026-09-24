@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.1.1 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -56,6 +56,7 @@ target_compile_definitions(NSeqArpKeys PUBLIC
 target_link_libraries(NSeqArpKeys PRIVATE
     juce::juce_audio_utils
     juce::juce_midi_ci
+    PUBLIC
     juce::juce_recommended_config_flags)
 
 include(CTest)
@@ -69,4 +70,16 @@ if (BUILD_TESTING)
         juce::juce_midi_ci
         juce::juce_recommended_config_flags)
     add_test(NAME PatternScheduler COMMAND NSeqArpKeysTests)
+    juce_add_console_app(NSeqArpKeysDomainTests PRODUCT_NAME "NSeqArpKeys Domain Tests")
+    juce_generate_juce_header(NSeqArpKeysDomainTests)
+    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
+    target_link_libraries(NSeqArpKeysDomainTests PRIVATE
+        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
+    add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
+    juce_add_console_app(NSeqArpKeysStateTests PRODUCT_NAME "NSeqArpKeys State Tests")
+    juce_generate_juce_header(NSeqArpKeysStateTests)
+    target_sources(NSeqArpKeysStateTests PRIVATE tests/ProcessorStateTests.cpp)
+    target_link_libraries(NSeqArpKeysStateTests PRIVATE
+        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
+    add_test(NAME ProcessorState COMMAND NSeqArpKeysStateTests)
 endif()

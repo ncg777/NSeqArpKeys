@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginProcessor.h"
+#include "Domain/AssignmentHistory.h"
 
 //==============================================================================
 class NSeqArpKeysAudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -24,6 +25,16 @@ private:
 
     // Refresh the UI controls to show the assignment for the given key.
     void loadAssignmentForKey(int key);
+    void savePatternToBank();
+    void loadPatternFromBank();
+    void applyRange();
+    void recordKeyEdit();
+    void undoKeyEdit();
+    void redoKeyEdit();
+    void syncEditHistory();
+    void updateTimingDisplay();
+    bool validateIntegerInput(juce::TextEditor&, std::vector<int>&, int minimum, int maximum,
+                              int exactCount = -1);
     void updateForteSearchResults();
     void updateSelectedForteLabel();
     void timerCallback() override;
@@ -69,6 +80,7 @@ private:
 
     // -------------------------------------------------------------------------
     NSeqArpKeysAudioProcessor& audioProcessor;
+    juce::TooltipWindow tooltipWindow { this, 500 };
 
     juce::MidiKeyboardState     keyboardState;
     juce::MidiKeyboardComponent keyboardComponent;
@@ -89,6 +101,17 @@ private:
     juce::Slider       gateSlider;
     juce::Slider       fixedLengthStepsSlider;
     juce::TextEditor   patternTextEditor;
+    juce::TextEditor   patternNameEditor, velocityStepsEditor, pitchStepsEditor, drumNotesEditor;
+    juce::ComboBox     modeSelector;
+    juce::Slider       subdivisionSlider, velocitySlider, transposeSlider, rotationSlider;
+    juce::ToggleButton reverseButton;
+    juce::TextButton copyPatternButton, pastePatternButton, duplicatePatternButton;
+    juce::TextButton savePatternButton, loadPatternButton, applyRangeButton;
+    juce::TextButton undoButton, redoButton;
+    juce::Slider rangeFirstSlider, rangeLastSlider;
+    juce::ToggleButton transposeRangeButton;
+    std::unique_ptr<KeyAssignment> copiedPattern;
+    AssignmentHistory editHistory;
     juce::TextEditor   forteSearchEditor;
     juce::ComboBox     forteNumberSelector;
     std::vector<ForteSearchEntry> forteSearchEntries;
@@ -102,6 +125,9 @@ private:
     juce::Label gateLabel;
     juce::Label fixedLengthStepsLabel;
     juce::Label patternLabel;
+    juce::Label patternNameLabel, modeLabel, subdivisionLabel, velocityLabel;
+    juce::Label transposeLabel, rotationLabel, velocityStepsLabel, pitchStepsLabel;
+    juce::Label drumNotesLabel, rangeLabel;
     juce::Label forteLabel;
     juce::Label forteSearchLabel;
     juce::Label forteSelectionLabel;

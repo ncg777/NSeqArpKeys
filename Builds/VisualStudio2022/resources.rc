@@ -11,16 +11,16 @@
 IDI_ICON1 ICON "icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION  1,1,1,0
+FILEVERSION  1,2,0,0
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
     BLOCK "040904E4"
     BEGIN
       VALUE "FileDescription",  "NSeqArpKeys\0"
-      VALUE "FileVersion",  "1.1.1\0"
+      VALUE "FileVersion",  "1.2.0\0"
       VALUE "ProductName",  "NSeqArpKeys\0"
-      VALUE "ProductVersion",  "1.1.1\0"
+      VALUE "ProductVersion",  "1.2.0\0"
     END
   END
 
