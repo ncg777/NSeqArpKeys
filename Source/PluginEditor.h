@@ -89,6 +89,7 @@ private:
     juce::Slider meterNumeratorSlider;
     juce::Slider meterDenominatorSlider;
     juce::ToggleButton latchButton;
+    juce::ToggleButton previewSoundButton;
     juce::TextButton stopKeyButton;
     juce::TextButton stopAllButton;
     juce::Label presetNameLabel;

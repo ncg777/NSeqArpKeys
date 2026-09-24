@@ -68,15 +68,7 @@ def main():
 
     sums = []
     with zipfile.ZipFile(output, "w") as archive:
-        if args.platform == "windows-x64":
-            add_file(archive, artifacts / "Standalone" / "NSeqArpKeys.exe",
-                     "NSeqArpKeys.exe", sums)
-        elif args.platform == "linux-x64":
-            add_file(archive, artifacts / "Standalone" / "NSeqArpKeys",
-                     "NSeqArpKeys", sums)
-        else:
-            add_tree(archive, artifacts / "Standalone" / "NSeqArpKeys.app",
-                     "NSeqArpKeys.app", sums)
+        if args.platform == "macos-universal":
             add_tree(archive, artifacts / "AU" / "NSeqArpKeys.component",
                      "NSeqArpKeys.component", sums)
         add_tree(archive, artifacts / "VST3" / "NSeqArpKeys.vst3", "NSeqArpKeys.vst3", sums)

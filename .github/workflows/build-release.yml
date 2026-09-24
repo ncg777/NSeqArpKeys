@@ -57,7 +57,6 @@ jobs:
       - name: Build native formats
         shell: bash
         run: |
-          cmake --build build --config Release --target NSeqArpKeys_Standalone --parallel 2
           cmake --build build --config Release --target NSeqArpKeys_VST3 --parallel 2
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             cmake --build build --config Release --target NSeqArpKeys_AU --parallel 2
@@ -108,4 +107,4 @@ jobs:
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/*.zip --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" release/*.zip --verify-tag --title "NSeqArpKeys ${GITHUB_REF_NAME#v}" --notes-file "docs/release-notes-${GITHUB_REF_NAME#v}.md"

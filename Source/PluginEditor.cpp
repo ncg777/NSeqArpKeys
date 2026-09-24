@@ -89,6 +89,11 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     latchButton.setToggleState(audioProcessor.isLatchEnabled(), juce::dontSendNotification);
     latchButton.onClick = [this] { audioProcessor.setLatchEnabled(latchButton.getToggleState()); };
     addAndMakeVisible(latchButton);
+    previewSoundButton.setButtonText("Preview sound");
+    previewSoundButton.setTooltip("Turn off to silence the built-in preview while generated MIDI continues to your instrument.");
+    previewSoundButton.setToggleState(audioProcessor.isPreviewSoundEnabled(), juce::dontSendNotification);
+    previewSoundButton.onClick = [this] { audioProcessor.setPreviewSoundEnabled(previewSoundButton.getToggleState()); };
+    addAndMakeVisible(previewSoundButton);
 
     stopKeyButton.setButtonText("Stop Key");
     stopKeyButton.onClick = [this] { audioProcessor.requestStopKey(audioProcessor.getSelectedKey()); };
@@ -221,8 +226,6 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         changeAssignment([this](KeyAssignment& a) {
             a.mode = modeSelector.getSelectedId() == 2
                 ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
-            if (a.mode == KeyAssignment::Mode::rhythmic && a.channel == 1)
-                a.channel = 10;
         });
         loadAssignmentForKey(audioProcessor.getSelectedKey());
     };
@@ -279,6 +282,10 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     };
     addLane(velocityStepsLabel, velocityStepsEditor, "Velocity lane", true);
     addLane(pitchStepsLabel, pitchStepsEditor, "Pitch lane", false);
+    velocityStepsEditor.setTextToShowWhenEmpty("Optional: empty = full velocity; 0 = mute", juce::Colours::grey);
+    pitchStepsEditor.setTextToShowWhenEmpty("Optional: empty or 0 = unchanged pitch", juce::Colours::grey);
+    modeSelector.setTooltip("Rhythmic uses Drum notes without a Forte set. Set Channel to match your receiving instrument.");
+    channelSlider.setTooltip("MIDI output channel: must match the receiving instrument. Changing mode keeps this channel.");
     addLabel(drumNotesLabel, "Drum notes");
     addAndMakeVisible(drumNotesEditor);
     drumNotesEditor.setTooltip("16 MIDI note numbers for bits 0–15; e.g. 36 38 42 ...");
@@ -556,6 +563,8 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     stopKeyButton.setBounds(transportRow.removeFromLeft(110));
     transportRow.removeFromLeft(8);
     stopAllButton.setBounds(transportRow.removeFromLeft(110));
+    transportRow.removeFromLeft(12);
+    previewSoundButton.setBounds(transportRow.removeFromLeft(170));
     area.removeFromTop(6);
 
     // Two-column layout for global params
@@ -1124,7 +1133,7 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
     browserOpen = open;
     browsePresetsButton.setButtonText(open ? "Back to Editor" : "Browse Presets");
     for (juce::Component* component : std::initializer_list<juce::Component*> { &keyboardComponent, &selectedKeyLabel,
-                                        &latchButton, &stopKeyButton, &stopAllButton,
+                                        &latchButton, &previewSoundButton, &stopKeyButton, &stopAllButton,
                                         &meterNumeratorLabel, &meterNumeratorSlider,
                                         &meterDenominatorLabel, &meterDenominatorSlider,
                                         &channelLabel, &channelSlider, &octaveLabel,
@@ -1188,6 +1197,7 @@ void NSeqArpKeysAudioProcessorEditor::updatePresetDisplay()
 
 void NSeqArpKeysAudioProcessorEditor::timerCallback()
 {
+    previewSoundButton.setToggleState(audioProcessor.isPreviewSoundEnabled(), juce::dontSendNotification);
     // Host automation may update the global parameter without restoring state.
     if (!meterNumeratorSlider.isMouseButtonDown())
         meterNumeratorSlider.setValue(audioProcessor.getMeterNumerator()->get(), juce::dontSendNotification);

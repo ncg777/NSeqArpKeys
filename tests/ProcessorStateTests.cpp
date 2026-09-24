@@ -29,7 +29,7 @@ void restoreXml(NSeqArpKeysAudioProcessor& p, const juce::XmlElement& state)
 }
 }
 
-int main(int argc, char** argv)
+int runTests(int argc, char** argv)
 {
     NSeqArpKeysAudioProcessor processor;
     auto pattern = drum(36);
@@ -53,6 +53,7 @@ int main(int argc, char** argv)
     rests.sequence = { 0, 0, 0 };
     processor.setAssignmentForKey(62, rests);
     processor.setSelectedKey(62);
+    processor.setPreviewSoundEnabled(false);
     processor.getMeterDenominator()->setValueNotifyingHost(
         processor.getMeterDenominator()->convertTo0to1(7));
 
@@ -61,6 +62,7 @@ int main(int argc, char** argv)
     NSeqArpKeysAudioProcessor restored;
     restored.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
     require(restored.getAssignmentForKey(60) == pattern, "DAW state lost 1.2.0 fields");
+    require(!restored.isPreviewSoundEnabled(), "Preview sound setting was not restored");
     require(restored.getAssignmentForKey(61).sequence.empty(), "Empty pattern was replaced on restore");
     require(restored.getAssignmentForKey(62).sequence.size() == 3, "All-rest loop length was lost");
     require(restored.getSelectedKey() == 62 && restored.getMeterDenominator()->get() == 7,
@@ -79,6 +81,7 @@ int main(int argc, char** argv)
     old->setAttribute("sequence", "1 0");
     old->setAttribute("forte", "1-1.0");
     restoreXml(restored, legacy);
+    require(restored.isPreviewSoundEnabled(), "Legacy state should retain audible preview by default");
     const auto migrated = restored.getAssignmentForKey(60);
     require(migrated.subdivision == 0 && migrated.effectiveSubdivision(3) == 3
             && migrated.fixedLengthSteps == 0 && migrated.mode == KeyAssignment::Mode::melodic,
@@ -150,12 +153,75 @@ int main(int argc, char** argv)
     require(midi.getNumEvents() == 1 && (*midi.begin()).getMessage().isNoteOff(),
             "Stop All must release the other active key");
 
+    // Reported rhythmic pattern, without a Forte set or expression lanes.
+    // Preview-key input follows the same queue used by the editor keyboard.
+    NSeqArpKeysAudioProcessor rhythm;
+    rhythm.prepareToPlay(48000.0, 512);
+    KeyAssignment beat;
+    beat.mode = KeyAssignment::Mode::rhythmic;
+    beat.channel = 10;
+    beat.sequence = { 1, 0, 0, 0, 2, 0, 0, 0 };
+    beat.subdivision = 4;
+    rhythm.setAssignmentForKey(60, beat);
+    std::vector<int> drumOnsets;
+    juce::AudioBuffer<float> drumAudio(2, 512);
+    juce::MidiBuffer drumMidi;
+    rhythm.queuePreviewMidiMessage(juce::MidiMessage::noteOn(1, 60, static_cast<juce::uint8>(127)));
+    for (int block = 0; block < 94; ++block)
+    {
+        if (block == 2) rhythm.setPreviewSoundEnabled(false);
+        if (block == 60) rhythm.setPreviewSoundEnabled(true);
+        rhythm.processBlock(drumAudio, drumMidi);
+        if (block >= 2 && block < 60)
+            require(drumAudio.getMagnitude(0, drumAudio.getNumSamples()) == 0.0f,
+                    "MIDI-only playback leaked preview audio");
+        if (block == 0 || block == 60)
+            require(drumAudio.getMagnitude(0, drumAudio.getNumSamples()) > 0.0f,
+                    "Enabling preview did not restore sound during playback");
+        for (const auto event : drumMidi)
+            if (event.getMessage().isNoteOn())
+            {
+                require(event.getMessage().getChannel() == 10, "Rhythm changed output routing");
+                require(event.getMessage().getVelocity() == 100, "Empty lane muted rhythm");
+                drumOnsets.push_back(event.getMessage().getNoteNumber());
+            }
+        drumMidi.clear();
+    }
+    require(drumOnsets == std::vector<int>({ 36, 38, 36 }),
+            "Rhythmic pattern must play kick/snare and loop without a Forte set");
+
     if (argc == 2)
     {
         juce::ScopedJuceInitialiser_GUI gui;
         processor.setSelectedKey(60);
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
         require(editor != nullptr, "Editor failed to open");
+        bool previewToggleFound = false;
+        for (auto* child : editor->getChildren())
+            if (auto* toggle = dynamic_cast<juce::ToggleButton*>(child))
+                if (toggle->getButtonText() == "Preview sound")
+                {
+                    previewToggleFound = true;
+                    require(!toggle->getToggleState(), "Editor lost the saved preview setting");
+                    toggle->setToggleState(true, juce::dontSendNotification);
+                    toggle->onClick();
+                    require(processor.isPreviewSoundEnabled(), "Preview toggle did not enable sound");
+                    toggle->setToggleState(false, juce::dontSendNotification);
+                    toggle->onClick();
+                    require(!processor.isPreviewSoundEnabled(), "Preview toggle did not mute sound");
+                }
+        require(previewToggleFound, "Preview sound control missing");
+        for (auto* child : editor->getChildren())
+            if (auto* combo = dynamic_cast<juce::ComboBox*>(child))
+                if (combo->getItemText(0) == "Melodic")
+                {
+                    processor.setChannelForKey(60, 1);
+                    combo->setSelectedId(1, juce::sendNotificationSync);
+                    combo->setSelectedId(2, juce::sendNotificationSync);
+                    require(processor.getAssignmentForKey(60).channel == 1,
+                            "Switching to rhythmic mode changed the selected MIDI channel");
+                    processor.setAssignmentForKey(60, pattern);
+                }
         auto click = [&](const juce::String& caption)
         {
             for (auto* child : editor->getChildren())
@@ -194,4 +260,15 @@ int main(int argc, char** argv)
         require(processor.getAssignmentForKey(60) == pattern, "Reopening editor changed pattern state");
     }
     std::cout << "Processor state and playback tests passed\n";
+    return 0;
+}
+
+int main(int argc, char** argv)
+{
+    try { return runTests(argc, argv); }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }

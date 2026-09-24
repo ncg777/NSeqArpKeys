@@ -62,7 +62,7 @@
 </head>
 <body><main>
   <section class="cover">
-    <div class="eyebrow">Standalone instrument + VST3 / AU plug-ins</div>
+    <div class="eyebrow">VST3 / AU MIDI pattern plug-ins</div>
     <img class="cover-logo" src="../assets/brand/logo.svg" alt="NSeqArpKeys logo">
     <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
     <div class="rule"></div>
@@ -72,10 +72,9 @@
 
   <section>
     <h2>1. Get started</h2>
-    <p class="lead">You can use NSeqArpKeys on its own or load a plug-in in a compatible DAW.</p>
+    <p class="lead">Load NSeqArpKeys as an instrument plug-in in a compatible DAW.</p>
     <h3>Install</h3>
-    <div class="two-col">
-      <div class="mini-card"><h3>Standalone</h3><p>Extract your OS archive and run <code>NSeqArpKeys.exe</code> on Windows, <code>NSeqArpKeys</code> on Linux, or <code>NSeqArpKeys.app</code> on macOS. Use <strong>Options</strong> to select an audio device if needed.</p></div>
+    <div>
       <div class="mini-card"><h3>Plug-in</h3><p>Copy the complete <code>NSeqArpKeys.vst3</code> bundle to your VST3 folder and rescan in your DAW. The macOS archive also includes <code>NSeqArpKeys.component</code> for Audio Units.</p></div>
     </div>
     <div class="callout"><strong>Keep plug-in bundles intact.</strong> VST3 folders: Windows <code>C:\Program Files\Common Files\VST3</code>, Linux <code>~/.vst3</code>, macOS <code>~/Library/Audio/Plug-Ins/VST3</code>. For Audio Units on macOS, use <code>~/Library/Audio/Plug-Ins/Components</code>.</div>
@@ -99,6 +98,7 @@
         <tr><td><strong>Browse Presets / Save</strong></td><td>Opens the library. Save updates the current user preset, or opens the browser to save a new copy.</td></tr>
         <tr><td><strong>Keyboard</strong></td><td>Triggers a pattern and selects the MIDI key whose assignment is shown.</td></tr>
         <tr><td><strong>Latch / Stop Key / Stop All</strong></td><td>Keeps patterns running after release, stops the selected key, or stops every active key.</td></tr>
+        <tr><td><strong>Preview sound</strong></td><td>Uncheck to silence the built-in tones while generated MIDI continues.</td></tr>
         <tr><td><strong>Meter Num / Global Steps/QN</strong></td><td>Global grouping and default subdivision. Steps/QN controls the duration of one step at the current tempo.</td></tr>
         <tr><td><strong>Channel / Octave</strong></td><td>Sets the selected key's MIDI output channel and pitch region.</td></tr>
         <tr><td><strong>Gate / Fixed Steps</strong></td><td>Adds a gated fraction of the span through rests and a fixed duration in steps.</td></tr>
@@ -131,8 +131,8 @@
     <h3>Tempo and meter</h3>
     <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x effective Steps/QN)</code> seconds: at 120 BPM and Steps/QN 4, a step lasts 0.125 seconds. A per-key value of 0 inherits the global setting. Meter Num is saved but does not currently change step duration or pattern length.</p>
     <h3>Rhythmic mode and variation</h3>
-    <p>In rhythmic mode, bit 0 plays the first Drum note, bit 1 the second, and so on to bit 15. Pattern <code>5 0</code> triggers bits 0 and 2, then rests. Nonpositive masks are silent. The usual output channel is 10 when switching from channel 1.</p>
-    <p>Output velocity scales with incoming key velocity. Velocity values are 0-127; zero silences a step. Pitch offsets are -127 to 127 semitones. Both lanes cycle within the pattern and restart at every pattern loop. Rotate and Reverse reorder the integer steps, leaving the lanes in place.</p>
+    <p>Rhythmic mode needs no Forte set. Bit 0 plays the first Drum note, bit 1 the second, through bit 15. Try <code>1 0 0 0 2 0 0 0</code> for notes 36 and 38 with the default map. Nonpositive masks are silent. Set Channel to match the receiving instrument; changing mode preserves it.</p>
+    <p>Leave both lanes empty to start and Transpose at 0. Output velocity scales with incoming key velocity. Velocity lane values are 0-127; zero mutes a step. Pitch lane values offset notes by -127 to 127 semitones; empty or 0 preserves pitch. Both lanes cycle within the pattern and restart each loop. Rotate and Reverse reorder only the integer steps.</p>
   </section>
 
   <section class="page">
@@ -147,7 +147,7 @@
     <p>Choose <strong>(No set)</strong> to clear the selected key's set. A melodic pattern without a set is silent; rhythmic mode uses Drum notes independently. Changing search text only filters the menu; choose a result to change the assignment.</p>
     <h3>Live performance</h3>
     <p>Normally, a pattern runs only while its trigger note is held. Latch changes note release behavior: the first trigger keeps the pattern running, and another trigger of the same key switches it off. Turning Latch off stops patterns whose trigger keys are no longer held.</p>
-    <p>The plug-in emits generated MIDI notes and also has an internal preview sound. In a DAW, generated MIDI routing depends on the host. In standalone mode, check <strong>Options</strong> for the audio output device if you cannot hear the preview.</p>
+    <p>Turn off <strong>Preview sound</strong> to silence the built-in tones while MIDI continues. This setting is saved with the setup. Route the plug-in's MIDI output to another instrument in your DAW and match Channel to the receiving instrument. MIDI routing depends on the host.</p>
   </section>
 
   <section class="page">
@@ -168,7 +168,7 @@
         <tr><td><strong>Import / Export</strong></td><td>Copies a <code>.nseqpreset</code> file into the library, or saves the selected library preset to a file. Import selects the new row; click Load to apply it.</td></tr>
       </tbody>
     </table>
-    <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The standalone app and plug-ins share this folder on each OS.</div>
+    <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The plug-in formats share this folder on each OS.</div>
     <h3>Individual pattern files</h3>
     <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Whole presets embed every assignment, so they can travel without the pattern bank. Loading a pattern replaces only the selected key and restarts it if active. Other keys keep playing. Pattern loading and range copies can be undone. Undo/Redo lasts for the editor session and resets when loading a whole preset or project.</p>
   </section>
@@ -178,10 +178,9 @@
     <table>
       <thead><tr><th>What you notice</th><th>What to check</th></tr></thead>
       <tbody>
-        <tr><td>No notes when a key is held</td><td>Select the key, enter at least one nonzero Pattern value, and choose a Forte Set. Try the Single Note Pulse factory preset on C4.</td></tr>
+        <tr><td>No notes when a key is held</td><td>Enter a positive Pattern value. Melodic mode needs a Forte Set; rhythmic mode uses Drum notes. Check Velocity lane for muted steps and the receiving MIDI channel.</td></tr>
         <tr><td>The pattern stops when you release the key</td><td>That is the default behavior. Turn on Latch before triggering the key if you want it to continue during edits.</td></tr>
         <tr><td>A pattern keeps playing</td><td>Click its trigger key again while Latch is on, use Stop Key for the selected key, or use Stop All.</td></tr>
-        <tr><td>No sound in standalone mode</td><td>Open Options and select an active audio output device. Confirm the selected key has a playable assignment.</td></tr>
         <tr><td>VST3 does not appear in the DAW</td><td>Keep the outer <code>NSeqArpKeys.vst3</code> folder intact in the VST3 directory and rescan plug-ins in the DAW.</td></tr>
         <tr><td>A preset does not appear</td><td>Check the browser's search, category, and Favourites only filters. User files must be valid <code>.nseqpreset</code> files in the preset folder.</td></tr>
       </tbody>
@@ -191,7 +190,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.2.0 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.2.0 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 </main></body>
 </html>

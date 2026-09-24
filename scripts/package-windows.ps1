@@ -5,13 +5,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$standalone = Join-Path $repoRoot 'dist\windows-x64\Standalone\NSeqArpKeys.exe'
 $vstBundle = Join-Path $repoRoot 'dist\windows-x64\VST3\NSeqArpKeys.vst3'
 $manifest = Join-Path $vstBundle 'Contents\Resources\moduleinfo.json'
 $vstBinary = Join-Path $vstBundle 'Contents\x86_64-win\NSeqArpKeys.vst3'
 $manual = Join-Path $repoRoot 'output\pdf\NSeqArpKeys-Manual.pdf'
 
-foreach ($required in @($standalone, $manifest, $vstBinary, $manual)) {
+foreach ($required in @($manifest, $vstBinary, $manual)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf) -or
         (Get-Item -LiteralPath $required).Length -eq 0) {
         throw "Required nonempty file is missing: $required"
@@ -48,9 +47,7 @@ $finalZip = Join-Path $OutputDirectory $zipName
 $temporaryZip = Join-Path $OutputDirectory ('.' + $zipName + '.' + [guid]::NewGuid().ToString('N') + '.tmp')
 $backupZip = Join-Path $OutputDirectory ('.' + $zipName + '.' + [guid]::NewGuid().ToString('N') + '.bak')
 
-$files = @(
-    [pscustomobject]@{ Source = $standalone; Entry = 'NSeqArpKeys.exe' }
-)
+$files = @()
 $bundlePrefix = [IO.Path]::GetFullPath($vstBundle).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 foreach ($file in (Get-ChildItem -LiteralPath $vstBundle -File -Recurse | Sort-Object FullName)) {
     $relative = $file.FullName.Substring($bundlePrefix.Length).Replace('\', '/')
@@ -61,7 +58,6 @@ $files += [pscustomobject]@{ Source = $manual; Entry = 'NSeqArpKeys-Manual.pdf' 
 $startHere = @"
 NSeqArpKeys $version - Windows x64
 
-Standalone app: extract the ZIP and run NSeqArpKeys.exe.
 VST3: copy the entire NSeqArpKeys.vst3 folder to
   C:\Program Files\Common Files\VST3
 Then rescan plug-ins in your DAW and load NSeqArpKeys as an instrument.

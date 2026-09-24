@@ -306,6 +306,10 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     processUntil(buffer.getNumSamples());
     m_previewSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    // Keep the synth and MIDI clock advancing so toggling preview never changes
+    // note timing or leaves stale voices when sound is enabled again.
+    if (!isPreviewSoundEnabled())
+        buffer.clear();
 }
 
 //==============================================================================
@@ -332,6 +336,7 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state->setAttribute("meterNumerator",   meterNumerator->get());
     state->setAttribute("meterDenominator", meterDenominator->get());
     state->setAttribute("latchEnabled", isLatchEnabled());
+    state->setAttribute("previewSoundEnabled", isPreviewSoundEnabled());
 
     const juce::ScopedLock lock(m_assignmentsLock);
     state->setAttribute("currentPresetId", m_currentPresetId);
@@ -364,6 +369,7 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
         p->setValueNotifyingHost(p->convertTo0to1(state->getIntAttribute("meterDenominator", 4)));
 
     setLatchEnabled(state->getBoolAttribute("latchEnabled", false));
+    setPreviewSoundEnabled(state->getBoolAttribute("previewSoundEnabled", true));
     requestStopAll();
     const juce::ScopedLock lock(m_assignmentsLock);
     m_assignments.fill(KeyAssignment{});

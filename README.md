@@ -3,7 +3,7 @@
 ![NSeqArpKeys logo](assets/brand/logo.svg)
 
 NSeqArpKeys is a pattern instrument for Windows, Linux, and macOS. It builds as
-a standalone app and a VST3; macOS also has an Audio Unit. Each MIDI trigger
+a VST3 plug-in; macOS also has an Audio Unit. Each MIDI trigger
 key has its own pattern, Forte pitch-class set, channel, octave, Gate, Fixed
 Steps, optional subdivision, mode, and expression controls. Hold a key to play
 its pattern, or turn on Latch to keep it
@@ -13,14 +13,14 @@ preview sound.
 ## Download and install
 
 Download the archive for your OS from the GitHub release. Each archive contains
-the native standalone app, the VST3 bundle, the user manual, and SHA-256 hashes.
+the VST3 bundle, the user manual, and SHA-256 hashes.
 The macOS archive also contains an Audio Unit bundle.
 
-| OS | Standalone | VST3 folder | Audio Unit folder |
-| --- | --- | --- | --- |
-| Windows x64 | `NSeqArpKeys.exe` | `C:\Program Files\Common Files\VST3` | — |
-| Linux x64 | `NSeqArpKeys` | `~/.vst3` | — |
-| macOS Intel / Apple Silicon | `NSeqArpKeys.app` | `~/Library/Audio/Plug-Ins/VST3` | `~/Library/Audio/Plug-Ins/Components` |
+| OS | VST3 folder | Audio Unit folder |
+| --- | --- | --- |
+| Windows x64 | `C:\Program Files\Common Files\VST3` | � |
+| Linux x64 | `~/.vst3` | � |
+| macOS Intel / Apple Silicon | `~/Library/Audio/Plug-Ins/VST3` | `~/Library/Audio/Plug-Ins/Components` |
 
 Copy the entire plug-in bundle into the indicated folder, then rescan plug-ins
 in your DAW. The macOS build is universal; it is not signed or notarized.
@@ -28,6 +28,10 @@ in your DAW. The macOS build is universal; it is not signed or notarized.
 Start with the **Single Note Pulse** factory preset and hold C4 (MIDI 60).
 The pattern stops when the key is released. Turn on **Latch (keep playing)**
 to hear it while editing. **Stop Key** and **Stop All** end playback.
+
+Turn off **Preview sound** to silence the built-in tones while MIDI continues.
+Route the plug-in's MIDI output to your instrument in the DAW and match its MIDI
+channel to the assignment's **Channel**. The preview setting is saved with the setup.
 
 The editable [HTML manual](docs/NSeqArpKeys-Manual.html) and
 [printable PDF](output/pdf/NSeqArpKeys-Manual.pdf) cover all controls, Forte
@@ -43,8 +47,10 @@ Old projects without a per-key Steps/QN value continue to inherit the global
 value.
 
 Choose **Melodic** for Forte-mapped integer bitsets or **Rhythmic** for bits
-0–15 mapped to the 16 editable drum MIDI notes (default channel 10 when
-switching from channel 1). A velocity value scales with how hard the key is
+0–15 mapped to the 16 editable drum MIDI notes. No Forte set is needed in
+Rhythmic mode. Set **Channel** to match the receiving instrument; switching
+modes preserves it. Leave both lanes empty to start, and keep **Transpose**
+at 0 for the original drum mapping. A velocity value scales with how hard the key is
 struck. The velocity lane has values 0–127 (0 silences that event), and the
 pitch lane offsets each step in semitones. Shorter lanes cycle within the
 pattern, and both lanes restart at each pattern loop. **Rotate**
@@ -90,7 +96,7 @@ overlap. For example, a span of 3 with Gate 0.5 and Fixed Steps 0.5 lasts
 The preset browser has six factory examples plus searchable user presets.
 Presets capture all 128 key assignments, including Gate and Fixed Steps. You
 can save, update, duplicate, favourite, import, export, and delete user
-presets. The standalone app and plug-ins share the OS application-data folder
+presets. The plug-in formats share the OS application-data folder
 `NSeqArpKeys/Presets`. DAW projects also retain their current plug-in state.
 To share a preset separately, export a `.nseqpreset` file.
 
@@ -102,7 +108,6 @@ CMake fetch the pinned JUCE version.
 
 ```text
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --target NSeqArpKeys_Standalone
 cmake --build build --config Release --target NSeqArpKeys_VST3
 cmake --build build --config Release --target NSeqArpKeysTests NSeqArpKeysDomainTests NSeqArpKeysStateTests
 ctest --test-dir build -C Release --output-on-failure

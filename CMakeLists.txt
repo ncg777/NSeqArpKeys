@@ -14,7 +14,7 @@ else()
     FetchContent_MakeAvailable(JUCE)
 endif()
 
-set(plugin_formats Standalone VST3)
+set(plugin_formats VST3)
 if (APPLE)
     list(APPEND plugin_formats AU)
 endif()

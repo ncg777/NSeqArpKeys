@@ -71,6 +71,8 @@ public:
     void requestStopAll();
     void setLatchEnabled(bool enabled);
     bool isLatchEnabled() const;
+    void setPreviewSoundEnabled(bool enabled) { m_previewSoundEnabled.store(enabled); }
+    bool isPreviewSoundEnabled() const { return m_previewSoundEnabled.load(); }
     juce::String getCurrentPresetId() const;
     void setCurrentPresetId(const juce::String& id);
     uint64_t getStateRestoreRevision() const { return m_stateRestoreRevision.load(); }
@@ -99,6 +101,7 @@ private:
     // -----------------------------------------------------------------------
     PatternScheduler m_scheduler;
     juce::Synthesiser m_previewSynth;
+    std::atomic<bool> m_previewSoundEnabled { true };
     juce::MidiBuffer m_pendingPreviewMidi;
     juce::CriticalSection m_pendingPreviewMidiLock;
     int m_nextPendingPreviewSamplePosition = 0;
