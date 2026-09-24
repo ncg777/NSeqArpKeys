@@ -24,6 +24,12 @@ private:
 
     // Refresh the UI controls to show the assignment for the given key.
     void loadAssignmentForKey(int key);
+    void savePatternToBank();
+    void loadPatternFromBank();
+    void applyRange();
+    void recordKeyEdit();
+    void undoKeyEdit();
+    void redoKeyEdit();
     void updateForteSearchResults();
     void updateSelectedForteLabel();
     void timerCallback() override;
@@ -89,6 +95,19 @@ private:
     juce::Slider       gateSlider;
     juce::Slider       fixedLengthStepsSlider;
     juce::TextEditor   patternTextEditor;
+    juce::TextEditor   patternNameEditor, velocityStepsEditor, pitchStepsEditor, drumNotesEditor;
+    juce::ComboBox     modeSelector;
+    juce::Slider       subdivisionSlider, velocitySlider, transposeSlider, rotationSlider;
+    juce::ToggleButton reverseButton;
+    juce::TextButton copyPatternButton, pastePatternButton, duplicatePatternButton;
+    juce::TextButton savePatternButton, loadPatternButton, applyRangeButton;
+    juce::TextButton undoButton, redoButton;
+    juce::Slider rangeFirstSlider, rangeLastSlider;
+    juce::Slider euclidHitsSlider, euclidStepsSlider;
+    juce::TextButton euclidButton;
+    juce::ToggleButton transposeRangeButton;
+    std::unique_ptr<KeyAssignment> copiedPattern;
+    std::vector<std::pair<int, KeyAssignment>> undoHistory, redoHistory;
     juce::TextEditor   forteSearchEditor;
     juce::ComboBox     forteNumberSelector;
     std::vector<ForteSearchEntry> forteSearchEntries;
@@ -102,6 +121,10 @@ private:
     juce::Label gateLabel;
     juce::Label fixedLengthStepsLabel;
     juce::Label patternLabel;
+    juce::Label patternNameLabel, modeLabel, subdivisionLabel, velocityLabel;
+    juce::Label transposeLabel, rotationLabel, velocityStepsLabel, pitchStepsLabel;
+    juce::Label drumNotesLabel, rangeLabel;
+    juce::Label euclidLabel;
     juce::Label forteLabel;
     juce::Label forteSearchLabel;
     juce::Label forteSelectionLabel;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.1.1 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -69,4 +69,9 @@ if (BUILD_TESTING)
         juce::juce_midi_ci
         juce::juce_recommended_config_flags)
     add_test(NAME PatternScheduler COMMAND NSeqArpKeysTests)
+    juce_add_console_app(NSeqArpKeysDomainTests PRODUCT_NAME "NSeqArpKeys Domain Tests")
+    juce_generate_juce_header(NSeqArpKeysDomainTests)
+    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
+    target_link_libraries(NSeqArpKeysDomainTests PRIVATE NSeqArpKeys juce::juce_audio_utils)
+    add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
 endif()

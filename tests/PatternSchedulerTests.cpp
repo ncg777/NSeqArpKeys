@@ -1,4 +1,5 @@
 #include "../Source/Engine/PatternScheduler.h"
+#include "../Source/Engine/GateRunnerEngine.h"
 
 #include <stdexcept>
 #include <vector>
@@ -9,6 +10,8 @@ struct Event
 {
     int sample;
     bool on;
+    int note;
+    int velocity;
 };
 
 void require(bool condition, const char* message)
@@ -28,19 +31,20 @@ KeyAssignment assignmentWith(const std::vector<int>& sequence, float gate, float
     return assignment;
 }
 
-std::vector<Event> process(PatternScheduler& scheduler, int blocks)
+std::vector<Event> process(PatternScheduler& scheduler, int blocks, int denominator = 1)
 {
     std::vector<Event> result;
     for (int block = 0; block < blocks; ++block)
     {
         juce::MidiBuffer midi;
-        scheduler.processBlock(midi, 1000, 60.0, 4, 1);
+        scheduler.processBlock(midi, 1000, 60.0, 4, denominator);
         for (const auto& metadata : midi)
         {
             const auto& message = metadata.getMessage();
             if (message.isNoteOnOrOff())
                 result.push_back({ block * 1000 + metadata.samplePosition,
-                                   message.isNoteOn() });
+                                   message.isNoteOn(), message.getNoteNumber(),
+                                   message.isNoteOn() ? message.getVelocity() : 0 });
         }
     }
     return result;
@@ -85,4 +89,55 @@ int main()
     require(zero.size() == 2 && zero[0].on && !zero[1].on
             && zero[0].sample == 0 && zero[1].sample == 0,
             "Zero duration must emit a matching note-off");
+
+    scheduler.prepare(1000.0);
+    auto fast = assignmentWith({ 1, 0 }, 0.5f, 0.0f);
+    auto slow = fast;
+    fast.subdivision = 4;
+    slow.subdivision = 2;
+    fast.velocity = 100;
+    fast.velocitySteps = { 127, 0 };
+    slow.transpose = 12;
+    trigger.clear();
+    scheduler.triggerKey(60, fast, 60.0, 4, 1, trigger, 64);
+    scheduler.triggerKey(61, slow, 60.0, 4, 1, trigger);
+    const auto polymetric = process(scheduler, 2);
+    require(polymetric.size() >= 9, "Two subdivisions must run independently");
+    require(polymetric[0].sample == 0 && polymetric[0].on
+            && polymetric[0].velocity == 100 * 64 / 127,
+            "Trigger velocity must scale generated notes");
+    bool foundFastLoop = false, foundSlowLoop = false;
+    for (const auto& e : polymetric)
+    {
+        if (e.on && e.sample == 500 && e.note == polymetric[0].note)
+            foundFastLoop = true;
+        if (e.on && e.sample == 1000 && e.note != polymetric[0].note)
+            foundSlowLoop = true;
+    }
+    require(foundFastLoop && foundSlowLoop, "Loop timing ignored per-pattern subdivision");
+
+    auto drums = assignmentWith({ 5, 0 }, 0.5f, 0.0f);
+    drums.mode = KeyAssignment::Mode::rhythmic;
+    drums.channel = 10;
+    drums.pitchSteps = { 0, 1 };
+    const auto steps = GateRunnerEngine::computeAllSteps(drums);
+    require(steps.size() == 2 && steps[0].size() == 2
+            && steps[0][0] == 36 && steps[0][1] == 42 && steps[1].empty(),
+            "Rhythm mode should map bits 0 and 2 to drum notes");
+    drums.reverse = true;
+    drums.rotation = 1;
+    require(GateRunnerEngine::computeAllSteps(drums)[0].size() == 2,
+            "Reverse and rotation should transform the sequence");
+
+    scheduler.prepare(1000.0);
+    auto unison = assignmentWith({ 1 }, 2.0f, 0.0f);
+    trigger.clear();
+    scheduler.triggerKey(60, unison, 60.0, 4, 1, trigger);
+    scheduler.triggerKey(61, unison, 60.0, 4, 1, trigger);
+    process(scheduler, 1);
+    juce::MidiBuffer releaseFirst, releaseLast;
+    scheduler.stopKey(60, releaseFirst);
+    scheduler.stopKey(61, releaseLast);
+    require(releaseFirst.isEmpty() && releaseLast.getNumEvents() == 1,
+            "Releasing one trigger must not silence another on the same output pitch");
 }

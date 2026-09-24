@@ -2,12 +2,14 @@
 #include "GateRunnerEngine.h"
 
 #include <algorithm>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 void PatternScheduler::prepare(double sampleRate)
 {
     m_sampleRate = sampleRate;
     m_activePatterns.clear();
+    m_outputNoteCounts = {};
 }
 
 // ---------------------------------------------------------------------------
@@ -24,7 +26,8 @@ void PatternScheduler::triggerKey(int key,
                                   double bpm,
                                   int    numerator,
                                   int    denominator,
-                                  juce::MidiBuffer& midiMessages)
+                                  juce::MidiBuffer& midiMessages,
+                                  int triggerVelocity)
 {
     if (assignment.sequence.empty())
         return;
@@ -37,13 +40,24 @@ void PatternScheduler::triggerKey(int key,
         auto& old = existing->second;
         for (int note = 0; note < 128; ++note)
             if (old.activeNoteCounts[static_cast<size_t>(note)] > 0)
-                midiMessages.addEvent(juce::MidiMessage::noteOff(old.channel, note), 0);
+            {
+                auto& count = m_outputNoteCounts[static_cast<size_t>(old.channel - 1)][static_cast<size_t>(note)];
+                count = std::max(0, count - old.activeNoteCounts[static_cast<size_t>(note)]);
+                if (count == 0)
+                    midiMessages.addEvent(juce::MidiMessage::noteOff(old.channel, note), 0);
+            }
     }
 
     // Precompute step notes via the GateRunner engine.
     ActivePattern pat;
     pat.elapsedSamples = 0.0;
     pat.channel        = assignment.channel;
+    pat.subdivision    = assignment.subdivision;
+    pat.velocity       = juce::jlimit(1, 127, assignment.velocity)
+                       * juce::jlimit(1, 127, triggerVelocity) / 127;
+    pat.velocitySteps  = assignment.velocitySteps;
+    pat.lastStepDuration = computeStepDuration(bpm, numerator,
+                                  assignment.effectiveSubdivision(denominator));
     pat.gate           = assignment.gate;
     pat.fixedLengthSteps = assignment.fixedLengthSteps;
     pat.stepNotes      = GateRunnerEngine::computeAllSteps(assignment);
@@ -83,7 +97,12 @@ void PatternScheduler::stopKey(int key, juce::MidiBuffer& midiMessages)
 
     for (int note = 0; note < 128; ++note)
         if (it->second.activeNoteCounts[static_cast<size_t>(note)] > 0)
-            midiMessages.addEvent(juce::MidiMessage::noteOff(it->second.channel, note), 0);
+        {
+            auto& count = m_outputNoteCounts[static_cast<size_t>(it->second.channel - 1)][static_cast<size_t>(note)];
+            count = std::max(0, count - it->second.activeNoteCounts[static_cast<size_t>(note)]);
+            if (count == 0)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(it->second.channel, note), 0);
+        }
 
     m_activePatterns.erase(it);
 }
@@ -97,12 +116,13 @@ bool PatternScheduler::isKeyActive(int key) const
 // ---------------------------------------------------------------------------
 void PatternScheduler::stopAll(juce::MidiBuffer& midiMessages)
 {
-    for (auto& [key, pat] : m_activePatterns)
+    for (int channel = 0; channel < 16; ++channel)
         for (int note = 0; note < 128; ++note)
-            if (pat.activeNoteCounts[static_cast<size_t>(note)] > 0)
-                midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, note), 0);
+            if (m_outputNoteCounts[static_cast<size_t>(channel)][static_cast<size_t>(note)] > 0)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(channel + 1, note), 0);
 
     m_activePatterns.clear();
+    m_outputNoteCounts = {};
 }
 
 // ---------------------------------------------------------------------------
@@ -112,14 +132,18 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
                                     int    numerator,
                                     int    denominator)
 {
-    double stepDur = computeStepDuration(bpm, numerator, denominator);
-    if (stepDur <= 0.0)
-        return;
-
     for (auto& [key, pat] : m_activePatterns)
     {
         if (pat.numSteps == 0)
             continue;
+
+        const double stepDur = computeStepDuration(bpm, numerator,
+                                       pat.subdivision > 0 ? pat.subdivision : denominator);
+        if (stepDur <= 0.0 || !std::isfinite(stepDur))
+            continue;
+        if (pat.lastStepDuration > 0.0 && stepDur != pat.lastStepDuration)
+            pat.elapsedSamples *= stepDur / pat.lastStepDuration;
+        pat.lastStepDuration = stepDur;
 
         double blockStart = pat.elapsedSamples;
         double blockEnd   = blockStart + static_cast<double>(numSamples);
@@ -166,16 +190,26 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
                 static_cast<int>(event.time - blockStart));
             if (event.on)
             {
+                const int stepVelocity = pat.velocitySteps.empty() ? 127
+                    : juce::jlimit(0, 127, pat.velocitySteps[static_cast<size_t>(event.step % pat.velocitySteps.size())]);
+                const int velocity = pat.velocity * stepVelocity / 127;
+                if (velocity == 0)
+                    continue;
                 midiMessages.addEvent(juce::MidiMessage::noteOn(pat.channel, event.note,
-                    static_cast<juce::uint8>(100)), sampleAt);
+                    static_cast<juce::uint8>(velocity)), sampleAt);
                 ++pat.activeNoteCounts[static_cast<size_t>(event.note)];
+                ++m_outputNoteCounts[static_cast<size_t>(pat.channel - 1)][static_cast<size_t>(event.note)];
             }
             else
             {
                 auto& count = pat.activeNoteCounts[static_cast<size_t>(event.note)];
-                if (count > 0 && --count == 0)
+                if (count > 0)
                 {
-                    midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, event.note), sampleAt);
+                    --count;
+                    auto& global = m_outputNoteCounts[static_cast<size_t>(pat.channel - 1)][static_cast<size_t>(event.note)];
+                    global = std::max(0, global - 1);
+                    if (global == 0)
+                        midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, event.note), sampleAt);
                 }
             }
         }

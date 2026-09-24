@@ -38,9 +38,10 @@
     .step-list { counter-reset: step; list-style: none; padding: 0; margin: 3mm 0 6mm; }
     .step-list li { counter-increment: step; position: relative; padding: 0 0 4mm 11mm; margin: 0; }
     .step-list li::before { content: counter(step); position: absolute; left: 0; top: 0; color: white; background: #236e98; width: 7mm; height: 7mm; border-radius: 50%; text-align: center; line-height: 7mm; font-size: 9pt; font-weight: bold; }
-    table { border-collapse: collapse; width: 100%; margin: 4mm 0 6mm; font-size: 9.5pt; break-inside: avoid; }
+    table { border-collapse: collapse; width: 100%; margin: 4mm 0 6mm; font-size: 9.5pt; }
+    tr { break-inside: avoid; }
     th { text-align: left; background: #1c405e; color: white; font-weight: bold; }
-    td, th { padding: 2.3mm 3mm; border: 1px solid #d7e0e9; vertical-align: top; }
+    td, th { padding: 1.5mm 3mm; border: 1px solid #d7e0e9; vertical-align: top; }
     tr:nth-child(even) td { background: #f6f9fb; }
     .mono { font: 10pt Consolas, "Courier New", monospace; }
     .example { border: 1px solid #cfdfeb; background: #f5f9fc; padding: 4mm 5mm; margin: 4mm 0 6mm; break-inside: avoid; }
@@ -64,7 +65,7 @@
     <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
     <div class="rule"></div>
     <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate and Fixed Steps, then save the complete setup as a preset.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.1.1 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.2.0 | September 2026</span></div>
   </section>
 
   <section>
@@ -83,12 +84,12 @@
       <li>Release C4 to stop. To keep it running while editing, turn on <strong>Latch (keep playing)</strong>, trigger C4 once, and release it.</li>
       <li>Click the same key again, or use <strong>Stop Key</strong> or <strong>Stop All</strong>, to stop a latched pattern.</li>
     </ol>
-    <p class="small">A blank key needs both a nonzero Pattern step and a Forte Set before it produces notes. The Init preset is deliberately silent.</p>
+    <p class="small">A melodic key needs both a nonzero Pattern step and a Forte Set. Rhythmic mode uses Drum notes instead. The Init preset is deliberately silent.</p>
   </section>
 
   <section class="page">
     <h2>2. Work in the editor</h2>
-    <p>The keyboard selects a trigger note. The controls below it edit the assignment for the currently selected key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, and fixed step length.</p>
+    <p>The keyboard selects a trigger note. The controls below it edit the assignment for that key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, subdivision and expression.</p>
     <table>
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
       <tbody>
@@ -96,15 +97,22 @@
         <tr><td><strong>Browse Presets / Save</strong></td><td>Opens the library. Save updates the current user preset, or opens the browser to save a new copy.</td></tr>
         <tr><td><strong>Keyboard</strong></td><td>Triggers a pattern and selects the MIDI key whose assignment is shown.</td></tr>
         <tr><td><strong>Latch / Stop Key / Stop All</strong></td><td>Keeps patterns running after release, stops the selected key, or stops every active key.</td></tr>
-        <tr><td><strong>Meter Num / Meter Den</strong></td><td>Global meter settings. Meter Den controls the duration of one pattern step at the current tempo.</td></tr>
+        <tr><td><strong>Meter Num / Global Steps/QN</strong></td><td>Global grouping and default subdivision. Steps/QN controls the duration of one step at the current tempo.</td></tr>
         <tr><td><strong>Channel / Octave</strong></td><td>Sets the selected key's MIDI output channel and pitch region.</td></tr>
         <tr><td><strong>Gate / Fixed Steps</strong></td><td>Adds a gated fraction of the span through rests and a fixed duration in steps.</td></tr>
         <tr><td><strong>Pattern</strong></td><td>Space-separated step values. Zero creates a rest and extends the previous sounding step's available gate span.</td></tr>
+        <tr><td><strong>Name / Mode / Steps/QN</strong></td><td>Name one pattern; choose melodic or rhythmic interpretation and its step subdivision. Zero inherits the global rate.</td></tr>
+        <tr><td><strong>Velocity / Transpose / Rotate / Reverse</strong></td><td>Shape output strength and pitch or change the integer step order.</td></tr>
+        <tr><td><strong>Velocity lane / Pitch lane / Drum notes</strong></td><td>Enter per-step velocity values, semitone offsets or the 16 drum MIDI notes for bits 0–15.</td></tr>
+        <tr><td><strong>Copy / Paste / Duplicate to next key</strong></td><td>Make independent copies of a key assignment.</td></tr>
+        <tr><td><strong>Save pattern / Load pattern</strong></td><td>Store or recall a single assignment as a <code>.nseqpattern</code> file.</td></tr>
+        <tr><td><strong>MIDI range / Transpose by key / Assign range</strong></td><td>Copy an assignment into the inclusive range, optionally transposed according to each key's distance from the source.</td></tr>
+        <tr><td><strong>Euclidean hits / steps / Generate bit 0</strong></td><td>Generate evenly spaced bit-0 drum triggers, then use Rotate to shift the phase.</td></tr>
         <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
       </tbody>
     </table>
     <h3>Change a running pattern</h3>
-    <p>With Latch on, trigger a key and release it. Edit Pattern, Gate, Fixed Steps, Forte Set, Channel, or Octave while listening. The active pattern restarts with the new assignment on the next audio block.</p>
+    <p>With Latch on, trigger and release a key, then edit its controls while listening. The active pattern restarts with the new assignment on the next audio block.</p>
     <div class="callout warn"><strong>Selected key matters.</strong> Stop Key applies to the key shown in the selected-key label. Stop All ends every currently playing pattern.</div>
   </section>
 
@@ -119,7 +127,10 @@
     <div class="example"><strong>Example - a three-step span</strong><span class="mono">1 0 0 2</span><p>The first note has three steps available: its own step and two following zeros. At 50% Gate it sounds for 1.5 steps; at 100% it reaches the next sounding step. A zero step does not retrigger the note.</p></div>
     <p>Gate ranges from 0% to 200%. Values above 100% can overlap later notes. Fixed Steps ranges from 0 to 16 in increments of 0.01. The two lengths add: <code>note length = Fixed Steps + Gate x sounding span</code>. For example, a three-step span with Gate 50% and Fixed Steps 0.5 lasts 2 steps. Releasing the trigger key stops the pattern immediately when Latch is off.</p>
     <h3>Tempo and meter</h3>
-    <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x Meter Den)</code> seconds: at 120 BPM and Meter Den 4, a step lasts 0.125 seconds. Meter Num is saved with the setup but does not currently change step duration or pattern length.</p>
+    <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x effective Steps/QN)</code> seconds: at 120 BPM and Steps/QN 4, a step lasts 0.125 seconds. A per-key value of 0 inherits the global setting. Meter Num is saved but does not currently change step duration or pattern length.</p>
+    <h3>Rhythmic mode and variation</h3>
+    <p>In rhythmic mode, bit 0 plays the first Drum note, bit 1 the second, and so on to bit 15. Pattern <code>5 0</code> triggers bits 0 and 2, then rests. Nonpositive masks are silent. The usual output channel is 10 when switching from channel 1.</p>
+    <p>Output velocity scales with incoming key velocity. The velocity lane cycles when shorter than the pattern; zero silences a step. Pitch offsets cycle in semitones. Rotate and Reverse reorder the integer steps, leaving the lanes in place.</p>
   </section>
 
   <section class="page">
@@ -131,7 +142,7 @@
       <li>Open <strong>Forte Set</strong> and choose a match. The selected set is shown underneath.</li>
     </ol>
     <div class="example"><strong>Example</strong><p><code>7-35.11 - diatonic scale [0 2 4 5 7 9 11]</code> contains seven pitch classes. With this set, <code>1 2 4 8</code> walks upward through its first four scale positions.</p></div>
-    <p>Choose <strong>(No set)</strong> to clear the selected key's set. A pattern without a set is silent. Changing the search text only filters the menu; choose a result to change the assignment.</p>
+    <p>Choose <strong>(No set)</strong> to clear the selected key's set. A melodic pattern without a set is silent; rhythmic mode uses Drum notes independently. Changing search text only filters the menu; choose a result to change the assignment.</p>
     <h3>Live performance</h3>
     <p>Normally, a pattern runs only while its trigger note is held. Latch changes note release behavior: the first trigger keeps the pattern running, and another trigger of the same key switches it off. Turning Latch off stops patterns whose trigger keys are no longer held.</p>
     <p>The plug-in emits generated MIDI notes and also has an internal preview sound. In a DAW, generated MIDI routing depends on the host. In standalone mode, check <strong>Options</strong> for the audio output device if you cannot hear the preview.</p>
@@ -156,6 +167,8 @@
       </tbody>
     </table>
     <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The standalone app and plug-ins share this folder on each OS.</div>
+    <h3>Individual pattern bank</h3>
+    <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Whole presets embed every assignment, so they can travel without the pattern bank. Loading a pattern replaces the selected key's assignment and restarts active playback.</p>
   </section>
 
   <section class="page">
@@ -176,7 +189,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.1.1 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.2.0 | Windows, Linux, macOS | Standalone and VST3; Audio Units on macOS.</p>
   </section>
 </main></body>
 </html>

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <array>
 #include "../Pcs12.h"
 
 /**
@@ -14,9 +15,27 @@
  */
 struct KeyAssignment
 {
+    enum class Mode { melodic, rhythmic };
+
     /** Integer sequence (GateRunner-style). Negative values select notes in the
      *  opposite direction from the pitch-class base offset. */
     std::vector<int> sequence;
+
+    /** Zero follows the existing global subdivision, 1–16 overrides it. */
+    int subdivision = 0;
+    Mode mode = Mode::melodic;
+    std::string name;
+    /** MIDI notes for bits 0–15 in rhythmic mode. */
+    std::array<int, 16> drumNotes { 36, 38, 42, 46, 41, 43, 45, 47,
+                                    48, 50, 49, 51, 39, 37, 54, 56 };
+    int transpose = 0;
+    int velocity = 100;
+    std::vector<int> velocitySteps;
+    std::vector<int> pitchSteps;
+    int rotation = 0;
+    bool reverse = false;
+    /** A key assigned from a range follows that range's root key. */
+    int rootKey = -1;
 
     /** Parsed Pcs12 pitch-class set (the "Forte set" for this key). */
     Pcs12 forte;
@@ -98,4 +117,6 @@ struct KeyAssignment
     }
 
     bool hasValidForte() const { return !forte.isEmpty(); }
+
+    int effectiveSubdivision(int global) const { return subdivision > 0 ? subdivision : global; }
 };

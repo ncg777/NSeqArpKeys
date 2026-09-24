@@ -1,4 +1,6 @@
 #include "PluginEditor.h"
+#include "Engine/GateRunnerEngine.h"
+#include "Domain/RhythmGenerators.h"
 
 namespace
 {
@@ -111,7 +113,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     };
 
     // ----- Global: Meter Denominator ------------------------------------------
-    meterDenominatorLabel.setText("Meter Den", juce::dontSendNotification);
+    meterDenominatorLabel.setText("Global Steps/QN", juce::dontSendNotification);
     addAndMakeVisible(meterDenominatorLabel);
 
     addAndMakeVisible(meterDenominatorSlider);
@@ -132,6 +134,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     channelSlider.setRange(1, 16, 1);
     channelSlider.onValueChange = [this]
     {
+        recordKeyEdit();
         audioProcessor.setChannelForKey(audioProcessor.getSelectedKey(),
                                         static_cast<int>(channelSlider.getValue()));
     };
@@ -144,6 +147,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     octaveSlider.setRange(0, 10, 1);
     octaveSlider.onValueChange = [this]
     {
+        recordKeyEdit();
         audioProcessor.setOctaveForKey(audioProcessor.getSelectedKey(),
                                        static_cast<int>(octaveSlider.getValue()));
     };
@@ -156,6 +160,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     gateSlider.setRange(0.0, 2.0, 0.01);
     gateSlider.onValueChange = [this]
     {
+        recordKeyEdit();
         audioProcessor.setGateForKey(audioProcessor.getSelectedKey(),
                                      static_cast<float>(gateSlider.getValue()));
     };
@@ -168,6 +173,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     fixedLengthStepsSlider.setTooltip("0 to 16 steps added to Gate; each step is set by Meter Den and tempo.");
     fixedLengthStepsSlider.onValueChange = [this]
     {
+        recordKeyEdit();
         audioProcessor.setFixedLengthStepsForKey(audioProcessor.getSelectedKey(),
             static_cast<float>(fixedLengthStepsSlider.getValue()));
     };
@@ -179,8 +185,175 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     addAndMakeVisible(patternTextEditor);
     patternTextEditor.onTextChange = [this]
     {
+        recordKeyEdit();
         audioProcessor.setPatternForKey(audioProcessor.getSelectedKey(),
                                         patternTextEditor.getText().toStdString());
+    };
+
+    auto changeAssignment = [this](auto change)
+    {
+        const int key = audioProcessor.getSelectedKey();
+        recordKeyEdit();
+        auto assignment = audioProcessor.getAssignmentForKey(key);
+        change(assignment);
+        audioProcessor.setAssignmentForKey(key, assignment);
+    };
+    auto addLabel = [this](juce::Label& label, const juce::String& text)
+    {
+        label.setText(text, juce::dontSendNotification);
+        addAndMakeVisible(label);
+    };
+    addLabel(patternNameLabel, "Name");
+    addAndMakeVisible(patternNameEditor);
+    patternNameEditor.onTextChange = [changeAssignment, this] ( )
+    {
+        changeAssignment([this](KeyAssignment& a) { a.name = patternNameEditor.getText().toStdString(); });
+    };
+    addLabel(modeLabel, "Mode");
+    addAndMakeVisible(modeSelector);
+    modeSelector.addItem("Melodic", 1);
+    modeSelector.addItem("Rhythmic (bits to MIDI notes)", 2);
+    modeSelector.onChange = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) {
+            a.mode = modeSelector.getSelectedId() == 2
+                ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
+            if (a.mode == KeyAssignment::Mode::rhythmic && a.channel == 1)
+                a.channel = 10;
+        });
+        loadAssignmentForKey(audioProcessor.getSelectedKey());
+    };
+    addLabel(subdivisionLabel, "Steps/QN");
+    addAndMakeVisible(subdivisionSlider);
+    subdivisionSlider.setRange(0, 16, 1);
+    subdivisionSlider.setTooltip("0 inherits Global Steps/QN. Other values override timing for this key.");
+    subdivisionSlider.onValueChange = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.subdivision = static_cast<int>(subdivisionSlider.getValue()); });
+    };
+    addLabel(velocityLabel, "Velocity");
+    addAndMakeVisible(velocitySlider);
+    velocitySlider.setRange(1, 127, 1);
+    velocitySlider.onValueChange = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.velocity = static_cast<int>(velocitySlider.getValue()); });
+    };
+    addLabel(transposeLabel, "Transpose");
+    addAndMakeVisible(transposeSlider);
+    transposeSlider.setRange(-48, 48, 1);
+    transposeSlider.onValueChange = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.transpose = static_cast<int>(transposeSlider.getValue()); });
+    };
+    addLabel(rotationLabel, "Rotate");
+    addAndMakeVisible(rotationSlider);
+    rotationSlider.setRange(-64, 64, 1);
+    rotationSlider.onValueChange = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.rotation = static_cast<int>(rotationSlider.getValue()); });
+    };
+    reverseButton.setButtonText("Reverse sequence");
+    addAndMakeVisible(reverseButton);
+    reverseButton.onClick = [changeAssignment, this]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.reverse = reverseButton.getToggleState(); });
+    };
+    auto addLane = [this, changeAssignment, addLabel](juce::Label& label, juce::TextEditor& editor,
+                                                       const juce::String& title, bool velocity)
+    {
+        addLabel(label, title);
+        addAndMakeVisible(editor);
+        editor.onTextChange = [changeAssignment, editorPtr = &editor, velocity]
+        {
+            auto values = GateRunnerEngine::parseSequence(editorPtr->getText().toStdString());
+            for (auto& value : values)
+                value = velocity ? juce::jlimit(0, 127, value) : juce::jlimit(-127, 127, value);
+            changeAssignment([&](KeyAssignment& a) {
+                if (velocity) a.velocitySteps = values;
+                else a.pitchSteps = values;
+            });
+        };
+    };
+    addLane(velocityStepsLabel, velocityStepsEditor, "Velocity lane", true);
+    addLane(pitchStepsLabel, pitchStepsEditor, "Pitch lane", false);
+    addLabel(drumNotesLabel, "Drum notes");
+    addAndMakeVisible(drumNotesEditor);
+    drumNotesEditor.setTooltip("16 MIDI note numbers for bits 0–15; e.g. 36 38 42 ...");
+    drumNotesEditor.onTextChange = [changeAssignment, this]
+    {
+        const auto notes = GateRunnerEngine::parseSequence(drumNotesEditor.getText().toStdString());
+        if (notes.size() != 16) return;
+        changeAssignment([&notes](KeyAssignment& a) {
+            for (size_t i = 0; i < notes.size(); ++i)
+                a.drumNotes[i] = juce::jlimit(0, 127, notes[i]);
+        });
+    };
+    for (auto* button : { &copyPatternButton, &pastePatternButton, &duplicatePatternButton,
+                          &undoButton, &redoButton,
+                          &savePatternButton, &loadPatternButton, &applyRangeButton })
+        addAndMakeVisible(button);
+    copyPatternButton.setButtonText("Copy");
+    pastePatternButton.setButtonText("Paste");
+    duplicatePatternButton.setButtonText("Duplicate to next key");
+    undoButton.setButtonText("Undo");
+    redoButton.setButtonText("Redo");
+    savePatternButton.setButtonText("Save pattern");
+    loadPatternButton.setButtonText("Load pattern");
+    applyRangeButton.setButtonText("Assign range");
+    copyPatternButton.onClick = [this] {
+        copiedPattern = std::make_unique<KeyAssignment>(
+            audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()));
+    };
+    pastePatternButton.onClick = [this] {
+        if (copiedPattern == nullptr) return;
+        recordKeyEdit();
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), *copiedPattern);
+        loadAssignmentForKey(audioProcessor.getSelectedKey());
+    };
+    duplicatePatternButton.onClick = [this] {
+        const int key = audioProcessor.getSelectedKey();
+        if (key == 127) return;
+        undoHistory.emplace_back(key + 1, audioProcessor.getAssignmentForKey(key + 1));
+        redoHistory.clear();
+        audioProcessor.setAssignmentForKey(key + 1, audioProcessor.getAssignmentForKey(key));
+        audioProcessor.setSelectedKey(key + 1);
+        loadAssignmentForKey(key + 1);
+    };
+    savePatternButton.onClick = [this] { savePatternToBank(); };
+    loadPatternButton.onClick = [this] { loadPatternFromBank(); };
+    applyRangeButton.onClick = [this] { applyRange(); };
+    undoButton.onClick = [this] { undoKeyEdit(); };
+    redoButton.onClick = [this] { redoKeyEdit(); };
+    addLabel(rangeLabel, "MIDI range");
+    for (auto* slider : { &rangeFirstSlider, &rangeLastSlider }) {
+        addAndMakeVisible(*slider);
+        slider->setRange(0, 127, 1);
+    }
+    rangeFirstSlider.setValue(48);
+    rangeLastSlider.setValue(72);
+    transposeRangeButton.setButtonText("Transpose by key");
+    transposeRangeButton.setToggleState(true, juce::dontSendNotification);
+    addAndMakeVisible(transposeRangeButton);
+    addLabel(euclidLabel, "Euclidean");
+    addAndMakeVisible(euclidHitsSlider);
+    addAndMakeVisible(euclidStepsSlider);
+    euclidHitsSlider.setRange(0, 64, 1);
+    euclidStepsSlider.setRange(1, 64, 1);
+    euclidHitsSlider.setValue(5);
+    euclidStepsSlider.setValue(13);
+    euclidButton.setButtonText("Generate bit 0");
+    addAndMakeVisible(euclidButton);
+    euclidButton.onClick = [this]
+    {
+        const auto values = makeEuclideanRhythm(static_cast<int>(euclidHitsSlider.getValue()),
+                                                 static_cast<int>(euclidStepsSlider.getValue()));
+        auto assignment = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+        recordKeyEdit();
+        assignment.mode = KeyAssignment::Mode::rhythmic;
+        if (assignment.channel == 1) assignment.channel = 10;
+        assignment.sequence = values;
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), assignment);
+        loadAssignmentForKey(audioProcessor.getSelectedKey());
     };
 
     // ----- Per-key: searchable Forte set --------------------------------------
@@ -223,6 +396,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         const int index = forteNumberSelector.getSelectedId() - 1;
         if (index >= 0 && index < static_cast<int>(visibleForteIds.size()))
         {
+            recordKeyEdit();
             audioProcessor.setForteForKey(audioProcessor.getSelectedKey(),
                                           visibleForteIds[static_cast<size_t>(index)].toStdString());
             updateSelectedForteLabel();
@@ -297,7 +471,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         addBrowserControl(*button);
 
     // ----- Initial load -------------------------------------------------------
-    setSize(760, 540);
+    setSize(860, 860);
     loadPresetLibrary();
     loadAssignmentForKey(audioProcessor.getSelectedKey());
     lastStateRestoreRevision = audioProcessor.getStateRestoreRevision();
@@ -323,7 +497,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
 {
     auto area  = getLocalBounds().reduced(8);
     int  w     = area.getWidth();
-    int  lblW  = 90;
+    int  lblW  = 110;
     int  rowH  = 26;
 
     auto presetRow = area.removeFromTop(32);
@@ -423,6 +597,45 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     makeRow(gateLabel,    gateSlider);
     makeRow(fixedLengthStepsLabel, fixedLengthStepsSlider);
     makeRow(patternLabel, patternTextEditor);
+    makeRow(patternNameLabel, patternNameEditor);
+    auto modeRow = area.removeFromTop(rowH);
+    modeLabel.setBounds(modeRow.removeFromLeft(lblW));
+    modeSelector.setBounds(modeRow.removeFromLeft(260));
+    subdivisionLabel.setBounds(modeRow.removeFromLeft(lblW));
+    subdivisionSlider.setBounds(modeRow);
+    area.removeFromTop(2);
+    auto expressionRow = area.removeFromTop(rowH);
+    velocityLabel.setBounds(expressionRow.removeFromLeft(lblW));
+    velocitySlider.setBounds(expressionRow.removeFromLeft(150));
+    transposeLabel.setBounds(expressionRow.removeFromLeft(lblW));
+    transposeSlider.setBounds(expressionRow.removeFromLeft(160));
+    rotationLabel.setBounds(expressionRow.removeFromLeft(75));
+    rotationSlider.setBounds(expressionRow);
+    area.removeFromTop(2);
+    makeRow(velocityStepsLabel, velocityStepsEditor);
+    makeRow(pitchStepsLabel, pitchStepsEditor);
+    makeRow(drumNotesLabel, drumNotesEditor);
+    reverseButton.setBounds(area.removeFromTop(rowH));
+    auto copyRow = area.removeFromTop(30);
+    copyPatternButton.setBounds(copyRow.removeFromLeft(90));
+    pastePatternButton.setBounds(copyRow.removeFromLeft(90));
+    duplicatePatternButton.setBounds(copyRow.removeFromLeft(170));
+    undoButton.setBounds(copyRow.removeFromLeft(65));
+    redoButton.setBounds(copyRow.removeFromLeft(65));
+    savePatternButton.setBounds(copyRow.removeFromLeft(115));
+    loadPatternButton.setBounds(copyRow.removeFromLeft(115));
+    area.removeFromTop(3);
+    auto rangeRow = area.removeFromTop(rowH);
+    rangeLabel.setBounds(rangeRow.removeFromLeft(lblW));
+    rangeFirstSlider.setBounds(rangeRow.removeFromLeft(140));
+    rangeLastSlider.setBounds(rangeRow.removeFromLeft(140));
+    transposeRangeButton.setBounds(rangeRow.removeFromLeft(160));
+    applyRangeButton.setBounds(rangeRow.removeFromLeft(130));
+    auto euclidRow = area.removeFromTop(rowH);
+    euclidLabel.setBounds(euclidRow.removeFromLeft(lblW));
+    euclidHitsSlider.setBounds(euclidRow.removeFromLeft(140));
+    euclidStepsSlider.setBounds(euclidRow.removeFromLeft(140));
+    euclidButton.setBounds(euclidRow.removeFromLeft(145));
     makeRow(forteSearchLabel, forteSearchEditor);
     makeRow(forteLabel,   forteNumberSelector);
     forteSelectionLabel.setBounds(area.removeFromTop(rowH));
@@ -461,6 +674,24 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     // For TextEditor, setText with false (= don't move cursor) does not
     // call onTextChange, so it is safe to call directly.
     patternTextEditor.setText(a.sequenceToString(), false);
+    patternNameEditor.setText(a.name, false);
+    modeSelector.setSelectedId(a.mode == KeyAssignment::Mode::rhythmic ? 2 : 1, juce::dontSendNotification);
+    subdivisionSlider.setValue(a.subdivision, juce::dontSendNotification);
+    subdivisionLabel.setTooltip(a.subdivision == 0
+        ? "Inherits global steps per quarter note: " + juce::String(audioProcessor.getMeterDenominator()->get())
+        : "Per-key steps per quarter note");
+    velocitySlider.setValue(a.velocity, juce::dontSendNotification);
+    transposeSlider.setValue(a.transpose, juce::dontSendNotification);
+    rotationSlider.setValue(a.rotation, juce::dontSendNotification);
+    reverseButton.setToggleState(a.reverse, juce::dontSendNotification);
+    auto valuesText = [](const std::vector<int>& values) {
+        juce::StringArray parts;
+        for (int n : values) parts.add(juce::String(n));
+        return parts.joinIntoString(" ");
+    };
+    velocityStepsEditor.setText(valuesText(a.velocitySteps), false);
+    pitchStepsEditor.setText(valuesText(a.pitchSteps), false);
+    drumNotesEditor.setText(valuesText(std::vector<int>(a.drumNotes.begin(), a.drumNotes.end())), false);
 
     channelSlider.setValue(a.channel, juce::dontSendNotification);
     octaveSlider .setValue(a.octave,  juce::dontSendNotification);
@@ -475,6 +706,126 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     selectedKeyLabel.setText("Selected key: " + name
                              + " (MIDI " + juce::String(key) + ")",
                              juce::dontSendNotification);
+}
+
+void NSeqArpKeysAudioProcessorEditor::applyRange()
+{
+    const int first = static_cast<int>(rangeFirstSlider.getValue());
+    const int last = static_cast<int>(rangeLastSlider.getValue());
+    if (first > last) return;
+    audioProcessor.copyAssignmentToRange(audioProcessor.getSelectedKey(), first, last,
+                                          transposeRangeButton.getToggleState());
+}
+
+void NSeqArpKeysAudioProcessorEditor::recordKeyEdit()
+{
+    const int key = audioProcessor.getSelectedKey();
+    if (undoHistory.size() == 100) undoHistory.erase(undoHistory.begin());
+    undoHistory.emplace_back(key, audioProcessor.getAssignmentForKey(key));
+    redoHistory.clear();
+}
+
+void NSeqArpKeysAudioProcessorEditor::undoKeyEdit()
+{
+    if (undoHistory.empty()) return;
+    const auto previous = std::move(undoHistory.back());
+    undoHistory.pop_back();
+    redoHistory.emplace_back(previous.first, audioProcessor.getAssignmentForKey(previous.first));
+    audioProcessor.setAssignmentForKey(previous.first, previous.second);
+    audioProcessor.setSelectedKey(previous.first);
+    loadAssignmentForKey(previous.first);
+}
+
+void NSeqArpKeysAudioProcessorEditor::redoKeyEdit()
+{
+    if (redoHistory.empty()) return;
+    const auto next = std::move(redoHistory.back());
+    redoHistory.pop_back();
+    undoHistory.emplace_back(next.first, audioProcessor.getAssignmentForKey(next.first));
+    audioProcessor.setAssignmentForKey(next.first, next.second);
+    audioProcessor.setSelectedKey(next.first);
+    loadAssignmentForKey(next.first);
+}
+
+void NSeqArpKeysAudioProcessorEditor::savePatternToBank()
+{
+    const int key = audioProcessor.getSelectedKey();
+    auto state = juce::XmlDocument::parse(captureStateXml());
+    if (state == nullptr) return;
+    juce::XmlElement bank("NSeqPattern");
+    bank.setAttribute("version", 1);
+    bool found = false;
+    for (auto* child : state->getChildIterator())
+        if (child->hasTagName("Assignment") && child->getIntAttribute("key", -1) == key)
+        {
+            bank.addChildElement(new juce::XmlElement(*child));
+            found = true;
+            break;
+        }
+    if (!found)
+    {
+        auto* assignment = bank.createNewChildElement("Assignment");
+        assignment->setAttribute("sequence", juce::String(
+            audioProcessor.getAssignmentForKey(key).sequenceToString()));
+    }
+    auto name = juce::String(audioProcessor.getAssignmentForKey(key).name)
+        .retainCharacters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ ")
+        .trim().replaceCharacter(' ', '-');
+    if (name.isEmpty()) name = "Pattern-" + juce::String(key);
+    auto directory = presetDirectory().getParentDirectory().getChildFile("Patterns");
+    if (directory.createDirectory().failed()) return;
+    presetChooser = std::make_unique<juce::FileChooser>("Save pattern to bank",
+        directory.getChildFile(name + ".nseqpattern"), "*.nseqpattern");
+    auto safeThis = juce::Component::SafePointer<NSeqArpKeysAudioProcessorEditor>(this);
+    presetChooser->launchAsync(juce::FileBrowserComponent::saveMode
+                              | juce::FileBrowserComponent::canSelectFiles
+                              | juce::FileBrowserComponent::warnAboutOverwriting,
+        [safeThis, bank](const juce::FileChooser& chooser)
+        {
+            if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
+            const bool saved = writeXmlFile(chooser.getResult().withFileExtension(".nseqpattern"), bank);
+            if (!saved) juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
+                "Pattern bank", "Could not save pattern.");
+        });
+}
+
+void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
+{
+    auto directory = presetDirectory().getParentDirectory().getChildFile("Patterns");
+    if (!directory.isDirectory()) return;
+    presetChooser = std::make_unique<juce::FileChooser>("Load pattern from bank",
+        directory, "*.nseqpattern");
+    auto safeThis = juce::Component::SafePointer<NSeqArpKeysAudioProcessorEditor>(this);
+    presetChooser->launchAsync(juce::FileBrowserComponent::openMode
+                              | juce::FileBrowserComponent::canSelectFiles,
+        [safeThis](const juce::FileChooser& chooser)
+        {
+            if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
+            if (chooser.getResult().getSize() > 1024 * 1024) return;
+            auto bank = juce::XmlDocument::parse(chooser.getResult());
+            if (bank == nullptr || !bank->hasTagName("NSeqPattern")
+                || bank->getIntAttribute("version") != 1
+                || bank->getNumChildElements() != 1
+                || bank->getFirstChildElement() == nullptr
+                || !bank->getFirstChildElement()->hasTagName("Assignment"))
+                return;
+            auto state = juce::XmlDocument::parse(safeThis->captureStateXml());
+            if (state == nullptr) return;
+            const int key = safeThis->audioProcessor.getSelectedKey();
+            for (int i = state->getNumChildElements() - 1; i >= 0; --i)
+            {
+                auto* child = state->getChildElement(i);
+                if (child->hasTagName("Assignment") && child->getIntAttribute("key", -1) == key)
+                    state->removeChildElement(child, true);
+            }
+            auto* assignment = new juce::XmlElement(*bank->getFirstChildElement());
+            assignment->setAttribute("key", key);
+            state->addChildElement(assignment);
+            juce::MemoryBlock data;
+            juce::AudioProcessor::copyXmlToBinary(*state, data);
+            safeThis->audioProcessor.setStateInformation(data.getData(), static_cast<int>(data.getSize()));
+            safeThis->loadAssignmentForKey(key);
+        });
 }
 
 void NSeqArpKeysAudioProcessorEditor::updateForteSearchResults()
@@ -786,7 +1137,22 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
                                         &fixedLengthStepsLabel, &fixedLengthStepsSlider,
                                         &patternLabel, &patternTextEditor, &forteSearchLabel,
                                         &forteSearchEditor, &forteLabel, &forteNumberSelector,
-                                        &forteSelectionLabel })
+                                        &forteSelectionLabel,
+                                        &patternNameLabel, &patternNameEditor,
+                                        &modeLabel, &modeSelector, &subdivisionLabel, &subdivisionSlider,
+                                        &velocityLabel, &velocitySlider, &transposeLabel, &transposeSlider,
+                                        &rotationLabel, &rotationSlider, &reverseButton,
+                                        &velocityStepsLabel, &velocityStepsEditor, &pitchStepsLabel, &pitchStepsEditor,
+                                        &drumNotesLabel, &drumNotesEditor,
+                                        &copyPatternButton, &pastePatternButton, &duplicatePatternButton,
+                                        &undoButton, &redoButton,
+                                        &savePatternButton, &loadPatternButton,
+                                        &rangeLabel, &rangeFirstSlider, &rangeLastSlider,
+                                        &transposeRangeButton, &applyRangeButton })
+        component->setVisible(!open);
+    for (juce::Component* component : std::initializer_list<juce::Component*> {
+                                        &euclidLabel, &euclidHitsSlider,
+                                        &euclidStepsSlider, &euclidButton })
         component->setVisible(!open);
     for (juce::Component* component : std::initializer_list<juce::Component*> { &presetSearchLabel, &presetSearchEditor,
                                         &presetCategoryFilterLabel, &presetCategoryFilter,
@@ -831,6 +1197,11 @@ void NSeqArpKeysAudioProcessorEditor::updatePresetDisplay()
 
 void NSeqArpKeysAudioProcessorEditor::timerCallback()
 {
+    // Host automation may update the global parameter without restoring state.
+    if (!meterNumeratorSlider.isMouseButtonDown())
+        meterNumeratorSlider.setValue(audioProcessor.getMeterNumerator()->get(), juce::dontSendNotification);
+    if (!meterDenominatorSlider.isMouseButtonDown())
+        meterDenominatorSlider.setValue(audioProcessor.getMeterDenominator()->get(), juce::dontSendNotification);
     const auto revision = audioProcessor.getStateRestoreRevision();
     if (revision != lastStateRestoreRevision)
     {

@@ -57,6 +57,8 @@ public:
     // Per-key assignment API used by the editor
     // -----------------------------------------------------------------------
     KeyAssignment getAssignmentForKey(int key) const;
+    void setAssignmentForKey(int key, const KeyAssignment& assignment);
+    void copyAssignmentToRange(int sourceKey, int first, int last, bool transpose);
 
     void setPatternForKey (int key, const std::string& text);
     void setForteForKey   (int key, const std::string& forteStr);

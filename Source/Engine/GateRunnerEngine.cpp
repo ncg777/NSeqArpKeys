@@ -79,14 +79,43 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
 // ---------------------------------------------------------------------------
 std::vector<std::vector<int>> GateRunnerEngine::computeAllSteps(const KeyAssignment& assignment)
 {
-    std::vector<int> scale = buildScale(assignment.forte);
-    int k = assignment.forte.getK();
+    const std::vector<int> scale = buildScale(assignment.forte);
+    const int k = assignment.forte.getK();
+
+    std::vector<int> values = assignment.sequence;
+    if (assignment.reverse)
+        std::reverse(values.begin(), values.end());
+    if (!values.empty())
+    {
+        const auto shift = ((assignment.rotation % static_cast<int>(values.size()))
+                            + static_cast<int>(values.size())) % static_cast<int>(values.size());
+        std::rotate(values.rbegin(), values.rbegin() + shift, values.rend());
+    }
 
     std::vector<std::vector<int>> result;
-    result.reserve(assignment.sequence.size());
+    result.reserve(values.size());
 
-    for (int stepVal : assignment.sequence)
-        result.push_back(computeStepNotes(scale, k, stepVal, assignment.octave));
+    for (size_t step = 0; step < values.size(); ++step)
+    {
+        std::vector<int> notes;
+        if (assignment.mode == KeyAssignment::Mode::rhythmic)
+        {
+            const auto bits = values[step] > 0 ? static_cast<unsigned int>(values[step]) : 0u;
+            for (size_t bit = 0; bit < assignment.drumNotes.size(); ++bit)
+                if ((bits & (1u << bit)) != 0)
+                    notes.push_back(assignment.drumNotes[bit]);
+        }
+        else
+            notes = computeStepNotes(scale, k, values[step], assignment.octave);
+
+        const int pitchOffset = assignment.pitchSteps.empty() ? 0
+            : assignment.pitchSteps[step % assignment.pitchSteps.size()];
+        for (auto& note : notes)
+            note += assignment.transpose + pitchOffset;
+        notes.erase(std::remove_if(notes.begin(), notes.end(),
+            [](int note) { return note < 0 || note > 127; }), notes.end());
+        result.push_back(std::move(notes));
+    }
 
     return result;
 }

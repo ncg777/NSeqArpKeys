@@ -18,6 +18,10 @@ struct ActivePattern
 
     int   numSteps = 0;
     int   channel  = 1;
+    int   subdivision = 0;
+    int   velocity = 100;
+    std::vector<int> velocitySteps;
+    double lastStepDuration = 0.0;
     float gate     = 0.5f;
     float fixedLengthSteps = 0.0f;
 
@@ -66,7 +70,8 @@ public:
                     double bpm,
                     int    numerator,
                     int    denominator,
-                    juce::MidiBuffer& midiMessages);
+                    juce::MidiBuffer& midiMessages,
+                    int triggerVelocity = 127);
 
     /** Stop all active patterns and send note-offs into @p midiMessages. */
     void stopAll(juce::MidiBuffer& midiMessages);
@@ -87,6 +92,7 @@ public:
 private:
     double m_sampleRate = 44100.0;
     std::map<int, ActivePattern> m_activePatterns;
+    std::array<std::array<int, 128>, 16> m_outputNoteCounts {};
 
     double computeStepDuration(double bpm, int numerator, int denominator) const;
 };
