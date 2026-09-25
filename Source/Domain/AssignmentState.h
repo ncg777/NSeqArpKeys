@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "KeyAssignment.h"
 #include "../Engine/GateRunnerEngine.h"
+#include <cmath>
 
 // Shared by DAW state, whole presets and individual pattern files.
 namespace AssignmentState
@@ -24,49 +25,67 @@ inline void write(juce::XmlElement& element, const KeyAssignment& a)
     child->setAttribute("rotation", a.rotation);
     child->setAttribute("reverse", a.reverse);
     child->setAttribute("rootKey", a.rootKey);
+    child->setAttribute("linkId", juce::String(a.linkId));
+    child->setAttribute("colour", juce::String(a.colour));
+    child->setAttribute("tags", juce::String(a.tags));
+    child->setAttribute("favourite", a.favourite);
     auto sequenceText = [](const std::vector<int>& values)
     {
         juce::StringArray tokens;
         for (int value : values) tokens.add(juce::String(value));
         return tokens.joinIntoString(" ");
     };
-    child->setAttribute("velocitySteps", sequenceText(a.velocitySteps));
-    child->setAttribute("pitchSteps", sequenceText(a.pitchSteps));
     child->setAttribute("drumNotes", sequenceText(
-        std::vector<int>(a.drumNotes.begin(), a.drumNotes.end())));
+        std::vector<int>(a.drumNotes.begin(), a.drumNotes.begin() + juce::jlimit(1, 16, a.drumLaneCount))));
+    child->setAttribute("drumVelocityBits", a.drumVelocityBits);
 }
 
 inline KeyAssignment read(const juce::XmlElement& element)
 {
     const auto* child = &element;
     KeyAssignment a;
-    a.setSequenceFromString(child->getStringAttribute("sequence").toStdString());
-    a.setForteFromString   (child->getStringAttribute("forte").toStdString());
-    a.channel      = juce::jlimit(1, 16, child->getIntAttribute("channel", 1));
-    a.octave       = juce::jlimit(0, 10, child->getIntAttribute("octave", 4));
-    a.gate = juce::jlimit(0.0f, 2.0f, static_cast<float>(child->getDoubleAttribute("gate", 0.5)));
-    a.fixedLengthSteps = juce::jlimit(0.0f, 16.0f,
-        static_cast<float>(child->getDoubleAttribute("fixedLengthSteps", 0.0)));
-    a.subdivision = juce::jlimit(0, 16, child->getIntAttribute("subdivision", 0));
     a.mode = child->getStringAttribute("mode") == "rhythmic"
         ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
-    a.name = child->getStringAttribute("name").toStdString();
+    const auto sequence = child->getStringAttribute("sequence");
+    if (sequence.length() <= 45056)
+        // A mode switch or selective paste can leave a wide rhythmic value in
+        // a melodic assignment. Preserve it so switching back is lossless.
+        a.setSequenceFromString(sequence.toStdString(), true);
+    const auto forte = child->getStringAttribute("forte");
+    if (forte.length() <= 64)
+        a.setForteFromString(forte.toStdString());
+    a.channel      = juce::jlimit(1, 16, child->getIntAttribute("channel", 1));
+    a.octave       = juce::jlimit(0, 10, child->getIntAttribute("octave", 4));
+    const auto gate = child->getDoubleAttribute("gate", 0.5);
+    const auto fixed = child->getDoubleAttribute("fixedLengthSteps", 0.0);
+    a.gate = std::isfinite(gate) ? juce::jlimit(0.0f, 2.0f, static_cast<float>(gate)) : 0.5f;
+    a.fixedLengthSteps = std::isfinite(fixed)
+        ? juce::jlimit(0.0f, 16.0f, static_cast<float>(fixed)) : 0.0f;
+    a.subdivision = juce::jlimit(0, 16, child->getIntAttribute("subdivision", 0));
+    a.name = child->getStringAttribute("name").substring(0, 80).toStdString();
     a.transpose = juce::jlimit(-127, 127, child->getIntAttribute("transpose", 0));
     a.velocity = juce::jlimit(1, 127, child->getIntAttribute("velocity", 100));
     a.rotation = juce::jlimit(-4096, 4096, child->getIntAttribute("rotation", 0));
     a.reverse = child->getBoolAttribute("reverse", false);
     a.rootKey = juce::jlimit(-1, 127, child->getIntAttribute("rootKey", -1));
+    a.linkId = child->getStringAttribute("linkId").substring(0, 80).toStdString();
+    const auto colour = child->getStringAttribute("colour", "#62D6C6");
+    if (colour.length() == 7 && colour.startsWithChar('#')
+        && colour.substring(1).containsOnly("0123456789abcdefABCDEF"))
+        a.colour = colour.toStdString();
+    a.tags = child->getStringAttribute("tags").substring(0, 200).toStdString();
+    a.favourite = child->getBoolAttribute("favourite", false);
     auto parseValues = [](const juce::String& text) {
         return GateRunnerEngine::parseSequence(text.toStdString());
     };
-    a.velocitySteps = parseValues(child->getStringAttribute("velocitySteps"));
-    for (auto& value : a.velocitySteps) value = juce::jlimit(0, 127, value);
-    a.pitchSteps = parseValues(child->getStringAttribute("pitchSteps"));
-    for (auto& value : a.pitchSteps) value = juce::jlimit(-127, 127, value);
     const auto drumValues = parseValues(child->getStringAttribute("drumNotes"));
-    if (drumValues.size() == a.drumNotes.size())
+    if (!drumValues.empty() && drumValues.size() <= a.drumNotes.size())
+    {
+        a.drumLaneCount = static_cast<int>(drumValues.size());
         for (size_t i = 0; i < drumValues.size(); ++i)
             a.drumNotes[i] = juce::jlimit(0, 127, drumValues[i]);
+    }
+    a.drumVelocityBits = juce::jlimit(1, 7, child->getIntAttribute("drumVelocityBits", 1));
     return a;
 }
 }

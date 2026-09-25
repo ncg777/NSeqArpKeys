@@ -78,10 +78,22 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
 // ---------------------------------------------------------------------------
 std::vector<std::vector<int>> GateRunnerEngine::computeAllSteps(const KeyAssignment& assignment)
 {
+    std::vector<std::vector<int>> result;
+    for (const auto& step : computeAllStepEvents(assignment))
+    {
+        auto& notes = result.emplace_back();
+        for (const auto& event : step) notes.push_back(event.note);
+    }
+    return result;
+}
+
+std::vector<std::vector<GateRunnerEngine::StepNote>>
+GateRunnerEngine::computeAllStepEvents(const KeyAssignment& assignment, size_t maxSteps)
+{
     const std::vector<int> scale = buildScale(assignment.forte);
     const int k = assignment.forte.getK();
 
-    std::vector<int> values = assignment.sequence;
+    auto values = assignment.sequence;
     if (assignment.reverse)
         std::reverse(values.begin(), values.end());
     if (!values.empty())
@@ -90,29 +102,34 @@ std::vector<std::vector<int>> GateRunnerEngine::computeAllSteps(const KeyAssignm
                             + static_cast<int>(values.size())) % static_cast<int>(values.size());
         std::rotate(values.rbegin(), values.rbegin() + shift, values.rend());
     }
+    if (values.size() > maxSteps) values.resize(maxSteps);
 
-    std::vector<std::vector<int>> result;
+    std::vector<std::vector<StepNote>> result;
     result.reserve(values.size());
 
     for (size_t step = 0; step < values.size(); ++step)
     {
-        std::vector<int> notes;
+        std::vector<StepNote> notes;
         if (assignment.mode == KeyAssignment::Mode::rhythmic)
         {
-            const auto bits = values[step] > 0 ? static_cast<unsigned int>(values[step]) : 0u;
-            for (size_t bit = 0; bit < assignment.drumNotes.size(); ++bit)
-                if ((bits & (1u << bit)) != 0)
-                    notes.push_back(assignment.drumNotes[bit]);
+            const int width = std::clamp(assignment.drumVelocityBits, 1, 7);
+            const auto mask = (1u << width) - 1u;
+            for (int lane = 0; lane < std::clamp(assignment.drumLaneCount, 1, 16); ++lane)
+            {
+                const auto level = values[step].bitsAt(lane * width, width);
+                if (level != 0)
+                    notes.push_back({ assignment.drumNotes[lane],
+                                      static_cast<int>((level * 127u + mask / 2u) / mask) });
+            }
         }
         else
-            notes = computeStepNotes(scale, k, values[step], assignment.octave);
+            for (int note : computeStepNotes(scale, k, values[step].melodicValue(), assignment.octave))
+                notes.push_back({ note, 127 });
 
-        const int pitchOffset = assignment.pitchSteps.empty() ? 0
-            : assignment.pitchSteps[step % assignment.pitchSteps.size()];
         for (auto& note : notes)
-            note += assignment.transpose + pitchOffset;
+            note.note += assignment.transpose;
         notes.erase(std::remove_if(notes.begin(), notes.end(),
-            [](int note) { return note < 0 || note > 127; }), notes.end());
+            [](const StepNote& note) { return note.note < 0 || note.note > 127; }), notes.end());
         result.push_back(std::move(notes));
     }
 

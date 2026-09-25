@@ -42,10 +42,9 @@ private:
         from.pop_back();
         Edit inverse { edit.selectedKey, {} };
         for (const auto& [key, assignment] : edit.assignments)
-        {
             inverse.assignments.emplace_back(key, get(key));
-            set(key, assignment);
-        }
+        // Capture every inverse before a linked edit can change another key.
+        set(edit.assignments);
         push(to, std::move(inverse));
         return edit.selectedKey;
     }

@@ -22,6 +22,7 @@
 class GateRunnerEngine
 {
 public:
+    struct StepNote { int note; int velocityLevel; };
     /** Parse a whitespace-separated integer string.  Negative values are allowed
      *  and represent reverse-direction bit-mapping in computeStepNotes(). */
     static std::vector<int> parseSequence(const std::string& text);
@@ -52,4 +53,7 @@ public:
 
     /** Convenience: precompute all step note lists for a full KeyAssignment. */
     static std::vector<std::vector<int>> computeAllSteps(const KeyAssignment& assignment);
+    // Limit output after applying transforms to the complete sequence.
+    static std::vector<std::vector<StepNote>> computeAllStepEvents(
+        const KeyAssignment& assignment, size_t maxSteps = static_cast<size_t>(-1));
 };

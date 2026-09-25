@@ -23,7 +23,7 @@ void require(bool condition, const char* message)
 KeyAssignment assignmentWith(const std::vector<int>& sequence, float gate, float fixedSteps)
 {
     KeyAssignment assignment;
-    assignment.sequence = sequence;
+    assignment.sequence.assign(sequence.begin(), sequence.end());
     assignment.setForteFromString("1-1.0");
     assignment.gate = gate;
     assignment.fixedLengthSteps = fixedSteps;
@@ -96,7 +96,6 @@ int main()
     fast.subdivision = 4;
     slow.subdivision = 2;
     fast.velocity = 100;
-    fast.velocitySteps = { 127, 0 };
     slow.transpose = 12;
     trigger.clear();
     scheduler.triggerKey(60, fast, 60.0, 4, 1, trigger, 64);
@@ -119,7 +118,6 @@ int main()
     auto drums = assignmentWith({ 5, 0 }, 0.5f, 0.0f);
     drums.mode = KeyAssignment::Mode::rhythmic;
     drums.channel = 10;
-    drums.pitchSteps = { 0, 1 };
     const auto steps = GateRunnerEngine::computeAllSteps(drums);
     require(steps.size() == 2 && steps[0].size() == 2
             && steps[0][0] == 36 && steps[0][1] == 42 && steps[1].empty(),
@@ -158,8 +156,10 @@ int main()
     }
 
     scheduler.prepare(1000.0);
-    auto muted = assignmentWith({ 1, 1 }, 2.0f, 0.5f);
-    muted.velocitySteps = { 127, 0 };
+    auto muted = assignmentWith({ 1, 0 }, 2.0f, 0.5f);
+    muted.mode = KeyAssignment::Mode::rhythmic;
+    muted.drumLaneCount = 1;
+    muted.drumVelocityBits = 2;
     scheduler.triggerKey(60, muted, 60.0, 4, 1, trigger);
     const auto silentSteps = process(scheduler, 4);
     require(silentSteps.size() == 2 && silentSteps[0].on && silentSteps[1].on,
@@ -168,17 +168,18 @@ int main()
     scheduler.stopAll(stopped);
     require(stopped.getNumEvents() == 1, "Muted-step overlap must remain owned until stopped");
 
-    // Both expression lanes restart with the sequence and cycle inside it.
+    // One shared width decodes each packed drum velocity level.
     scheduler.prepare(1000.0);
-    auto expression = assignmentWith({ 1, 1, 1 }, 0.1f, 0.0f);
+    auto expression = assignmentWith({ 9, 0 }, 0.1f, 0.0f);
+    expression.mode = KeyAssignment::Mode::rhythmic;
+    expression.drumLaneCount = 2;
+    expression.drumVelocityBits = 2;
     expression.velocity = 127;
-    expression.velocitySteps = { 127, 64 };
-    expression.pitchSteps = { 0, 12 };
     scheduler.triggerKey(60, expression, 60.0, 4, 1, trigger);
-    const auto lanes = process(scheduler, 4);
-    require(lanes.size() == 8 && lanes[0].velocity == 127 && lanes[2].velocity == 64
-            && lanes[4].velocity == 127 && lanes[6].velocity == 127
-            && lanes[6].note == lanes[0].note, "Pitch and velocity lanes must share loop boundaries");
+    const auto lanes = process(scheduler, 3);
+    require(lanes.size() == 8 && lanes[0].velocity == 42 && lanes[1].velocity == 85
+            && lanes[4].velocity == 42 && lanes[5].velocity == 85,
+            "Drum lane velocity bits did not repeat with the pattern");
 
     for (int change = 0; change < 3; ++change)
     {
@@ -199,7 +200,6 @@ int main()
     scheduler.prepare(1000.0);
     auto quiet = assignmentWith({ 1 }, 0.5f, 0.0f);
     quiet.velocity = 1;
-    quiet.velocitySteps = { 1 };
     scheduler.triggerKey(60, quiet, 60.0, 4, 1, trigger, 1);
     const auto soft = process(scheduler, 1);
     require(soft.size() == 2 && soft[0].velocity == 1,
