@@ -192,7 +192,7 @@ struct KeyAssignment
         return true;
     }
 
-    bool setSequenceFromString(const std::string& s)
+    bool setSequenceFromString(const std::string& s, bool allowWideValues = false)
     {
         if (s.size() > 45056) return false;
         std::istringstream iss(s);
@@ -202,7 +202,7 @@ struct KeyAssignment
         {
             SequenceValue value;
             if (result.size() >= 4096 || !SequenceValue::parse(token, value)
-                || (mode == Mode::melodic && !value.fitsMelodicInt())) return false;
+                || (!allowWideValues && mode == Mode::melodic && !value.fitsMelodicInt())) return false;
             result.push_back(std::move(value));
         }
         sequence = std::move(result);

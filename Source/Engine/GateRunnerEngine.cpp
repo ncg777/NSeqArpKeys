@@ -88,7 +88,7 @@ std::vector<std::vector<int>> GateRunnerEngine::computeAllSteps(const KeyAssignm
 }
 
 std::vector<std::vector<GateRunnerEngine::StepNote>>
-GateRunnerEngine::computeAllStepEvents(const KeyAssignment& assignment)
+GateRunnerEngine::computeAllStepEvents(const KeyAssignment& assignment, size_t maxSteps)
 {
     const std::vector<int> scale = buildScale(assignment.forte);
     const int k = assignment.forte.getK();
@@ -102,6 +102,7 @@ GateRunnerEngine::computeAllStepEvents(const KeyAssignment& assignment)
                             + static_cast<int>(values.size())) % static_cast<int>(values.size());
         std::rotate(values.rbegin(), values.rbegin() + shift, values.rend());
     }
+    if (values.size() > maxSteps) values.resize(maxSteps);
 
     std::vector<std::vector<StepNote>> result;
     result.reserve(values.size());

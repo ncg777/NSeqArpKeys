@@ -53,5 +53,7 @@ public:
 
     /** Convenience: precompute all step note lists for a full KeyAssignment. */
     static std::vector<std::vector<int>> computeAllSteps(const KeyAssignment& assignment);
-    static std::vector<std::vector<StepNote>> computeAllStepEvents(const KeyAssignment& assignment);
+    // Limit output after applying transforms to the complete sequence.
+    static std::vector<std::vector<StepNote>> computeAllStepEvents(
+        const KeyAssignment& assignment, size_t maxSteps = static_cast<size_t>(-1));
 };

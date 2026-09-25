@@ -48,7 +48,9 @@ inline KeyAssignment read(const juce::XmlElement& element)
         ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
     const auto sequence = child->getStringAttribute("sequence");
     if (sequence.length() <= 45056)
-        a.setSequenceFromString(sequence.toStdString());
+        // A mode switch or selective paste can leave a wide rhythmic value in
+        // a melodic assignment. Preserve it so switching back is lossless.
+        a.setSequenceFromString(sequence.toStdString(), true);
     const auto forte = child->getStringAttribute("forte");
     if (forte.length() <= 64)
         a.setForteFromString(forte.toStdString());

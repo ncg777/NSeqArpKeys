@@ -60,6 +60,17 @@ int main()
     notes = GateRunnerEngine::computeAllSteps(pattern);
     require(notes[0].size() == 2 && notes[0][0] == 36);
 
+    // A short display window must follow the complete transformed pattern.
+    pattern.sequence.assign(20, 0);
+    pattern.sequence.back() = 1;
+    pattern.rotation = 0;
+    auto preview = GateRunnerEngine::computeAllStepEvents(pattern, 16);
+    require(preview.size() == 16 && preview[0].size() == 1 && preview[0][0].note == 36);
+    pattern.reverse = false;
+    pattern.rotation = 1;
+    preview = GateRunnerEngine::computeAllStepEvents(pattern, 16);
+    require(preview.size() == 16 && preview[0].size() == 1 && preview[0][0].note == 36);
+
     pattern = KeyAssignment{};
     pattern.sequence = { 1, 0 };
     pattern.setForteFromString("1-1.0");
@@ -101,7 +112,9 @@ int main()
     keys[60].name = "Copy";
     keys[61] = keys[60];
     auto get = [&](int key) { return keys[static_cast<size_t>(key)]; };
-    auto set = [&](int key, const KeyAssignment& a) { keys[static_cast<size_t>(key)] = a; };
+    auto set = [&](const auto& assignments) {
+        for (const auto& [key, a] : assignments) keys[static_cast<size_t>(key)] = a;
+    };
     require(history.undo(get, set) == 60);
     require(keys[60].name == "Original" && keys[61].name == "Neighbour");
     require(!history.canUndo() && history.canRedo());

@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 #include "Engine/GateRunnerEngine.h"
 #include "Domain/AssignmentState.h"
-#include <string_view>
+#include "Domain/SafeXml.h"
 
 namespace
 {
@@ -114,6 +114,7 @@ NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
 {
     // Initialize Pcs12 static maps (idempotent if already populated).
     Pcs12::GenerateMaps();
+    for (auto& sounding : m_soundingKeys) sounding.store(false);
 
     addParameter(meterNumerator   = new juce::AudioParameterInt("meterNumerator",   "Meter Numerator",   1, 16, 4));
     addParameter(meterDenominator = new juce::AudioParameterInt("meterDenominator", "Meter Denominator", 1, 16, 4));
@@ -131,6 +132,7 @@ void NSeqArpKeysAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPe
     m_heldTriggerKeys.fill(false);
     m_triggerVelocities.fill(127);
     m_latchWasEnabled = m_latchEnabled.load();
+    for (auto& sounding : m_soundingKeys) sounding.store(false);
 }
 
 void NSeqArpKeysAudioProcessor::releaseResources()
@@ -143,7 +145,9 @@ void NSeqArpKeysAudioProcessor::releaseResources()
     m_pendingPreviewMidi.clear();
     m_pendingStopKeys.clear();
     m_pendingStopAll = false;
+    m_pendingAudition.reset();
     m_heldTriggerKeys.fill(false);
+    for (auto& sounding : m_soundingKeys) sounding.store(false);
 }
 
 bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -163,6 +167,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         return;
 
     std::set<int> stopKeys;
+    std::unique_ptr<std::pair<int, KeyAssignment>> audition;
     bool stopAllRequested = false;
     {
         const juce::ScopedLock lock(m_pendingPreviewMidiLock);
@@ -176,6 +181,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         stopKeys.swap(m_pendingStopKeys);
         stopAllRequested = m_pendingStopAll;
         m_pendingStopAll = false;
+        audition = std::move(m_pendingAudition);
     }
 
     auto* playHead = getPlayHead();
@@ -226,7 +232,6 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     };
 
     std::vector<std::pair<int, KeyAssignment>> updates;
-    std::unique_ptr<std::pair<int, KeyAssignment>> audition;
     {
         const juce::ScopedLock lock(m_assignmentsLock);
         for (int key : m_pendingAssignmentUpdates)
@@ -235,10 +240,9 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         for (int key : m_pendingTimingUpdates)
             m_scheduler.setSubdivision(key, m_assignments[static_cast<size_t>(key)].subdivision);
         m_pendingTimingUpdates.clear();
-        audition = std::move(m_pendingAudition);
     }
     for (const auto& [key, assignment] : updates)
-        if (m_scheduler.isKeyActive(key))
+        if (!stopAllRequested && stopKeys.count(key) == 0 && m_scheduler.isKeyActive(key))
         {
             if (assignment.sequence.empty())
                 emitStopKey(key, 0);
@@ -372,16 +376,14 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
 void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    if (data == nullptr || sizeInBytes <= 0 || sizeInBytes > 16 * 1024 * 1024)
+    if (data == nullptr || sizeInBytes <= 8 || sizeInBytes > 16 * 1024 * 1024)
         return;
-    if (sizeInBytes > 8)
-    {
-        const std::string_view xmlBytes(static_cast<const char*>(data) + 8,
-                                        static_cast<size_t>(sizeInBytes - 8));
-        if (xmlBytes.find("<!DOCTYPE") != std::string_view::npos
-            || xmlBytes.find("<!ENTITY") != std::string_view::npos)
-            return;
-    }
+    const auto xmlLength = juce::ByteOrder::littleEndianInt(static_cast<const char*>(data) + 4);
+    if (xmlLength == 0 || xmlLength > static_cast<unsigned int>(sizeInBytes - 8)
+        || !juce::CharPointer_UTF8::isValidString(static_cast<const char*>(data) + 8,
+                                                 static_cast<int>(xmlLength))
+        || !SafeXml::hasSafeStructure(juce::String::fromUTF8(static_cast<const char*>(data) + 8,
+                                                           static_cast<int>(xmlLength)))) return;
     auto state = juce::AudioProcessor::getXmlFromBinary(data, sizeInBytes);
     if (state == nullptr || !state->hasTagName("NSeqArpKeys"))
         return;
@@ -400,7 +402,6 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
     m_assignments.fill(KeyAssignment{});
     m_pendingAssignmentUpdates.clear();
     m_pendingTimingUpdates.clear();
-    m_pendingAudition.reset();
     m_currentPresetId = state->getStringAttribute("currentPresetId").substring(0, 80);
     std::map<std::string, KeyAssignment> embeddedPatterns;
     for (auto* child : state->getChildIterator())
@@ -458,6 +459,23 @@ void NSeqArpKeysAudioProcessor::setAssignmentForKey(int key, const KeyAssignment
 {
     if (key < 0 || key >= 128) return;
     const juce::ScopedLock lock(m_assignmentsLock);
+    replaceAssignment(key, assignment);
+    if (!assignment.linkId.empty())
+        for (int other = 0; other < 128; ++other)
+            if (other != key && m_assignments[static_cast<size_t>(other)].linkId == assignment.linkId)
+                replaceAssignment(other, assignment);
+}
+
+void NSeqArpKeysAudioProcessor::restoreAssignments(
+    const std::vector<std::pair<int, KeyAssignment>>& assignments)
+{
+    const juce::ScopedLock lock(m_assignmentsLock);
+    for (const auto& [key, assignment] : assignments)
+        if (key >= 0 && key < 128) replaceAssignment(key, assignment);
+}
+
+void NSeqArpKeysAudioProcessor::replaceAssignment(int key, const KeyAssignment& assignment)
+{
     auto& current = m_assignments[static_cast<size_t>(key)];
     if (current == assignment) return;
     auto timingOnly = current;
@@ -467,14 +485,6 @@ void NSeqArpKeysAudioProcessor::setAssignmentForKey(int key, const KeyAssignment
     else
         m_pendingAssignmentUpdates.insert(key);
     current = assignment;
-    if (!assignment.linkId.empty())
-        for (int other = 0; other < 128; ++other)
-            if (other != key && m_assignments[static_cast<size_t>(other)].linkId == assignment.linkId
-                && !(m_assignments[static_cast<size_t>(other)] == assignment))
-            {
-                m_assignments[static_cast<size_t>(other)] = assignment;
-                m_pendingAssignmentUpdates.insert(other);
-            }
 }
 
 void NSeqArpKeysAudioProcessor::copyAssignmentToRange(int sourceKey, int first, int last,
@@ -553,6 +563,7 @@ void NSeqArpKeysAudioProcessor::requestStopKey(int key)
     if (key < 0 || key >= 128)
         return;
     const juce::ScopedLock lock(m_pendingPreviewMidiLock);
+    if (m_pendingAudition && m_pendingAudition->first == key) m_pendingAudition.reset();
     juce::MidiBuffer remaining;
     for (const auto& metadata : m_pendingPreviewMidi)
         if (metadata.getMessage().getNoteNumber() != key)
@@ -568,12 +579,13 @@ void NSeqArpKeysAudioProcessor::requestStopAll()
     m_nextPendingPreviewSamplePosition = 0;
     m_pendingStopAll = true;
     m_pendingStopKeys.clear();
+    m_pendingAudition.reset();
 }
 
 void NSeqArpKeysAudioProcessor::auditionPattern(int key, const KeyAssignment& assignment)
 {
     if (key < 0 || key >= 128) return;
-    const juce::ScopedLock lock(m_assignmentsLock);
+    const juce::ScopedLock lock(m_pendingPreviewMidiLock);
     m_pendingAudition = std::make_unique<std::pair<int, KeyAssignment>>(key, assignment);
 }
 

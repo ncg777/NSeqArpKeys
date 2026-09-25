@@ -1,7 +1,7 @@
 #include "PluginEditor.h"
 #include "Engine/GateRunnerEngine.h"
 #include "Domain/AssignmentState.h"
-#include <numeric>
+#include "Domain/SafeXml.h"
 
 namespace
 {
@@ -21,18 +21,12 @@ juce::File patternDirectory()
 
 std::unique_ptr<juce::XmlElement> parseSafeXml(const juce::String& text)
 {
-    // JUCE's XML parser can resolve DTD entities. Our formats never emit a
-    // DTD, so reject declarations before invoking the parser.
-    if (text.containsIgnoreCase("<!DOCTYPE") || text.containsIgnoreCase("<!ENTITY"))
-        return {};
-    return juce::XmlDocument::parse(text);
+    return SafeXml::parse(text);
 }
 
 std::unique_ptr<juce::XmlElement> parseSafeXmlFile(const juce::File& file, int64_t limit)
 {
-    if (!file.existsAsFile() || file.getSize() <= 0 || file.getSize() > limit)
-        return {};
-    return parseSafeXml(file.loadFileAsString());
+    return SafeXml::readFile(file, limit);
 }
 
 bool writeXmlFile(const juce::File& target, const juce::XmlElement& xml)
@@ -272,6 +266,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         auto assignment = audioProcessor.getAssignmentForKey(key);
         change(assignment);
         audioProcessor.setAssignmentForKey(key, assignment);
+        updatePatternPreview();
     };
     auto addLabel = [this](juce::Label& label, const juce::String& text)
     {
@@ -357,8 +352,10 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
             || notes.empty() || notes.size() > 16)
         {
             drumNotesEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
+            drumNotesEditor.setTooltip("Not applied: enter 1 to 16 MIDI pitches from 0 to 127.");
             return;
         }
+        drumNotesEditor.setTooltip("1 to 16 MIDI pitches. The number of pitches sets the lane count.");
         changeAssignment([&notes](KeyAssignment& a) {
             a.drumLaneCount = static_cast<int>(notes.size());
             for (size_t i = 0; i < notes.size(); ++i)
@@ -491,6 +488,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     // ----- Per-key: searchable Forte set --------------------------------------
     forteSearchLabel.setText("Find Set", juce::dontSendNotification);
     addAndMakeVisible(forteSearchLabel);
+    forteSearchEditor.setInputRestrictions(80);
     forteSearchEditor.setTextToShowWhenEmpty("Forte ID, common name, or pitches", juce::Colours::grey);
     forteSearchEditor.onTextChange = [this] { updateForteSearchResults(); };
     forteSearchEditor.onReturnKey = [this]
@@ -532,6 +530,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
             audioProcessor.setForteForKey(audioProcessor.getSelectedKey(),
                                           visibleForteIds[static_cast<size_t>(index)].toStdString());
             updateSelectedForteLabel();
+            updatePatternPreview();
         }
     };
 
@@ -644,15 +643,14 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     assignLinkButton.onClick = [this] { assignSelectedPattern(true); };
     auditionButton.onClick = [this]
     {
-        if (selectedPatternIndex < 0) return;
-        const int key = audioProcessor.getSelectedKey();
-        if (auditioningKey == key && audioProcessor.isKeySounding(key))
+        if (auditioningKey >= 0)
         {
-            audioProcessor.requestStopKey(key);
-            auditioningKey = -1;
+            stopPatternAudition();
         }
         else
         {
+            if (selectedPatternIndex < 0 || selectedPatternIndex >= static_cast<int>(patternLibrary.size())) return;
+            const int key = audioProcessor.getSelectedKey();
             audioProcessor.auditionPattern(key, patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment);
             auditioningKey = key;
         }
@@ -671,6 +669,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
 
 NSeqArpKeysAudioProcessorEditor::~NSeqArpKeysAudioProcessorEditor()
 {
+    stopPatternAudition();
     setLookAndFeel(nullptr);
     presetList.setModel(nullptr);
     keyboardComponent.removeMouseListener(this);
@@ -1083,7 +1082,7 @@ void NSeqArpKeysAudioProcessorEditor::undoKeyEdit()
     syncEditHistory();
     const int key = editHistory.undo(
         [this](int k) { return audioProcessor.getAssignmentForKey(k); },
-        [this](int k, const KeyAssignment& a) { audioProcessor.setAssignmentForKey(k, a); });
+        [this](const auto& assignments) { audioProcessor.restoreAssignments(assignments); });
     if (key < 0) return;
     audioProcessor.setSelectedKey(key);
     loadAssignmentForKey(key);
@@ -1094,7 +1093,7 @@ void NSeqArpKeysAudioProcessorEditor::redoKeyEdit()
     syncEditHistory();
     const int key = editHistory.redo(
         [this](int k) { return audioProcessor.getAssignmentForKey(k); },
-        [this](int k, const KeyAssignment& a) { audioProcessor.setAssignmentForKey(k, a); });
+        [this](const auto& assignments) { audioProcessor.restoreAssignments(assignments); });
     if (key < 0) return;
     audioProcessor.setSelectedKey(key);
     loadAssignmentForKey(key);
@@ -1169,9 +1168,13 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
 
 void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
 {
+    const auto selectedId = selectedPatternIndex >= 0 && selectedPatternIndex < static_cast<int>(patternLibrary.size())
+        ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id : juce::String();
+    stopPatternAudition();
     patternLibrary.clear();
+    selectedPatternIndex = -1;
     auto directory = patternDirectory();
-    if (directory.createDirectory().failed()) return;
+    if (directory.createDirectory().failed()) { filterPatternLibrary(); return; }
     juce::Array<juce::File> files;
     directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpattern");
     for (const auto& file : files)
@@ -1197,6 +1200,8 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
         if (a.assignment.favourite != b.assignment.favourite) return a.assignment.favourite;
         return juce::String(a.assignment.name).compareIgnoreCase(juce::String(b.assignment.name)) < 0;
     });
+    for (int i = 0; i < static_cast<int>(patternLibrary.size()); ++i)
+        if (patternLibrary[static_cast<size_t>(i)].id == selectedId) selectedPatternIndex = i;
     filterPatternLibrary();
 }
 
@@ -1245,6 +1250,13 @@ void NSeqArpKeysAudioProcessorEditor::assignSelectedPattern(bool linked)
     else recordKeyEdit();
     auto assignment = patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment;
     assignment.linkId = linked ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id.toStdString() : "";
+    // Joining a link uses the definition already edited in this project.
+    if (linked)
+        for (int other = 0; other < 128; ++other)
+        {
+            const auto existing = audioProcessor.getAssignmentForKey(other);
+            if (existing.linkId == assignment.linkId) { assignment = existing; break; }
+        }
     audioProcessor.setAssignmentForKey(key, assignment);
     setPatternBrowserOpen(false);
     loadAssignmentForKey(key);
@@ -1283,9 +1295,7 @@ void NSeqArpKeysAudioProcessorEditor::saveSelectedPatternMetadata()
 void NSeqArpKeysAudioProcessorEditor::updatePatternPreview()
 {
     const auto a = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
-    auto preview = a;
-    if (preview.sequence.size() > 16) preview.sequence.resize(16);
-    const auto events = GateRunnerEngine::computeAllStepEvents(preview);
+    const auto events = GateRunnerEngine::computeAllStepEvents(a, 16);
     juce::String text = "STEP PREVIEW   ";
     for (const auto& step : events)
         text << (step.empty() ? "· " : juce::String(step.size()) + " ");
@@ -1571,8 +1581,10 @@ void NSeqArpKeysAudioProcessorEditor::selectedRowsChanged(int row)
 {
     if (patternBrowserOpen)
     {
-        selectedPatternIndex = row >= 0 && row < static_cast<int>(filteredPatterns.size())
+        const int nextIndex = row >= 0 && row < static_cast<int>(filteredPatterns.size())
             ? filteredPatterns[static_cast<size_t>(row)] : -1;
+        if (nextIndex != selectedPatternIndex) stopPatternAudition();
+        selectedPatternIndex = nextIndex;
         const bool selected = selectedPatternIndex >= 0;
         for (auto* button : { &assignCopyButton, &assignLinkButton, &auditionButton, &bankSaveButton })
             button->setEnabled(selected);
@@ -1635,6 +1647,7 @@ void NSeqArpKeysAudioProcessorEditor::showPresetStatus(const juce::String& messa
 
 void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 {
+    if (open) stopPatternAudition();
     browserOpen = open;
     if (open) patternBrowserOpen = false;
     updateModeVisibility();
@@ -1642,6 +1655,7 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 
 void NSeqArpKeysAudioProcessorEditor::setPatternBrowserOpen(bool open)
 {
+    if (!open) stopPatternAudition();
     patternBrowserOpen = open;
     if (open)
     {
@@ -1649,6 +1663,13 @@ void NSeqArpKeysAudioProcessorEditor::setPatternBrowserOpen(bool open)
         loadPatternLibrary();
     }
     updateModeVisibility();
+}
+
+void NSeqArpKeysAudioProcessorEditor::stopPatternAudition()
+{
+    if (auditioningKey >= 0) audioProcessor.requestStopKey(auditioningKey);
+    auditioningKey = -1;
+    auditionButton.setButtonText("Audition");
 }
 
 void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
@@ -1716,6 +1737,8 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
         component->setVisible(patternBrowserOpen);
     bankEmptyLabel.setVisible(patternBrowserOpen && filteredPatterns.empty());
     presetList.updateContent();
+    // Melodic mode has an octave row and the selected-set description.
+    setSize(getWidth(), editor && !rhythmic ? 900 : 830);
     resized();
 }
 
@@ -1762,6 +1785,7 @@ void NSeqArpKeysAudioProcessorEditor::timerCallback()
     const auto revision = audioProcessor.getStateRestoreRevision();
     if (revision != lastStateRestoreRevision)
     {
+        stopPatternAudition();
         syncEditHistory();
         meterNumeratorSlider.setValue(audioProcessor.getMeterNumerator()->get(), juce::dontSendNotification);
         meterDenominatorSlider.setValue(audioProcessor.getMeterDenominator()->get(), juce::dontSendNotification);

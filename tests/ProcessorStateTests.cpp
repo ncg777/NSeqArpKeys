@@ -1,5 +1,7 @@
 #include "../Source/PluginProcessor.h"
 #include "../Source/Domain/AssignmentState.h"
+#include "../Source/Domain/AssignmentHistory.h"
+#include "../Source/Domain/SafeXml.h"
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
@@ -88,6 +90,16 @@ int runTests(int argc, char** argv)
     AssignmentState::write(shortFile, shortDrums);
     require(AssignmentState::read(shortFile) == shortDrums,
             "Variable drum lane count, shared velocity bits or wide mask were lost");
+    shortDrums.mode = KeyAssignment::Mode::melodic;
+    AssignmentState::write(shortFile, shortDrums);
+    require(AssignmentState::read(shortFile) == shortDrums,
+            "Switching modes must not lose wide masks when saving a pattern");
+    processor.setAssignmentForKey(63, shortDrums);
+    juce::MemoryBlock switchedState;
+    processor.getStateInformation(switchedState);
+    restored.setStateInformation(switchedState.getData(), static_cast<int>(switchedState.getSize()));
+    require(restored.getAssignmentForKey(63) == shortDrums,
+            "Host restore lost a wide mask after a mode switch");
 
     juce::XmlElement legacy("NSeqArpKeys");
     legacy.setAttribute("meterDenominator", 3);
@@ -113,6 +125,30 @@ int runTests(int argc, char** argv)
     restored.setStateInformation(hostile.getData(), static_cast<int>(hostile.getSize()));
     require(restored.getAssignmentForKey(60) == migrated,
             "A DTD-bearing host state was accepted before safe validation");
+    require(SafeXml::parse(hostileXml) == nullptr, "Pattern/preset parser accepted a DTD");
+    juce::String nested;
+    for (int i = 0; i < 1024; ++i) nested += "<NSeqArpKeys>";
+    for (int i = 0; i < 1024; ++i) nested += "</NSeqArpKeys>";
+    require(SafeXml::parse(nested) == nullptr, "Deeply nested XML reached the recursive parser");
+    hostile.setSize(8);
+    const auto nestedLength = static_cast<juce::uint32>(nested.getNumBytesAsUTF8());
+    hostile.append(nested.toRawUTF8(), nestedLength + 1);
+    const auto nestedLittleLength = juce::ByteOrder::swapIfBigEndian(nestedLength);
+    std::memcpy(static_cast<char*>(hostile.getData()) + 4, &nestedLittleLength, 4);
+    restored.setStateInformation(hostile.getData(), static_cast<int>(hostile.getSize()));
+    require(restored.getAssignmentForKey(60) == migrated, "Deeply nested host XML changed state");
+    hostile.setSize(9);
+    const juce::uint32 oneByte = juce::ByteOrder::swapIfBigEndian(static_cast<juce::uint32>(1));
+    std::memcpy(static_cast<char*>(hostile.getData()) + 4, &oneByte, 4);
+    static_cast<char*>(hostile.getData())[8] = static_cast<char>(0xe2);
+    restored.setStateInformation(hostile.getData(), static_cast<int>(hostile.getSize()));
+    require(restored.getAssignmentForKey(60) == migrated, "Truncated UTF-8 host state was accepted");
+    require(SafeXml::parse("<?xml version=\"1.0\"?><NSeqArpKeys><!-- <ignored> -->"
+                          "<Assignment name=\"A &amp; B > C\"/><![CDATA[<text>]]></NSeqArpKeys>") != nullptr,
+            "Safe XML comments, escaped attributes or CDATA were rejected");
+    juce::String manyAttributes = "<NSeqArpKeys";
+    for (int i = 0; i < 65; ++i) manyAttributes += " a" + juce::String(i) + "=\"x\"";
+    require(SafeXml::parse(manyAttributes + "/>") == nullptr, "XML attribute limit was not enforced");
     std::vector<char> oversizedState(16 * 1024 * 1024 + 1);
     restored.setStateInformation(oversizedState.data(), static_cast<int>(oversizedState.size()));
     require(restored.getAssignmentForKey(60) == migrated,
@@ -149,6 +185,25 @@ int runTests(int argc, char** argv)
     onCleanInstall.setStateInformation(sharedState.getData(), static_cast<int>(sharedState.getSize()));
     require(onCleanInstall.getAssignmentForKey(70) == linked,
             "Whole preset lost embedded shared pattern definition");
+
+    // Linked edits capture the complete inverse before restoring any key.
+    processor.setAssignmentForKey(71, linked);
+    AssignmentHistory history;
+    history.record({ 70, { { 70, linked }, { 71, linked } } });
+    auto editedLink = linked;
+    editedLink.name = "Redo both members";
+    processor.setAssignmentForKey(70, editedLink);
+    const auto get = [&](int key) { return processor.getAssignmentForKey(key); };
+    const auto set = [&](const auto& assignments) { processor.restoreAssignments(assignments); };
+    history.undo(get, set);
+    require(get(70) == linked && get(71) == linked, "Linked undo failed");
+    history.redo(get, set);
+    require(get(70) == editedLink && get(71) == editedLink, "Linked redo captured a partially undone edit");
+    auto detached = editedLink;
+    detached.linkId.clear();
+    detached.name = "Independent replacement";
+    processor.restoreAssignments({ { 70, detached }, { 71, linked } });
+    require(get(70) == detached && get(71) == linked, "Snapshot restore propagated outside its keys");
 
     // Real processor callback: sample-accurate triggering, release, editing,
     // isolated pattern replacement and per-key timing changes.
@@ -205,6 +260,63 @@ int runTests(int argc, char** argv)
     playback.processBlock(audio, midi);
     require(midi.getNumEvents() == 1 && (*midi.begin()).getMessage().isNoteOff(),
             "Stop All must release the other active key");
+
+    NSeqArpKeysAudioProcessor linkedPlayback;
+    linkedPlayback.prepareToPlay(1000.0, 100);
+    linkedPlayback.getMeterDenominator()->setValueNotifyingHost(0.0f);
+    auto linkedBeat = drum(36);
+    linkedBeat.linkId = "timing";
+    linkedPlayback.setAssignmentForKey(60, linkedBeat);
+    linkedPlayback.setAssignmentForKey(61, linkedBeat);
+    audio.setSize(2, 100);
+    midi.clear();
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, static_cast<juce::uint8>(127)), 0);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 61, static_cast<juce::uint8>(127)), 0);
+    linkedPlayback.processBlock(audio, midi);
+    linkedBeat.subdivision = 2;
+    linkedPlayback.setAssignmentForKey(60, linkedBeat);
+    midi.clear();
+    audio.setSize(2, 201);
+    linkedPlayback.processBlock(audio, midi);
+    int linkedOnsets = 0;
+    for (const auto event : midi)
+        if (event.getMessage().isNoteOn())
+        {
+            ++linkedOnsets;
+            require(event.samplePosition == 200, "A linked timing edit restarted a follower");
+        }
+    require(linkedOnsets == 2, "Linked timing did not preserve both phases");
+    linkedBeat.name = "Edited before Stop";
+    linkedPlayback.setAssignmentForKey(60, linkedBeat);
+    linkedPlayback.requestStopAll();
+    midi.clear();
+    linkedPlayback.processBlock(audio, midi);
+    for (const auto event : midi)
+        require(!event.getMessage().isNoteOn(), "Stop retriggered a pending pattern edit");
+
+    NSeqArpKeysAudioProcessor audition;
+    require(!audition.isKeySounding(60), "Sounding indicators must start inactive");
+    audition.prepareToPlay(1000.0, 100);
+    audio.setSize(2, 100);
+    for (bool stopAll : { false, true })
+    {
+        audition.auditionPattern(60, drum(36));
+        if (stopAll) audition.requestStopAll(); else audition.requestStopKey(60);
+        midi.clear();
+        audition.processBlock(audio, midi);
+        require(midi.isEmpty() && !audition.isKeySounding(60), "Stop did not cancel a queued audition");
+    }
+    audition.auditionPattern(60, drum(36));
+    midi.clear();
+    audition.processBlock(audio, midi);
+    require(audition.isKeySounding(60), "Audition did not start");
+    audition.auditionPattern(61, drum(38));
+    audition.releaseResources();
+    require(!audition.isKeySounding(60), "Release left a stale sounding indicator");
+    audition.prepareToPlay(1000.0, 100);
+    midi.clear();
+    audition.processBlock(audio, midi);
+    require(midi.isEmpty(), "Release left a queued audition");
 
     // Reported rhythmic pattern, without a Forte set.
     // Preview-key input follows the same queue used by the editor keyboard.
@@ -264,13 +376,31 @@ int runTests(int argc, char** argv)
                     require(!processor.isPreviewSoundEnabled(), "Preview toggle did not mute sound");
                 }
         require(previewToggleFound, "Preview sound control missing");
+        const auto checkLayout = [&]
+        {
+            for (auto* child : editor->getChildren())
+                if (child->isVisible())
+                    require(child->getHeight() >= 16 && editor->getLocalBounds().contains(child->getBounds()),
+                            "A visible editor control is clipped or collapsed");
+        };
         for (auto* child : editor->getChildren())
             if (auto* combo = dynamic_cast<juce::ComboBox*>(child))
                 if (combo->getItemText(0) == "Melodic")
                 {
                     processor.setChannelForKey(60, 1);
                     combo->setSelectedId(1, juce::sendNotificationSync);
+                    checkLayout();
+                    if (argc >= 4)
+                    {
+                        const auto file = juce::File::getCurrentWorkingDirectory().getChildFile(argv[3]);
+                        file.deleteFile();
+                        juce::FileOutputStream stream(file);
+                        require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                            editor->createComponentSnapshot(editor->getLocalBounds()), stream),
+                            "Could not save melodic editor snapshot");
+                    }
                     combo->setSelectedId(2, juce::sendNotificationSync);
+                    checkLayout();
                     require(processor.getAssignmentForKey(60).channel == 1,
                             "Switching to rhythmic mode changed the selected MIDI channel");
                     processor.setAssignmentForKey(60, pattern);
@@ -316,6 +446,7 @@ int runTests(int argc, char** argv)
         if (argc >= 3)
         {
             click("Pattern Bank");
+            checkLayout();
             auto bankSnapshot = editor->createComponentSnapshot(editor->getLocalBounds());
             const auto bankFile = juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]);
             bankFile.deleteFile();
@@ -323,6 +454,52 @@ int runTests(int argc, char** argv)
             require(bankOutput.openedOk()
                 && juce::PNGImageFormat().writeImageToStream(bankSnapshot, bankOutput),
                 "Could not save Pattern Bank snapshot");
+
+            // Run with an isolated, nonempty bank to exercise the actual UI callbacks.
+            if (juce::SystemStats::getEnvironmentVariable("NSEQARPKEYS_PRESET_DIR", {}).isNotEmpty())
+            {
+                click("Assign link");
+                auto bankLink = processor.getAssignmentForKey(60);
+                require(!bankLink.linkId.empty(), "UI bank fixture must contain a pattern");
+                bankLink.name = "Edited shared definition";
+                processor.setAssignmentForKey(60, bankLink);
+                const auto previous62 = processor.getAssignmentForKey(62);
+                processor.setSelectedKey(62);
+                click("Pattern Bank");
+                click("Assign link");
+                require(processor.getAssignmentForKey(60) == bankLink
+                    && processor.getAssignmentForKey(62) == bankLink,
+                    "Joining a bank link overwrote the project's edited definition");
+                click("Undo");
+                require(processor.getAssignmentForKey(60) == bankLink
+                    && processor.getAssignmentForKey(62) == previous62, "Bank link undo failed");
+                click("Redo");
+                require(processor.getAssignmentForKey(60) == bankLink
+                    && processor.getAssignmentForKey(62) == bankLink, "Bank link redo failed");
+
+                processor.prepareToPlay(1000.0, 100);
+                click("Pattern Bank");
+                click("Audition");
+                click("Stop audition");
+                midi.clear();
+                processor.processBlock(audio, midi);
+                require(midi.isEmpty(), "UI Stop audition failed before the first audio callback");
+                click("Audition");
+                click("Back to Editor");
+                midi.clear();
+                processor.processBlock(audio, midi);
+                require(midi.isEmpty(), "Closing the bank left a queued audition");
+                click("Pattern Bank");
+                click("Audition");
+                midi.clear();
+                processor.processBlock(audio, midi);
+                require(processor.isKeySounding(62), "UI audition did not start");
+                editor.reset();
+                midi.clear();
+                processor.processBlock(audio, midi);
+                require(!processor.isKeySounding(62), "Closing the editor left its audition running");
+                processor.releaseResources();
+            }
         }
     }
     std::cout << "Processor state and playback tests passed\n";

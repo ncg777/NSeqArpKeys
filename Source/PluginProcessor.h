@@ -58,6 +58,7 @@ public:
     // -----------------------------------------------------------------------
     KeyAssignment getAssignmentForKey(int key) const;
     void setAssignmentForKey(int key, const KeyAssignment& assignment);
+    void restoreAssignments(const std::vector<std::pair<int, KeyAssignment>>& assignments);
     void copyAssignmentToRange(int sourceKey, int first, int last, bool transpose);
 
     void setPatternForKey (int key, const std::string& text);
@@ -82,6 +83,7 @@ public:
 
 private:
     void initialisePreviewSynth();
+    void replaceAssignment(int key, const KeyAssignment& assignment);
 
     // -----------------------------------------------------------------------
     // Global parameters

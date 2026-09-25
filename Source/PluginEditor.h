@@ -37,6 +37,7 @@ private:
     void updateModeVisibility();
     void updatePatternPreview();
     void setPatternBrowserOpen(bool open);
+    void stopPatternAudition();
     void loadPatternLibrary();
     void filterPatternLibrary();
     void assignSelectedPattern(bool linked);

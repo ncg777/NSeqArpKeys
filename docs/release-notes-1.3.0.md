@@ -21,6 +21,13 @@
   A setup reopens without access to the local Pattern Bank.
 - Text input, file import and state restore are bounded. Invalid integer
   edits remain unapplied; oversized pattern and preset files are rejected.
+  XML declarations that define entities, excessive nesting and excessive
+  element or attribute counts are rejected before parsing.
+- Linked-pattern undo/redo preserves each assignment, and timing edits keep
+  linked keys in phase. Joining a bank link retains the project's edited
+  definition. Audition stops when leaving the bank or closing the editor.
+- Step previews follow rotation and reversal across the full sequence.
+  Switching modes preserves large rhythmic values through save and restore.
 
 ## Compatibility
 
