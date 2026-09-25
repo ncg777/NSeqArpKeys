@@ -23,6 +23,7 @@
     ul, ol { margin: 2mm 0 5mm; padding-left: 6mm; }
     li { padding-left: 1mm; margin-bottom: 2mm; }
     code { font: 9pt Consolas, "Courier New", monospace; background: #edf3f8; padding: 0.2mm 1mm; border-radius: 2px; }
+    a { color: #0b6d9a; }
     strong { color: #172f4b; }
     .cover { min-height: 245mm; padding-top: 28mm; break-after: page; display: flex; flex-direction: column; }
     .eyebrow { color: #1d6c9e; font-size: 9pt; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10mm; }
@@ -59,6 +60,8 @@
     .mini-card { border: 1px solid #d5e2eb; padding: 4mm; break-inside: avoid; }
     .mini-card h3 { margin-top: 0; }
     .footer-note { border-top: 1px solid #c9d8e5; padding-top: 4mm; color: #63788d; font-size: 9pt; }
+    .companion-list { margin: 2mm 0 3mm; }
+    .companion-list li { margin-bottom: 2mm; }
     .mapping-table { max-width: 140mm; }
     .mapping-table td:first-child { font-weight: bold; }
     .forte-appendix { font-size: 8.3pt; line-height: 1.24; }
@@ -82,6 +85,7 @@
     <p class="subtitle">Turn integer sequences into melodies and chords through Forte pitch-class sets.</p>
     <div class="rule"></div>
     <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
+    <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
     <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.3.1 | September 2026</span></div>
   </section>
 
@@ -123,6 +127,13 @@
       <li>Click the same key again, or use <strong>Stop Key</strong> or <strong>Stop All</strong>, to stop a latched pattern.</li>
     </ol>
     <p class="small">A melodic key needs both a nonzero Pattern step and a Forte Set. Rhythmic mode uses Drum notes instead. The Init preset is deliberately silent.</p>
+    <h3>Make patterns with companion apps</h3>
+    <ul class="companion-list">
+      <li><strong>Sequence Operator</strong> (<a href="https://ncg777.github.io/sequence-operator/">ncg777.github.io/sequence-operator/</a>) creates and transforms integer sequences. Copy its result into a Melodic <strong>Pattern</strong> to hear those numbers as notes and chords.</li>
+      <li><strong>Rhythm Navigator</strong> (<a href="https://ncg777.github.io/rhythm-navigator/">ncg777.github.io/rhythm-navigator/</a>) supplies onset patterns. Put the Sequence Operator values at those onsets and <code>0</code> at rests. For drums, use <strong>Combined sequence → Copy</strong> in its drum sequencer and paste the decimal masks into a Rhythmic <strong>Pattern</strong>. Use at most 16 lanes, set <strong>Velocity bits/lane</strong> to <code>1</code>, enter Drum notes in its displayed bit order, and set <strong>Steps/QN</strong> to its displayed denominator when that is 16 or less.</li>
+      <li><strong>KComplexExplorer</strong> (<a href="https://ncg777.github.io/KComplexExplorer/">ncg777.github.io/KComplexExplorer/</a>) lets you audition and compare pitch-class sets, inspect their Forte numbers and interval vectors, and generate harmonic matrices. Choose a set in <strong>Find Set / Forte Set</strong>; different trigger keys can use different sets. Its padded suffix <code>.09</code> appears as <code>.9</code> in NSeqArpKeys.</li>
+    </ul>
+    <p>Use KComplexExplorer for the pitch collection, Sequence Operator for the note-mask stream, and Rhythm Navigator for its timing; then trigger the finished pattern from a MIDI key in NSeqArpKeys.</p>
   </section>
 
   <section class="page editor-page">

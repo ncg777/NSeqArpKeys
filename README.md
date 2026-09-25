@@ -10,6 +10,13 @@ its pattern, or turn on Latch to keep it
 playing while you edit. The app produces MIDI notes and has an internal
 preview sound.
 
+**Create patterns with companion apps:**
+[Sequence Operator](https://ncg777.github.io/sequence-operator/) shapes integer
+sequences, [Rhythm Navigator](https://ncg777.github.io/rhythm-navigator/)
+supplies rhythms and drum masks, and
+[KComplexExplorer](https://ncg777.github.io/KComplexExplorer/) helps you choose
+Forte pitch-class sets. Bring those ideas together in NSeqArpKeys.
+
 ## How integer patterns become notes
 
 In **Melodic** mode, each space-separated integer in **Pattern** is one step.
@@ -41,6 +48,28 @@ different pitches. The trigger key starts the assigned pattern; it does not
 transpose these notes. **Transpose** changes the output pitch separately.
 See the [manual's mapping guide](docs/NSeqArpKeys-Manual.html) and its complete
 Forte pitch-class and interval-vector appendix.
+
+## Make patterns with the companion apps
+
+- **[Sequence Operator](https://ncg777.github.io/sequence-operator/)** creates
+  and transforms integer sequences. Copy its result into a key's Melodic
+  **Pattern** to turn the numbers into notes and chords.
+- **[Rhythm Navigator](https://ncg777.github.io/rhythm-navigator/)** generates
+  onset patterns. Place Sequence Operator values on those onsets and `0` on
+  the rests. For drums, use its **Combined sequence → Copy** control and paste
+  the decimal masks into a Rhythmic **Pattern**. Set **Velocity bits/lane** to
+  `1`, use at most 16 lanes, put **Drum notes** in the displayed bit order, and
+  match **Steps/QN** to its displayed denominator when that value is at most
+  `16`.
+- **[KComplexExplorer](https://ncg777.github.io/KComplexExplorer/)** lets you
+  audition and compare pitch-class sets, inspect their Forte numbers and
+  interval vectors, and generate harmonic matrices. Choose a set you like in
+  NSeqArpKeys' **Find Set / Forte Set** controls; different trigger keys can
+  carry different sets. If KComplexExplorer shows a padded suffix such as
+  `.09`, look for the same transposition as `.9` in NSeqArpKeys.
+
+Together, these tools let you choose the pitch collection, shape the integer
+note stream, and design its timing before you play the result from a MIDI key.
 
 ## Download and install
 
