@@ -81,6 +81,16 @@ also bounded before use.
 The [1.3.0 release notes](docs/release-notes-1.3.0.md) summarize compatibility
 and the [user manual](docs/NSeqArpKeys-Manual.html) explains the controls.
 
+## Version 1.3.1 pattern bank transfer
+
+The Pattern Bank can import and export all entries as one XML-based
+`.nseqbank` file. Import merges into the local bank: matching pattern IDs are
+updated and new IDs are added. Other local patterns are retained. An entry
+without an ID receives one on import, so externally generated banks can omit
+IDs. Export includes every bank entry, regardless of the current search or
+favourites filter. See the [bank file format](docs/pattern-bank-format.md) and
+[1.3.1 release notes](docs/release-notes-1.3.1.md).
+
 ## Note lengths
 
 One step lasts `60 / (BPM × effective Steps/QN)` seconds. At 120 BPM and Steps/QN 4,
@@ -137,7 +147,7 @@ and verifies the ZIP. Archives are written to `release/`.
 
 [The GitHub Actions workflow](.github/workflows/build-release.yml) builds and
 runs this packaging script on Windows, Linux, and macOS. Every run uploads the
-three ZIPs as workflow artifacts. Pushing a `v1.3.0` tag publishes them as a
+three ZIPs as workflow artifacts. Pushing a `v1.3.1` tag publishes them as a
 GitHub release after all three builds succeed.
 
 ## Repository map
