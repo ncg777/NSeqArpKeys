@@ -31,12 +31,21 @@ struct KeyAssignment
     /** MIDI notes for bits 0–15 in rhythmic mode. */
     std::array<int, 16> drumNotes { 36, 38, 42, 46, 41, 43, 45, 47,
                                     48, 50, 49, 51, 39, 37, 54, 56 };
+    int drumLaneCount = 16;
+    /** Packed from the least significant bit, lane by lane. The widths total
+     *  at most 32 bits. One bit preserves the original binary lane masks. */
+    std::array<int, 16> drumVelocityBits { 1, 1, 1, 1, 1, 1, 1, 1,
+                                           1, 1, 1, 1, 1, 1, 1, 1 };
     int transpose = 0;
     int velocity = 100;
-    std::vector<int> velocitySteps;
-    std::vector<int> pitchSteps;
     int rotation = 0;
     bool reverse = false;
+    /** Same nonempty ID on multiple assignments means edits follow the link. */
+    std::string linkId;
+    /** Visual metadata travels with patterns and presets. */
+    std::string colour = "#62D6C6";
+    std::string tags;
+    bool favourite = false;
     /** Source key of an independent range copy (not a live link). */
     int rootKey = -1;
 
@@ -86,6 +95,7 @@ struct KeyAssignment
                                     int minimum = std::numeric_limits<int>::min(),
                                     int maximum = std::numeric_limits<int>::max())
     {
+        if (s.size() > 45056) return false;
         std::istringstream iss(s);
         std::vector<int> result;
         std::string token;
@@ -115,8 +125,10 @@ struct KeyAssignment
     {
         const auto fields = [](const KeyAssignment& a) {
             return std::tie(a.sequence, a.subdivision, a.mode, a.name, a.drumNotes,
-                            a.transpose, a.velocity, a.velocitySteps, a.pitchSteps,
-                            a.rotation, a.reverse, a.rootKey, a.forteString, a.channel,
+                            a.drumLaneCount,
+                            a.drumVelocityBits, a.transpose, a.velocity,
+                            a.rotation, a.reverse, a.linkId, a.colour, a.tags,
+                            a.favourite, a.rootKey, a.forteString, a.channel,
                             a.octave, a.gate, a.fixedLengthSteps);
         };
         return fields(*this) == fields(other);
@@ -147,6 +159,19 @@ struct KeyAssignment
     }
 
     bool hasValidForte() const { return !forte.isEmpty(); }
+
+    bool hasValidDrumVelocityBits() const
+    {
+        if (drumLaneCount < 1 || drumLaneCount > 16) return false;
+        int total = 0;
+        for (int i = 0; i < drumLaneCount; ++i)
+        {
+            const int width = drumVelocityBits[static_cast<size_t>(i)];
+            if (width < 1 || width > 7) return false;
+            total += width;
+        }
+        return total <= 32;
+    }
 
     int effectiveSubdivision(int global) const { return subdivision > 0 ? subdivision : global; }
 };

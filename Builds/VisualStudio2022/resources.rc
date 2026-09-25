@@ -18,9 +18,9 @@ BEGIN
     BLOCK "040904E4"
     BEGIN
       VALUE "FileDescription",  "NSeqArpKeys\0"
-      VALUE "FileVersion",  "1.2.0\0"
+      VALUE "FileVersion",  "1.3.0\0"
       VALUE "ProductName",  "NSeqArpKeys\0"
-      VALUE "ProductVersion",  "1.2.0\0"
+      VALUE "ProductVersion",  "1.3.0\0"
     END
   END
 

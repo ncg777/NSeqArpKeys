@@ -15,11 +15,28 @@ int main()
     KeyAssignment pattern;
     pattern.mode = KeyAssignment::Mode::rhythmic;
     pattern.sequence = { 5, 0, 1 };
-    pattern.pitchSteps = { 0, 12 };
     auto notes = GateRunnerEngine::computeAllSteps(pattern);
     require(notes.size() == 3 && notes[0].size() == 2);
     require(notes[0][0] == 36 && notes[0][1] == 42);
     require(notes[1].empty() && notes[2].size() == 1 && notes[2][0] == 36);
+    pattern.drumLaneCount = 3;
+    pattern.drumVelocityBits[0] = 2;
+    pattern.drumVelocityBits[1] = 3;
+    pattern.drumVelocityBits[2] = 2;
+    pattern.sequence = { 17 }; // lane 1 level 1, lane 2 level 4
+    const auto hits = GateRunnerEngine::computeAllStepEvents(pattern);
+    require(hits.size() == 1 && hits[0].size() == 2
+        && hits[0][0].note == 36 && hits[0][0].velocityLevel == 42
+        && hits[0][1].note == 38 && hits[0][1].velocityLevel == 72);
+    require(pattern.hasValidDrumVelocityBits());
+    pattern.drumVelocityBits[2] = 7;
+    require(pattern.hasValidDrumVelocityBits());
+    pattern.drumVelocityBits[2] = 33;
+    require(!pattern.hasValidDrumVelocityBits());
+    pattern.drumVelocityBits[2] = 1;
+    pattern.drumVelocityBits.fill(1);
+    pattern.drumLaneCount = 16;
+    pattern.sequence = { 5, 0, 1 };
 
     pattern.reverse = true;
     notes = GateRunnerEngine::computeAllSteps(pattern);
@@ -59,6 +76,7 @@ int main()
     for (int i = 0; i < 4097; ++i) tooLong += "1 ";
     require(!pattern.setSequenceFromString(tooLong));
     require(pattern.sequence.empty());
+    require(!pattern.setSequenceFromString(std::string(45057, ' ')));
 
     std::array<KeyAssignment, 128> keys;
     keys[60].name = "Original";

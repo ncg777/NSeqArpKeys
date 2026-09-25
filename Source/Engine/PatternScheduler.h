@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <JuceHeader.h>
 #include "../Domain/KeyAssignment.h"
+#include "GateRunnerEngine.h"
 
 // ---------------------------------------------------------------------------
 /** Runtime state for one currently-active pattern instance. */
@@ -20,13 +21,12 @@ struct ActivePattern
     int   channel  = 1;
     int   subdivision = 0;
     int   velocity = 100;
-    std::vector<int> velocitySteps;
     double lastStepDuration = 0.0;
     float gate     = 0.5f;
     float fixedLengthSteps = 0.0f;
 
     /** Precomputed note lists for every step (indexed by step % numSteps). */
-    std::vector<std::vector<int>> stepNotes;
+    std::vector<std::vector<GateRunnerEngine::StepNote>> stepNotes;
     std::vector<int> noteLengthSteps;
     int maxNoteLengthSteps = 1;
 

@@ -2,6 +2,7 @@
 #include "../Source/Domain/AssignmentState.h"
 #include <stdexcept>
 #include <iostream>
+#include <cstring>
 
 namespace
 {
@@ -36,8 +37,12 @@ int runTests(int argc, char** argv)
     pattern.name = "Saved pattern";
     pattern.subdivision = 3;
     pattern.velocity = 89;
-    pattern.velocitySteps = { 127, 0, 64 };
-    pattern.pitchSteps = { 0, 7 };
+    pattern.drumLaneCount = 4;
+    pattern.drumVelocityBits[0] = 4;
+    pattern.drumVelocityBits[1] = 3;
+    pattern.tags = "drums, test";
+    pattern.colour = "#F4BD68";
+    pattern.favourite = true;
     pattern.transpose = -5;
     pattern.rotation = 2;
     pattern.reverse = true;
@@ -61,7 +66,7 @@ int runTests(int argc, char** argv)
     processor.getStateInformation(saved);
     NSeqArpKeysAudioProcessor restored;
     restored.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
-    require(restored.getAssignmentForKey(60) == pattern, "DAW state lost 1.2.0 fields");
+    require(restored.getAssignmentForKey(60) == pattern, "DAW state lost 1.3.0 fields");
     require(!restored.isPreviewSoundEnabled(), "Preview sound setting was not restored");
     require(restored.getAssignmentForKey(61).sequence.empty(), "Empty pattern was replaced on restore");
     require(restored.getAssignmentForKey(62).sequence.size() == 3, "All-rest loop length was lost");
@@ -73,6 +78,15 @@ int runTests(int argc, char** argv)
     const auto decoded = juce::XmlDocument::parse(file.toString());
     require(decoded != nullptr && AssignmentState::read(*decoded) == pattern,
             "Individual pattern export/import must preserve every setting");
+    auto shortDrums = drum(36);
+    shortDrums.drumLaneCount = 3;
+    shortDrums.drumVelocityBits[0] = 7;
+    shortDrums.drumVelocityBits[1] = 7;
+    shortDrums.drumVelocityBits[2] = 7;
+    juce::XmlElement shortFile("Assignment");
+    AssignmentState::write(shortFile, shortDrums);
+    require(AssignmentState::read(shortFile) == shortDrums,
+            "Variable drum lane count or velocity widths were lost");
 
     juce::XmlElement legacy("NSeqArpKeys");
     legacy.setAttribute("meterDenominator", 3);
@@ -86,6 +100,22 @@ int runTests(int argc, char** argv)
     require(migrated.subdivision == 0 && migrated.effectiveSubdivision(3) == 3
             && migrated.fixedLengthSteps == 0 && migrated.mode == KeyAssignment::Mode::melodic,
             "Legacy preset must inherit global timing with compatible defaults");
+    const juce::String hostileXml = "<?xml version=\"1.0\"?><!DOCTYPE NSeqArpKeys "
+        "[<!ENTITY x \"unexpected\">]><NSeqArpKeys><Assignment key=\"60\" "
+        "sequence=\"&x;\"/></NSeqArpKeys>";
+    juce::MemoryBlock hostile;
+    hostile.append(saved.getData(), 8); // Keep JUCE's state magic.
+    const auto xmlLength = static_cast<juce::uint32>(hostileXml.getNumBytesAsUTF8());
+    hostile.append(hostileXml.toRawUTF8(), xmlLength + 1);
+    const auto littleLength = juce::ByteOrder::swapIfBigEndian(xmlLength);
+    std::memcpy(static_cast<char*>(hostile.getData()) + 4, &littleLength, 4);
+    restored.setStateInformation(hostile.getData(), static_cast<int>(hostile.getSize()));
+    require(restored.getAssignmentForKey(60) == migrated,
+            "A DTD-bearing host state was accepted before safe validation");
+    std::vector<char> oversizedState(16 * 1024 * 1024 + 1);
+    restored.setStateInformation(oversizedState.data(), static_cast<int>(oversizedState.size()));
+    require(restored.getAssignmentForKey(60) == migrated,
+            "Oversized host state changed assignments");
 
     processor.copyAssignmentToRange(60, 63, 65, true);
     require(processor.getAssignmentForKey(64).transpose == pattern.transpose + 4,
@@ -96,6 +126,28 @@ int runTests(int argc, char** argv)
     require(processor.getAssignmentForKey(60).name == pattern.name
             && processor.getAssignmentForKey(63).name == pattern.name,
             "Range copies must be independent");
+
+    auto linked = drum(40);
+    linked.linkId = "library-example";
+    processor.setAssignmentForKey(70, linked);
+    processor.setAssignmentForKey(71, linked);
+    linked.name = "Shared edit";
+    processor.setAssignmentForKey(70, linked);
+    require(processor.getAssignmentForKey(71).name == "Shared edit",
+            "Linked assignments did not follow edits");
+    auto separate = processor.getAssignmentForKey(71);
+    separate.linkId.clear();
+    processor.setAssignmentForKey(71, separate);
+    linked.name = "Another shared edit";
+    processor.setAssignmentForKey(70, linked);
+    require(processor.getAssignmentForKey(71).name == "Shared edit",
+            "Make independent did not break the link");
+    juce::MemoryBlock sharedState;
+    processor.getStateInformation(sharedState);
+    NSeqArpKeysAudioProcessor onCleanInstall;
+    onCleanInstall.setStateInformation(sharedState.getData(), static_cast<int>(sharedState.getSize()));
+    require(onCleanInstall.getAssignmentForKey(70) == linked,
+            "Whole preset lost embedded shared pattern definition");
 
     // Real processor callback: sample-accurate triggering, release, editing,
     // isolated pattern replacement and per-key timing changes.
@@ -153,7 +205,7 @@ int runTests(int argc, char** argv)
     require(midi.getNumEvents() == 1 && (*midi.begin()).getMessage().isNoteOff(),
             "Stop All must release the other active key");
 
-    // Reported rhythmic pattern, without a Forte set or expression lanes.
+    // Reported rhythmic pattern, without a Forte set.
     // Preview-key input follows the same queue used by the editor keyboard.
     NSeqArpKeysAudioProcessor rhythm;
     rhythm.prepareToPlay(48000.0, 512);
@@ -190,7 +242,7 @@ int runTests(int argc, char** argv)
     require(drumOnsets == std::vector<int>({ 36, 38, 36 }),
             "Rhythmic pattern must play kick/snare and loop without a Forte set");
 
-    if (argc == 2)
+    if (argc >= 2)
     {
         juce::ScopedJuceInitialiser_GUI gui;
         processor.setSelectedKey(60);
@@ -258,6 +310,15 @@ int runTests(int argc, char** argv)
         editor.reset();
         editor.reset(processor.createEditor());
         require(processor.getAssignmentForKey(60) == pattern, "Reopening editor changed pattern state");
+        if (argc >= 3)
+        {
+            click("Pattern Bank");
+            auto bankSnapshot = editor->createComponentSnapshot(editor->getLocalBounds());
+            juce::FileOutputStream bankOutput(juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]));
+            require(bankOutput.openedOk()
+                && juce::PNGImageFormat().writeImageToStream(bankSnapshot, bankOutput),
+                "Could not save Pattern Bank snapshot");
+        }
     }
     std::cout << "Processor state and playback tests passed\n";
     return 0;

@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include "Engine/GateRunnerEngine.h"
 #include "Domain/AssignmentState.h"
+#include <numeric>
 
 namespace
 {
@@ -11,6 +12,27 @@ juce::File presetDirectory()
         return juce::File(custom);
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
         .getChildFile("NSeqArpKeys").getChildFile("Presets");
+}
+
+juce::File patternDirectory()
+{
+    return presetDirectory().getParentDirectory().getChildFile("Patterns");
+}
+
+std::unique_ptr<juce::XmlElement> parseSafeXml(const juce::String& text)
+{
+    // JUCE's XML parser can resolve DTD entities. Our formats never emit a
+    // DTD, so reject declarations before invoking the parser.
+    if (text.containsIgnoreCase("<!DOCTYPE") || text.containsIgnoreCase("<!ENTITY"))
+        return {};
+    return juce::XmlDocument::parse(text);
+}
+
+std::unique_ptr<juce::XmlElement> parseSafeXmlFile(const juce::File& file, int64_t limit)
+{
+    if (!file.existsAsFile() || file.getSize() <= 0 || file.getSize() > limit)
+        return {};
+    return parseSafeXml(file.loadFileAsString());
 }
 
 bool writeXmlFile(const juce::File& target, const juce::XmlElement& xml)
@@ -27,13 +49,28 @@ bool validPresetState(const juce::XmlElement* state)
     if (state == nullptr || !state->hasTagName("NSeqArpKeys"))
         return false;
     int assignments = 0;
+    int definitions = 0;
+    std::array<bool, 128> seenKeys {};
     for (auto* child : state->getChildIterator())
     {
+        if (child->hasTagName("SharedPattern"))
+        {
+            if (++definitions > 128 || child->getStringAttribute("id").length() > 80
+                || child->getStringAttribute("sequence").length() > 45056)
+                return false;
+            continue;
+        }
+        const int key = child->getIntAttribute("key", -1);
         if (!child->hasTagName("Assignment")
-            || child->getIntAttribute("key", -1) < 0
-            || child->getIntAttribute("key", -1) > 127
+            || key < 0 || key > 127
+            || seenKeys[static_cast<size_t>(key)]
+            || child->getStringAttribute("sequence").length() > 45056
+            || child->getStringAttribute("name").length() > 80
+            || child->getStringAttribute("tags").length() > 200
+            || child->getStringAttribute("linkId").length() > 80
             || ++assignments > 128)
             return false;
+        seenKeys[static_cast<size_t>(key)] = true;
     }
     return true;
 }
@@ -45,19 +82,39 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
       audioProcessor(p),
       keyboardComponent(keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
+    theme.setColourScheme(juce::LookAndFeel_V4::getDarkColourScheme());
+    theme.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff294354));
+    theme.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff397c81));
+    theme.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffedf5fa));
+    theme.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff172431));
+    theme.setColour(juce::TextEditor::textColourId, juce::Colour(0xffeef6f9));
+    theme.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff365164));
+    theme.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(0xff62d6c6));
+    theme.setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff203342));
+    theme.setColour(juce::ComboBox::textColourId, juce::Colour(0xffedf5fa));
+    theme.setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff365164));
+    theme.setColour(juce::Slider::thumbColourId, juce::Colour(0xff62d6c6));
+    theme.setColour(juce::Slider::trackColourId, juce::Colour(0xff4a8791));
+    theme.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffedf5fa));
+    theme.setColour(juce::Label::textColourId, juce::Colour(0xffc8d9e2));
+    theme.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff172431));
+    setLookAndFeel(&theme);
     // ----- Keyboard -----------------------------------------------------------
     addAndMakeVisible(keyboardComponent);
     keyboardState.addListener(this);
+    keyboardComponent.addMouseListener(this, true);
 
     presetNameLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(presetNameLabel);
     previousPresetButton.setButtonText("<");
     nextPresetButton.setButtonText(">");
     browsePresetsButton.setButtonText("Browse Presets");
+    browsePatternsButton.setButtonText("Pattern Bank");
     savePresetButton.setButtonText("Save");
     previousPresetButton.onClick = [this] { navigatePreset(-1); };
     nextPresetButton.onClick = [this] { navigatePreset(1); };
     browsePresetsButton.onClick = [this] { setBrowserOpen(!browserOpen); };
+    browsePatternsButton.onClick = [this] { setPatternBrowserOpen(!patternBrowserOpen); };
     savePresetButton.onClick = [this]
     {
         const auto id = audioProcessor.getCurrentPresetId();
@@ -81,7 +138,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         showPresetStatus("Enter a name, then choose Save New.");
     };
     for (auto* button : { &previousPresetButton, &nextPresetButton,
-                          &browsePresetsButton, &savePresetButton })
+                          &browsePresetsButton, &browsePatternsButton, &savePresetButton })
         addAndMakeVisible(button);
 
     latchButton.setButtonText("Latch (keep playing)");
@@ -188,6 +245,8 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     addAndMakeVisible(patternLabel);
 
     addAndMakeVisible(patternTextEditor);
+    patternTextEditor.setInputRestrictions(45056);
+    patternTextEditor.setTooltip("Signed integer steps. Up to 4096 items; invalid input stays unapplied.");
     patternTextEditor.onTextChange = [this]
     {
         std::vector<int> values;
@@ -196,6 +255,8 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
         recordKeyEdit();
         audioProcessor.setPatternForKey(audioProcessor.getSelectedKey(),
                                         patternTextEditor.getText().toStdString());
+        patternLabel.setText("Pattern (" + juce::String(values.size()) + ")", juce::dontSendNotification);
+        updatePatternPreview();
     };
 
     auto changeAssignment = [this](auto change)
@@ -213,6 +274,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     };
     addLabel(patternNameLabel, "Name");
     addAndMakeVisible(patternNameEditor);
+    patternNameEditor.setInputRestrictions(80);
     patternNameEditor.onTextChange = [changeAssignment, this] ( )
     {
         changeAssignment([this](KeyAssignment& a) { a.name = patternNameEditor.getText().toStdString(); });
@@ -265,45 +327,96 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     {
         changeAssignment([this](KeyAssignment& a) { a.reverse = reverseButton.getToggleState(); });
     };
-    auto addLane = [this, changeAssignment, addLabel](juce::Label& label, juce::TextEditor& editor,
-                                                       const juce::String& title, bool velocity)
+    addLabel(drumVelocityBitsLabel, "Velocity bits");
+    addAndMakeVisible(drumVelocityBitsEditor);
+    drumVelocityBitsEditor.setInputRestrictions(48);
+    drumVelocityBitsEditor.setTooltip("One width (1-7) per drum pitch; total at most 32 bits. Lane 1 is least significant. Zero means no hit.");
+    drumVelocityBitsEditor.onTextChange = [this, changeAssignment]
     {
-        addLabel(label, title);
-        addAndMakeVisible(editor);
-        editor.onTextChange = [this, changeAssignment, editorPtr = &editor, velocity]
+        std::vector<int> widths;
+        if (!validateIntegerInput(drumVelocityBitsEditor, widths, 1, 7,
+            audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()).drumLaneCount)) return;
+        if (std::accumulate(widths.begin(), widths.end(), 0) > 32)
         {
-            std::vector<int> values;
-            if (!validateIntegerInput(*editorPtr, values, velocity ? 0 : -127, 127)) return;
-            changeAssignment([&](KeyAssignment& a) {
-                if (velocity) a.velocitySteps = values;
-                else a.pitchSteps = values;
-            });
-        };
+            drumVelocityBitsEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
+            drumVelocityBitsEditor.setTooltip("Not applied: widths must total at most 32 bits.");
+            return;
+        }
+        changeAssignment([&widths](KeyAssignment& a) {
+            std::copy(widths.begin(), widths.end(), a.drumVelocityBits.begin());
+        });
+        updatePatternPreview();
     };
-    addLane(velocityStepsLabel, velocityStepsEditor, "Velocity lane", true);
-    addLane(pitchStepsLabel, pitchStepsEditor, "Pitch lane", false);
-    velocityStepsEditor.setTextToShowWhenEmpty("Optional: empty = full velocity; 0 = mute", juce::Colours::grey);
-    pitchStepsEditor.setTextToShowWhenEmpty("Optional: empty or 0 = unchanged pitch", juce::Colours::grey);
     modeSelector.setTooltip("Rhythmic uses Drum notes without a Forte set. Set Channel to match your receiving instrument.");
     channelSlider.setTooltip("MIDI output channel: must match the receiving instrument. Changing mode keeps this channel.");
     addLabel(drumNotesLabel, "Drum notes");
     addAndMakeVisible(drumNotesEditor);
-    drumNotesEditor.setTooltip("16 MIDI note numbers for bits 0–15; e.g. 36 38 42 ...");
+    drumNotesEditor.setInputRestrictions(64);
+    drumNotesEditor.setTooltip("1 to 16 MIDI pitches. The number of pitches sets the lane count.");
     drumNotesEditor.onTextChange = [changeAssignment, this]
     {
         std::vector<int> notes;
-        if (!validateIntegerInput(drumNotesEditor, notes, 0, 127, 16)) return;
+        if (!validateIntegerInput(drumNotesEditor, notes, 0, 127)
+            || notes.empty() || notes.size() > 16)
+        {
+            drumNotesEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
+            return;
+        }
         changeAssignment([&notes](KeyAssignment& a) {
+            a.drumLaneCount = static_cast<int>(notes.size());
             for (size_t i = 0; i < notes.size(); ++i)
                 a.drumNotes[i] = juce::jlimit(0, 127, notes[i]);
         });
+        const auto a = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+        juce::StringArray widths;
+        for (int i = 0; i < a.drumLaneCount; ++i) widths.add(juce::String(a.drumVelocityBits[static_cast<size_t>(i)]));
+        drumVelocityBitsEditor.setText(widths.joinIntoString(" "), false);
+        updatePatternPreview();
     };
+    addLabel(patternColourLabel, "Colour");
+    addAndMakeVisible(patternColourSelector);
+    const juce::StringArray colours { "Mint", "Sky", "Violet", "Amber", "Coral" };
+    for (int i = 0; i < colours.size(); ++i) patternColourSelector.addItem(colours[i], i + 1);
+    patternColourSelector.onChange = [this, changeAssignment]
+    {
+        static const char* palette[] { "#62D6C6", "#77B9FF", "#B99BFF", "#F4BD68", "#EF8B83" };
+        const int index = patternColourSelector.getSelectedId() - 1;
+        if (index >= 0 && index < 5)
+            changeAssignment([index](KeyAssignment& a) { a.colour = palette[index]; });
+        repaint();
+    };
+    addLabel(patternTagsLabel, "Tags");
+    addAndMakeVisible(patternTagsEditor);
+    patternTagsEditor.setInputRestrictions(200);
+    patternTagsEditor.setTextToShowWhenEmpty("e.g. pulse, intro, drums", juce::Colours::grey);
+    patternTagsEditor.onFocusLost = [this, changeAssignment]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.tags = patternTagsEditor.getText().toStdString(); });
+    };
+    patternFavouriteButton.setButtonText("Favourite");
+    patternFavouriteButton.onClick = [this, changeAssignment]
+    {
+        changeAssignment([this](KeyAssignment& a) { a.favourite = patternFavouriteButton.getToggleState(); });
+    };
+    addAndMakeVisible(patternFavouriteButton);
+    patternPreviewLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(patternPreviewLabel);
     for (auto* button : { &copyPatternButton, &pastePatternButton, &duplicatePatternButton,
                           &undoButton, &redoButton,
-                          &savePatternButton, &loadPatternButton, &applyRangeButton })
+                          &savePatternButton, &loadPatternButton, &applyRangeButton,
+                          &cutPatternButton, &clearPatternButton, &independentButton })
         addAndMakeVisible(button);
     copyPatternButton.setButtonText("Copy");
     pastePatternButton.setButtonText("Paste");
+    cutPatternButton.setButtonText("Cut");
+    clearPatternButton.setButtonText("Clear");
+    independentButton.setButtonText("Make independent");
+    addAndMakeVisible(pasteScopeSelector);
+    pasteScopeSelector.addItem("All settings", 1);
+    pasteScopeSelector.addItem("Sequence", 2);
+    pasteScopeSelector.addItem("Timing", 3);
+    pasteScopeSelector.addItem("Expression", 4);
+    pasteScopeSelector.setSelectedId(1);
     duplicatePatternButton.setButtonText("Duplicate to next key");
     undoButton.setButtonText("Undo");
     redoButton.setButtonText("Redo");
@@ -320,15 +433,50 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     pastePatternButton.onClick = [this] {
         if (copiedPattern == nullptr) return;
         recordKeyEdit();
-        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), *copiedPattern);
+        auto a = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+        switch (pasteScopeSelector.getSelectedId())
+        {
+            case 2: a.sequence = copiedPattern->sequence; break;
+            case 3: a.subdivision = copiedPattern->subdivision;
+                    a.gate = copiedPattern->gate;
+                    a.fixedLengthSteps = copiedPattern->fixedLengthSteps; break;
+            case 4: a.velocity = copiedPattern->velocity;
+                    a.transpose = copiedPattern->transpose;
+                    a.rotation = copiedPattern->rotation;
+                    a.reverse = copiedPattern->reverse;
+                    a.drumVelocityBits = copiedPattern->drumVelocityBits; break;
+            default: a = *copiedPattern; a.linkId.clear(); break;
+        }
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), a);
         loadAssignmentForKey(audioProcessor.getSelectedKey());
     };
+    cutPatternButton.onClick = [this]
+    {
+        copiedPattern = std::make_unique<KeyAssignment>(audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()));
+        pastePatternButton.setEnabled(true);
+        recordKeyEdit();
+        KeyAssignment blank;
+        blank.sequence.clear();
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), blank);
+        loadAssignmentForKey(audioProcessor.getSelectedKey());
+    };
+    clearPatternButton.onClick = [this]
+    {
+        recordKeyEdit();
+        KeyAssignment blank;
+        blank.sequence.clear();
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), blank);
+        loadAssignmentForKey(audioProcessor.getSelectedKey());
+    };
+    independentButton.onClick = [this] { makeSelectedIndependent(); };
     duplicatePatternButton.onClick = [this] {
         const int key = audioProcessor.getSelectedKey();
         if (key == 127) return;
         syncEditHistory();
         editHistory.record({ key + 1, { { key + 1, audioProcessor.getAssignmentForKey(key + 1) } } });
-        audioProcessor.setAssignmentForKey(key + 1, audioProcessor.getAssignmentForKey(key));
+        auto copy = audioProcessor.getAssignmentForKey(key);
+        copy.linkId.clear();
+        audioProcessor.setAssignmentForKey(key + 1, copy);
         audioProcessor.setSelectedKey(key + 1);
         loadAssignmentForKey(key + 1);
     };
@@ -400,6 +548,10 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     // ----- Selected key label -------------------------------------------------
     selectedKeyLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(selectedKeyLabel);
+    activeKeysLabel.setJustificationType(juce::Justification::centred);
+    activeKeysLabel.setColour(juce::Label::textColourId, juce::Colour(0xff62d6c6));
+    activeKeysLabel.setText("No active keys", juce::dontSendNotification);
+    addAndMakeVisible(activeKeysLabel);
 
     // ----- Preset browser -----------------------------------------------------
     auto addBrowserControl = [this](juce::Component& component)
@@ -425,6 +577,11 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     presetSearchEditor.onTextChange = [this] { refreshPresetFilters(); };
     presetDescriptionEditor.setMultiLine(true);
     presetDescriptionEditor.setReturnKeyStartsNewLine(true);
+    presetSearchEditor.setInputRestrictions(80);
+    presetNameEditor.setInputRestrictions(80);
+    presetCategoryEditor.setInputRestrictions(40);
+    presetTagsEditor.setInputRestrictions(200);
+    presetDescriptionEditor.setInputRestrictions(500);
 
     addBrowserControl(presetCategoryFilter);
     presetCategoryFilter.onChange = [this] { refreshPresetFilters(); };
@@ -461,8 +618,57 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
                           &importPresetButton, &exportPresetButton })
         addBrowserControl(*button);
 
+    patternSearchLabel.setText("Find pattern", juce::dontSendNotification);
+    patternSearchEditor.setInputRestrictions(80);
+    patternSearchEditor.setTextToShowWhenEmpty("Search names and tags", juce::Colours::grey);
+    patternSearchEditor.onTextChange = [this] { filterPatternLibrary(); };
+    bankFavouritesButton.setButtonText("Favourites only");
+    bankFavouritesButton.onClick = [this] { filterPatternLibrary(); };
+    bankFavouriteButton.setButtonText("Favourite this pattern");
+    bankNameEditor.setInputRestrictions(80);
+    bankTagsEditor.setInputRestrictions(200);
+    bankTagsLabel.setText("Tags", juce::dontSendNotification);
+    bankEmptyLabel.setText("No saved patterns yet\nSave the current pattern to start your bank.", juce::dontSendNotification);
+    bankEmptyLabel.setJustificationType(juce::Justification::centred);
+    bankHelpLabel.setText("Assign the selected pattern to the current MIDI key as a copy or link.", juce::dontSendNotification);
+    for (const auto& component : { &patternSearchLabel, &bankDetailsLabel, &bankTagsLabel,
+                                   &bankEmptyLabel, &bankHelpLabel })
+        addAndMakeVisible(*component);
+    for (auto* component : std::initializer_list<juce::Component*> { &patternSearchEditor,
+                             &bankNameEditor, &bankTagsEditor, &bankColourSelector,
+                             &bankFavouritesButton, &bankFavouriteButton,
+                             &assignCopyButton, &assignLinkButton,
+                             &auditionButton, &bankSaveButton,
+                             &saveCurrentToBankButton }) addAndMakeVisible(*component);
+    for (int i = 0; i < colours.size(); ++i) bankColourSelector.addItem(colours[i], i + 1);
+    assignCopyButton.setButtonText("Assign copy");
+    assignLinkButton.setButtonText("Assign link");
+    auditionButton.setButtonText("Audition");
+    bankSaveButton.setButtonText("Save details");
+    saveCurrentToBankButton.setButtonText("Save current pattern to bank");
+    saveCurrentToBankButton.onClick = [this] { savePatternToBank(); };
+    assignCopyButton.onClick = [this] { assignSelectedPattern(false); };
+    assignLinkButton.onClick = [this] { assignSelectedPattern(true); };
+    auditionButton.onClick = [this]
+    {
+        if (selectedPatternIndex < 0) return;
+        const int key = audioProcessor.getSelectedKey();
+        if (auditioningKey == key && audioProcessor.isKeySounding(key))
+        {
+            audioProcessor.requestStopKey(key);
+            auditioningKey = -1;
+        }
+        else
+        {
+            audioProcessor.auditionPattern(key, patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment);
+            auditioningKey = key;
+        }
+        auditionButton.setButtonText(auditioningKey >= 0 ? "Stop audition" : "Audition");
+    };
+    bankSaveButton.onClick = [this] { saveSelectedPatternMetadata(); };
+
     // ----- Initial load -------------------------------------------------------
-    setSize(860, 860);
+    setSize(980, 830);
     loadPresetLibrary();
     loadAssignmentForKey(audioProcessor.getSelectedKey());
     lastStateRestoreRevision = audioProcessor.getStateRestoreRevision();
@@ -472,16 +678,49 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
 
 NSeqArpKeysAudioProcessorEditor::~NSeqArpKeysAudioProcessorEditor()
 {
+    setLookAndFeel(nullptr);
     presetList.setModel(nullptr);
+    keyboardComponent.removeMouseListener(this);
     keyboardState.removeListener(this);
+}
+
+void NSeqArpKeysAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
+{
+    if (!event.mods.isPopupMenu() || patternLibrary.empty()) return;
+    auto* target = event.eventComponent;
+    if (target != &keyboardComponent && !keyboardComponent.isParentOf(target)) return;
+    juce::PopupMenu menu;
+    menu.addItem(1, "Assign selected bank pattern as copy", selectedPatternIndex >= 0);
+    menu.addItem(2, "Assign selected bank pattern as link", selectedPatternIndex >= 0);
+    menu.addItem(3, "Make this key independent",
+        !audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()).linkId.empty());
+    auto safeThis = juce::Component::SafePointer<NSeqArpKeysAudioProcessorEditor>(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&keyboardComponent),
+        [safeThis](int result)
+        {
+            if (safeThis == nullptr) return;
+            if (result == 1) safeThis->assignSelectedPattern(false);
+            else if (result == 2) safeThis->assignSelectedPattern(true);
+            else if (result == 3) safeThis->makeSelectedIndependent();
+        });
 }
 
 //==============================================================================
 void NSeqArpKeysAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff1a1a2e));
-    g.setColour(juce::Colours::white);
-    g.setFont(14.0f);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff101c29), 0.0f, 0.0f,
+        juce::Colour(0xff233748), static_cast<float>(getWidth()), static_cast<float>(getHeight()), false));
+    g.fillAll();
+    g.setColour(juce::Colour(0xff263c4c));
+    g.fillRoundedRectangle(getLocalBounds().reduced(7).toFloat(), 12.0f);
+    g.setColour(juce::Colour(0xff62d6c6).withAlpha(0.9f));
+    g.fillRoundedRectangle(12.0f, 12.0f, 5.0f, 28.0f, 2.0f);
+    if (!browserOpen && !patternBrowserOpen)
+    {
+        g.setColour(juce::Colour(0xff172a39));
+        g.fillRoundedRectangle(14.0f, 183.0f, static_cast<float>(getWidth() - 28),
+            static_cast<float>(getHeight() - 198), 10.0f);
+    }
 }
 
 void NSeqArpKeysAudioProcessorEditor::resized()
@@ -489,7 +728,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     auto area  = getLocalBounds().reduced(8);
     int  w     = area.getWidth();
     int  lblW  = 110;
-    int  rowH  = 26;
+    int  rowH  = 32;
 
     auto presetRow = area.removeFromTop(32);
     presetNameLabel.setBounds(presetRow.removeFromLeft(300));
@@ -499,9 +738,48 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     presetRow.removeFromLeft(8);
     browsePresetsButton.setBounds(presetRow.removeFromLeft(135));
     presetRow.removeFromLeft(8);
+    browsePatternsButton.setBounds(presetRow.removeFromLeft(125));
+    presetRow.removeFromLeft(8);
     savePresetButton.setBounds(presetRow.removeFromLeft(90));
     area.removeFromTop(6);
 
+    if (patternBrowserOpen)
+    {
+        auto searchRow = area.removeFromTop(32);
+        patternSearchLabel.setBounds(searchRow.removeFromLeft(100));
+        patternSearchEditor.setBounds(searchRow.removeFromLeft(350));
+        searchRow.removeFromLeft(12);
+        bankFavouritesButton.setBounds(searchRow.removeFromLeft(180));
+        area.removeFromTop(12);
+        auto left = area.removeFromLeft(400);
+        area.removeFromLeft(18);
+        presetList.setBounds(left);
+        bankEmptyLabel.setBounds(left.reduced(20));
+        bankDetailsLabel.setBounds(area.removeFromTop(36));
+        bankHelpLabel.setBounds(area.removeFromTop(28));
+        area.removeFromTop(10);
+        bankNameEditor.setBounds(area.removeFromTop(32));
+        area.removeFromTop(8);
+        auto tagsRow = area.removeFromTop(32);
+        bankTagsLabel.setBounds(tagsRow.removeFromLeft(70));
+        bankTagsEditor.setBounds(tagsRow);
+        area.removeFromTop(8);
+        bankColourSelector.setBounds(area.removeFromTop(32));
+        bankFavouriteButton.setBounds(area.removeFromTop(28));
+        area.removeFromTop(16);
+        auto assignRow = area.removeFromTop(36);
+        assignCopyButton.setBounds(assignRow.removeFromLeft(125));
+        assignRow.removeFromLeft(8);
+        assignLinkButton.setBounds(assignRow.removeFromLeft(125));
+        area.removeFromTop(8);
+        auto actionRow = area.removeFromTop(36);
+        auditionButton.setBounds(actionRow.removeFromLeft(125));
+        actionRow.removeFromLeft(8);
+        bankSaveButton.setBounds(actionRow.removeFromLeft(125));
+        area.removeFromTop(20);
+        saveCurrentToBankButton.setBounds(area.removeFromTop(36).removeFromLeft(240));
+        return;
+    }
     if (browserOpen)
     {
         auto filterRow = area.removeFromTop(28);
@@ -550,12 +828,13 @@ void NSeqArpKeysAudioProcessorEditor::resized()
         return;
     }
 
-    keyboardComponent.setBounds(area.removeFromTop(80));
+    keyboardComponent.setBounds(area.removeFromTop(88));
     area.removeFromTop(6);
 
     // Selected key display
     selectedKeyLabel.setBounds(area.removeFromTop(20));
-    area.removeFromTop(4);
+    activeKeysLabel.setBounds(area.removeFromTop(20));
+    area.removeFromTop(6);
 
     auto transportRow = area.removeFromTop(28);
     latchButton.setBounds(transportRow.removeFromLeft(210));
@@ -574,7 +853,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     meterDenominatorLabel .setBounds(globalRow.removeFromLeft(lblW));
     meterDenominatorSlider.setBounds(globalRow);
 
-    area.removeFromTop(4);
+    area.removeFromTop(8);
 
     // Per-key controls (one per row, label + control)
     auto makeRow = [&](juce::Label& lbl, juce::Component& ctrl)
@@ -582,15 +861,27 @@ void NSeqArpKeysAudioProcessorEditor::resized()
         auto row = area.removeFromTop(rowH);
         lbl.setBounds(row.removeFromLeft(lblW));
         ctrl.setBounds(row);
-        area.removeFromTop(2);
+        area.removeFromTop(5);
     };
 
     makeRow(channelLabel, channelSlider);
-    makeRow(octaveLabel,  octaveSlider);
+    const bool rhythmic = modeSelector.getSelectedId() == 2;
+    if (!rhythmic) makeRow(octaveLabel, octaveSlider);
     makeRow(gateLabel,    gateSlider);
     makeRow(fixedLengthStepsLabel, fixedLengthStepsSlider);
     makeRow(patternLabel, patternTextEditor);
+    patternPreviewLabel.setBounds(area.removeFromTop(22));
+    area.removeFromTop(3);
     makeRow(patternNameLabel, patternNameEditor);
+    auto metadataRow = area.removeFromTop(rowH);
+    patternColourLabel.setBounds(metadataRow.removeFromLeft(lblW));
+    patternColourSelector.setBounds(metadataRow.removeFromLeft(150));
+    metadataRow.removeFromLeft(10);
+    patternTagsLabel.setBounds(metadataRow.removeFromLeft(45));
+    patternTagsEditor.setBounds(metadataRow.removeFromLeft(360));
+    metadataRow.removeFromLeft(10);
+    patternFavouriteButton.setBounds(metadataRow);
+    area.removeFromTop(2);
     auto modeRow = area.removeFromTop(rowH);
     modeLabel.setBounds(modeRow.removeFromLeft(lblW));
     modeSelector.setBounds(modeRow.removeFromLeft(260));
@@ -605,18 +896,35 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     rotationLabel.setBounds(expressionRow.removeFromLeft(75));
     rotationSlider.setBounds(expressionRow);
     area.removeFromTop(2);
-    makeRow(velocityStepsLabel, velocityStepsEditor);
-    makeRow(pitchStepsLabel, pitchStepsEditor);
-    makeRow(drumNotesLabel, drumNotesEditor);
+    if (rhythmic)
+    {
+        makeRow(drumNotesLabel, drumNotesEditor);
+        makeRow(drumVelocityBitsLabel, drumVelocityBitsEditor);
+    }
+    else
+    {
+        makeRow(forteSearchLabel, forteSearchEditor);
+        makeRow(forteLabel, forteNumberSelector);
+        forteSelectionLabel.setBounds(area.removeFromTop(rowH));
+    }
     reverseButton.setBounds(area.removeFromTop(rowH));
     auto copyRow = area.removeFromTop(30);
-    copyPatternButton.setBounds(copyRow.removeFromLeft(90));
-    pastePatternButton.setBounds(copyRow.removeFromLeft(90));
+    copyPatternButton.setBounds(copyRow.removeFromLeft(78));
+    cutPatternButton.setBounds(copyRow.removeFromLeft(70));
+    clearPatternButton.setBounds(copyRow.removeFromLeft(70));
+    pasteScopeSelector.setBounds(copyRow.removeFromLeft(145));
+    pastePatternButton.setBounds(copyRow.removeFromLeft(75));
     duplicatePatternButton.setBounds(copyRow.removeFromLeft(170));
-    undoButton.setBounds(copyRow.removeFromLeft(65));
-    redoButton.setBounds(copyRow.removeFromLeft(65));
-    savePatternButton.setBounds(copyRow.removeFromLeft(115));
-    loadPatternButton.setBounds(copyRow.removeFromLeft(115));
+    independentButton.setBounds(copyRow.removeFromLeft(160));
+    area.removeFromTop(4);
+    auto fileRow = area.removeFromTop(30);
+    undoButton.setBounds(fileRow.removeFromLeft(75));
+    fileRow.removeFromLeft(5);
+    redoButton.setBounds(fileRow.removeFromLeft(75));
+    fileRow.removeFromLeft(12);
+    savePatternButton.setBounds(fileRow.removeFromLeft(130));
+    fileRow.removeFromLeft(5);
+    loadPatternButton.setBounds(fileRow.removeFromLeft(130));
     area.removeFromTop(3);
     auto rangeRow = area.removeFromTop(rowH);
     rangeLabel.setBounds(rangeRow.removeFromLeft(lblW));
@@ -624,9 +932,6 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     rangeLastSlider.setBounds(rangeRow.removeFromLeft(140));
     transposeRangeButton.setBounds(rangeRow.removeFromLeft(160));
     applyRangeButton.setBounds(rangeRow.removeFromLeft(130));
-    makeRow(forteSearchLabel, forteSearchEditor);
-    makeRow(forteLabel,   forteNumberSelector);
-    forteSelectionLabel.setBounds(area.removeFromTop(rowH));
 }
 
 //==============================================================================
@@ -639,10 +944,6 @@ void NSeqArpKeysAudioProcessorEditor::handleNoteOn(juce::MidiKeyboardState*,
     loadAssignmentForKey(midiNoteNumber);
     audioProcessor.queuePreviewMidiMessage(juce::MidiMessage::noteOn(midiChannel, midiNoteNumber, velocity));
 
-    juce::String name = juce::MidiMessage::getMidiNoteName(midiNoteNumber, true, true, 4);
-    selectedKeyLabel.setText("Selected key: " + name
-                             + " (MIDI " + juce::String(midiNoteNumber) + ")",
-                             juce::dontSendNotification);
 }
 
 void NSeqArpKeysAudioProcessorEditor::handleNoteOff(juce::MidiKeyboardState*,
@@ -662,6 +963,7 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     // For TextEditor, setText with false (= don't send a change message) does not
     // call onTextChange, so it is safe to call directly.
     patternTextEditor.setText(a.sequenceToString(), false);
+    patternLabel.setText("Pattern (" + juce::String(a.sequence.size()) + ")", juce::dontSendNotification);
     patternNameEditor.setText(a.name, false);
     modeSelector.setSelectedId(a.mode == KeyAssignment::Mode::rhythmic ? 2 : 1, juce::dontSendNotification);
     subdivisionSlider.setValue(a.subdivision, juce::dontSendNotification);
@@ -675,12 +977,18 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
         for (int n : values) parts.add(juce::String(n));
         return parts.joinIntoString(" ");
     };
-    velocityStepsEditor.setText(valuesText(a.velocitySteps), false);
-    pitchStepsEditor.setText(valuesText(a.pitchSteps), false);
-    drumNotesEditor.setText(valuesText(std::vector<int>(a.drumNotes.begin(), a.drumNotes.end())), false);
-    for (auto* editor : { &patternTextEditor, &velocityStepsEditor, &pitchStepsEditor, &drumNotesEditor })
+    drumVelocityBitsEditor.setText(valuesText(std::vector<int>(a.drumVelocityBits.begin(),
+        a.drumVelocityBits.begin() + juce::jlimit(1, 16, a.drumLaneCount))), false);
+    drumNotesEditor.setText(valuesText(std::vector<int>(a.drumNotes.begin(),
+        a.drumNotes.begin() + juce::jlimit(1, 16, a.drumLaneCount))), false);
+    for (auto* editor : { &patternTextEditor, &drumVelocityBitsEditor, &drumNotesEditor })
         editor->removeColour(juce::TextEditor::outlineColourId);
-    drumNotesEditor.setEnabled(a.mode == KeyAssignment::Mode::rhythmic);
+    patternTagsEditor.setText(a.tags, false);
+    patternFavouriteButton.setToggleState(a.favourite, juce::dontSendNotification);
+    static const char* palette[] { "#62D6C6", "#77B9FF", "#B99BFF", "#F4BD68", "#EF8B83" };
+    int colourIndex = 0;
+    for (int i = 0; i < 5; ++i) if (a.colour == palette[i]) colourIndex = i;
+    patternColourSelector.setSelectedId(colourIndex + 1, juce::dontSendNotification);
     pastePatternButton.setEnabled(copiedPattern != nullptr);
     duplicatePatternButton.setEnabled(key < 127);
 
@@ -692,10 +1000,13 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     forteSearchEditor.setText(a.forteString, false);
     updateForteSearchResults();
     updateSelectedForteLabel();
+    updatePatternPreview();
+    updateModeVisibility();
 
     juce::String name = juce::MidiMessage::getMidiNoteName(key, true, true, 4);
     selectedKeyLabel.setText("Selected key: " + name
-                             + " (MIDI " + juce::String(key) + ")",
+                             + " (MIDI " + juce::String(key) + ")"
+                             + (a.linkId.empty() ? " · Independent" : " · Linked"),
                              juce::dontSendNotification);
 }
 
@@ -751,7 +1062,17 @@ void NSeqArpKeysAudioProcessorEditor::recordKeyEdit()
 {
     syncEditHistory();
     const int key = audioProcessor.getSelectedKey();
-    editHistory.record({ key, { { key, audioProcessor.getAssignmentForKey(key) } } });
+    AssignmentHistory::Edit edit { key, {} };
+    const auto current = audioProcessor.getAssignmentForKey(key);
+    if (current.linkId.empty())
+        edit.assignments.emplace_back(key, current);
+    else
+        for (int other = 0; other < 128; ++other)
+        {
+            auto a = audioProcessor.getAssignmentForKey(other);
+            if (a.linkId == current.linkId) edit.assignments.emplace_back(other, std::move(a));
+        }
+    editHistory.record(std::move(edit));
 }
 
 void NSeqArpKeysAudioProcessorEditor::undoKeyEdit()
@@ -781,13 +1102,14 @@ void NSeqArpKeysAudioProcessorEditor::savePatternToBank()
     const int key = audioProcessor.getSelectedKey();
     juce::XmlElement bank("NSeqPattern");
     bank.setAttribute("version", 1);
+    bank.setAttribute("id", juce::Uuid().toString());
     AssignmentState::write(*bank.createNewChildElement("Assignment"),
                            audioProcessor.getAssignmentForKey(key));
     auto name = juce::String(audioProcessor.getAssignmentForKey(key).name)
         .retainCharacters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ ")
         .trim().replaceCharacter(' ', '-');
     if (name.isEmpty()) name = "Pattern-" + juce::String(key);
-    auto directory = presetDirectory().getParentDirectory().getChildFile("Patterns");
+    auto directory = patternDirectory();
     if (directory.createDirectory().failed()) return;
     presetChooser = std::make_unique<juce::FileChooser>("Save pattern to bank",
         directory.getChildFile(name + ".nseqpattern"), "*.nseqpattern");
@@ -798,15 +1120,24 @@ void NSeqArpKeysAudioProcessorEditor::savePatternToBank()
         [safeThis, bank](const juce::FileChooser& chooser)
         {
             if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
-            const bool saved = writeXmlFile(chooser.getResult().withFileExtension(".nseqpattern"), bank);
+            const auto target = chooser.getResult().withFileExtension(".nseqpattern");
+            auto output = bank;
+            if (auto existing = parseSafeXmlFile(target, 1024 * 1024);
+                existing != nullptr && existing->hasTagName("NSeqPattern"))
+            {
+                const auto existingId = existing->getStringAttribute("id").substring(0, 80);
+                if (existingId.isNotEmpty()) output.setAttribute("id", existingId);
+            }
+            const bool saved = writeXmlFile(target, output);
             if (!saved) juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
                 "Pattern bank", "Could not save pattern.");
+            else safeThis->loadPatternLibrary();
         });
 }
 
 void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
 {
-    auto directory = presetDirectory().getParentDirectory().getChildFile("Patterns");
+    auto directory = patternDirectory();
     directory.createDirectory();
     presetChooser = std::make_unique<juce::FileChooser>("Load pattern from bank",
         directory, "*.nseqpattern");
@@ -817,7 +1148,7 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
         {
             if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
             if (chooser.getResult().getSize() > 1024 * 1024) return;
-            auto bank = juce::XmlDocument::parse(chooser.getResult());
+            auto bank = parseSafeXmlFile(chooser.getResult(), 1024 * 1024);
             if (bank == nullptr || !bank->hasTagName("NSeqPattern")
                 || bank->getIntAttribute("version") != 1
                 || bank->getNumChildElements() != 1
@@ -826,10 +1157,139 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
                 return;
             const int key = safeThis->audioProcessor.getSelectedKey();
             safeThis->recordKeyEdit();
-            safeThis->audioProcessor.setAssignmentForKey(key,
-                AssignmentState::read(*bank->getFirstChildElement()));
+            auto imported = AssignmentState::read(*bank->getFirstChildElement());
+            imported.linkId.clear();
+            safeThis->audioProcessor.setAssignmentForKey(key, imported);
             safeThis->loadAssignmentForKey(key);
         });
+}
+
+void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
+{
+    patternLibrary.clear();
+    auto directory = patternDirectory();
+    if (directory.createDirectory().failed()) return;
+    juce::Array<juce::File> files;
+    directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpattern");
+    for (const auto& file : files)
+    {
+        if (file.getSize() <= 0 || file.getSize() > 1024 * 1024) continue;
+        auto xml = parseSafeXmlFile(file, 1024 * 1024);
+        if (xml == nullptr || !xml->hasTagName("NSeqPattern")
+            || xml->getIntAttribute("version") != 1
+            || xml->getNumChildElements() != 1) continue;
+        auto* child = xml->getFirstChildElement();
+        if (child == nullptr || !child->hasTagName("Assignment")
+            || child->getStringAttribute("sequence").length() > 45056) continue;
+        PatternEntry entry;
+        entry.id = xml->getStringAttribute("id", file.getFileNameWithoutExtension()).substring(0, 80);
+        entry.file = file;
+        entry.assignment = AssignmentState::read(*child);
+        if (entry.assignment.name.empty())
+            entry.assignment.name = file.getFileNameWithoutExtension().substring(0, 80).toStdString();
+        patternLibrary.push_back(std::move(entry));
+    }
+    std::sort(patternLibrary.begin(), patternLibrary.end(), [](const PatternEntry& a, const PatternEntry& b)
+    {
+        if (a.assignment.favourite != b.assignment.favourite) return a.assignment.favourite;
+        return juce::String(a.assignment.name).compareIgnoreCase(juce::String(b.assignment.name)) < 0;
+    });
+    filterPatternLibrary();
+}
+
+void NSeqArpKeysAudioProcessorEditor::filterPatternLibrary()
+{
+    const auto query = patternSearchEditor.getText().trim();
+    const auto previous = selectedPatternIndex >= 0 && selectedPatternIndex < static_cast<int>(patternLibrary.size())
+        ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id : juce::String();
+    filteredPatterns.clear();
+    for (int i = 0; i < static_cast<int>(patternLibrary.size()); ++i)
+    {
+        const auto& a = patternLibrary[static_cast<size_t>(i)].assignment;
+        if (bankFavouritesButton.getToggleState() && !a.favourite) continue;
+        if (query.isNotEmpty() && !(juce::String(a.name) + " " + juce::String(a.tags)).containsIgnoreCase(query)) continue;
+        filteredPatterns.push_back(i);
+    }
+    if (!patternBrowserOpen) return;
+    bankEmptyLabel.setVisible(filteredPatterns.empty());
+    presetList.updateContent();
+    int row = -1;
+    for (int i = 0; i < static_cast<int>(filteredPatterns.size()); ++i)
+        if (patternLibrary[static_cast<size_t>(filteredPatterns[static_cast<size_t>(i)])].id == previous)
+            row = i;
+    if (row < 0 && !filteredPatterns.empty()) row = 0;
+    if (row >= 0) { presetList.selectRow(row); selectedRowsChanged(row); }
+    else { presetList.deselectAllRows(); selectedRowsChanged(-1); }
+}
+
+void NSeqArpKeysAudioProcessorEditor::assignSelectedPattern(bool linked)
+{
+    if (selectedPatternIndex < 0 || selectedPatternIndex >= static_cast<int>(patternLibrary.size())) return;
+    const int key = audioProcessor.getSelectedKey();
+    if (linked)
+    {
+        syncEditHistory();
+        AssignmentHistory::Edit edit { key, { { key, audioProcessor.getAssignmentForKey(key) } } };
+        const auto id = patternLibrary[static_cast<size_t>(selectedPatternIndex)].id.toStdString();
+        for (int other = 0; other < 128; ++other)
+            if (other != key)
+            {
+                auto a = audioProcessor.getAssignmentForKey(other);
+                if (a.linkId == id) edit.assignments.emplace_back(other, std::move(a));
+            }
+        editHistory.record(std::move(edit));
+    }
+    else recordKeyEdit();
+    auto assignment = patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment;
+    assignment.linkId = linked ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id.toStdString() : "";
+    audioProcessor.setAssignmentForKey(key, assignment);
+    setPatternBrowserOpen(false);
+    loadAssignmentForKey(key);
+}
+
+void NSeqArpKeysAudioProcessorEditor::makeSelectedIndependent()
+{
+    const int key = audioProcessor.getSelectedKey();
+    auto assignment = audioProcessor.getAssignmentForKey(key);
+    if (assignment.linkId.empty()) return;
+    recordKeyEdit();
+    assignment.linkId.clear();
+    audioProcessor.setAssignmentForKey(key, assignment);
+    loadAssignmentForKey(key);
+}
+
+void NSeqArpKeysAudioProcessorEditor::saveSelectedPatternMetadata()
+{
+    if (selectedPatternIndex < 0 || selectedPatternIndex >= static_cast<int>(patternLibrary.size())) return;
+    auto& entry = patternLibrary[static_cast<size_t>(selectedPatternIndex)];
+    const auto name = bankNameEditor.getText().trim();
+    if (name.isEmpty()) return;
+    entry.assignment.name = name.toStdString();
+    entry.assignment.tags = bankTagsEditor.getText().toStdString();
+    entry.assignment.favourite = bankFavouriteButton.getToggleState();
+    static const char* palette[] { "#62D6C6", "#77B9FF", "#B99BFF", "#F4BD68", "#EF8B83" };
+    const int index = bankColourSelector.getSelectedId() - 1;
+    if (index >= 0 && index < 5) entry.assignment.colour = palette[index];
+    juce::XmlElement xml("NSeqPattern");
+    xml.setAttribute("version", 1);
+    xml.setAttribute("id", entry.id);
+    AssignmentState::write(*xml.createNewChildElement("Assignment"), entry.assignment);
+    if (writeXmlFile(entry.file, xml)) loadPatternLibrary();
+}
+
+void NSeqArpKeysAudioProcessorEditor::updatePatternPreview()
+{
+    const auto a = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+    auto preview = a;
+    if (preview.sequence.size() > 16) preview.sequence.resize(16);
+    const auto events = GateRunnerEngine::computeAllStepEvents(preview);
+    juce::String text = "STEP PREVIEW   ";
+    for (const auto& step : events)
+        text << (step.empty() ? "· " : juce::String(step.size()) + " ");
+    if (a.sequence.size() > 16) text << "…";
+    patternPreviewLabel.setText(text, juce::dontSendNotification);
+    patternPreviewLabel.setColour(juce::Label::textColourId,
+        juce::Colour::fromString("ff" + juce::String(a.colour).trimCharactersAtStart("#")));
 }
 
 void NSeqArpKeysAudioProcessorEditor::updateForteSearchResults()
@@ -894,7 +1354,7 @@ juce::String NSeqArpKeysAudioProcessorEditor::captureStateXml() const
 
 juce::String NSeqArpKeysAudioProcessorEditor::normalisedStateXml(const juce::String& xml) const
 {
-    auto state = juce::XmlDocument::parse(xml);
+    auto state = parseSafeXml(xml);
     if (!validPresetState(state.get()))
         return {};
     state->removeAttribute("selectedKey");
@@ -969,9 +1429,9 @@ void NSeqArpKeysAudioProcessorEditor::loadPresetLibrary()
         directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpreset");
         for (const auto& file : files)
         {
-            if (file.getSize() > 1024 * 1024)
+            if (file.getSize() > 16 * 1024 * 1024)
                 continue;
-            auto xml = juce::XmlDocument::parse(file);
+            auto xml = parseSafeXmlFile(file, 16 * 1024 * 1024);
             if (xml == nullptr || !xml->hasTagName("NSeqPreset")
                 || xml->getIntAttribute("version") != 1)
                 continue;
@@ -990,7 +1450,7 @@ void NSeqArpKeysAudioProcessorEditor::loadPresetLibrary()
                 presets.push_back(std::move(preset));
         }
 
-        auto favourites = juce::XmlDocument::parse(directory.getChildFile("favourites.xml"));
+        auto favourites = parseSafeXmlFile(directory.getChildFile("favourites.xml"), 1024 * 1024);
         if (favourites != nullptr && favourites->hasTagName("Favourites"))
             for (auto* child : favourites->getChildIterator())
                 if (child->hasTagName("Preset"))
@@ -1073,13 +1533,27 @@ void NSeqArpKeysAudioProcessorEditor::refreshPresetFilters()
 
 int NSeqArpKeysAudioProcessorEditor::getNumRows()
 {
-    return static_cast<int>(filteredPresets.size());
+    return static_cast<int>(patternBrowserOpen ? filteredPatterns.size() : filteredPresets.size());
 }
 
 void NSeqArpKeysAudioProcessorEditor::paintListBoxItem(int row, juce::Graphics& g,
                                                         int width, int height,
                                                         bool rowIsSelected)
 {
+    if (patternBrowserOpen)
+    {
+        if (row < 0 || row >= static_cast<int>(filteredPatterns.size())) return;
+        const auto& a = patternLibrary[static_cast<size_t>(filteredPatterns[static_cast<size_t>(row)])].assignment;
+        g.fillAll(rowIsSelected ? juce::Colour(0xff294b57) : juce::Colour(0xff1e2836));
+        g.setColour(juce::Colour::fromString("ff" + juce::String(a.colour).trimCharactersAtStart("#")));
+        g.fillRoundedRectangle(8.0f, 7.0f, 5.0f, static_cast<float>(height - 14), 2.0f);
+        g.setColour(juce::Colour(0xffedf6fb));
+        g.setFont(14.0f);
+        g.drawText((a.favourite ? juce::String::fromUTF8("\xe2\x98\x85 ") : "")
+            + (a.name.empty() ? "Untitled pattern" : juce::String(a.name)),
+            22, 0, width - 30, height, juce::Justification::centredLeft, true);
+        return;
+    }
     if (row < 0 || row >= static_cast<int>(filteredPresets.size())) return;
     const auto& preset = presets[static_cast<size_t>(filteredPresets[static_cast<size_t>(row)])];
     g.fillAll(rowIsSelected ? juce::Colour(0xff365e82) : juce::Colour(0xff252d3a));
@@ -1092,6 +1566,34 @@ void NSeqArpKeysAudioProcessorEditor::paintListBoxItem(int row, juce::Graphics& 
 
 void NSeqArpKeysAudioProcessorEditor::selectedRowsChanged(int row)
 {
+    if (patternBrowserOpen)
+    {
+        selectedPatternIndex = row >= 0 && row < static_cast<int>(filteredPatterns.size())
+            ? filteredPatterns[static_cast<size_t>(row)] : -1;
+        const bool selected = selectedPatternIndex >= 0;
+        for (auto* button : { &assignCopyButton, &assignLinkButton, &auditionButton, &bankSaveButton })
+            button->setEnabled(selected);
+        for (juce::Component* field : std::initializer_list<juce::Component*> {
+            &bankNameEditor, &bankTagsEditor, &bankColourSelector, &bankFavouriteButton })
+            field->setEnabled(selected);
+        if (selected)
+        {
+            const auto& a = patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment;
+            bankDetailsLabel.setText(juce::String(a.sequence.size()) + " steps · "
+                + (a.mode == KeyAssignment::Mode::rhythmic ? "Rhythmic" : "Melodic"),
+                juce::dontSendNotification);
+            bankNameEditor.setText(a.name, false);
+            bankTagsEditor.setText(a.tags, false);
+            bankFavouriteButton.setToggleState(a.favourite, juce::dontSendNotification);
+            static const char* palette[] { "#62D6C6", "#77B9FF", "#B99BFF", "#F4BD68", "#EF8B83" };
+            int colourIndex = 0;
+            for (int i = 0; i < 5; ++i) if (a.colour == palette[i]) colourIndex = i;
+            bankColourSelector.setSelectedId(colourIndex + 1, juce::dontSendNotification);
+        }
+        else
+            bankDetailsLabel.setText("No pattern selected", juce::dontSendNotification);
+        return;
+    }
     selectedPresetIndex = row >= 0 && row < static_cast<int>(filteredPresets.size())
         ? filteredPresets[static_cast<size_t>(row)] : -1;
     if (selectedPresetIndex < 0)
@@ -1131,8 +1633,29 @@ void NSeqArpKeysAudioProcessorEditor::showPresetStatus(const juce::String& messa
 void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 {
     browserOpen = open;
-    browsePresetsButton.setButtonText(open ? "Back to Editor" : "Browse Presets");
+    if (open) patternBrowserOpen = false;
+    updateModeVisibility();
+}
+
+void NSeqArpKeysAudioProcessorEditor::setPatternBrowserOpen(bool open)
+{
+    patternBrowserOpen = open;
+    if (open)
+    {
+        browserOpen = false;
+        loadPatternLibrary();
+    }
+    updateModeVisibility();
+}
+
+void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
+{
+    const bool editor = !browserOpen && !patternBrowserOpen;
+    const bool rhythmic = modeSelector.getSelectedId() == 2;
+    browsePresetsButton.setButtonText(browserOpen ? "Back to Editor" : "Presets");
+    browsePatternsButton.setButtonText(patternBrowserOpen ? "Back to Editor" : "Pattern Bank");
     for (juce::Component* component : std::initializer_list<juce::Component*> { &keyboardComponent, &selectedKeyLabel,
+                                        &activeKeysLabel,
                                         &latchButton, &previewSoundButton, &stopKeyButton, &stopAllButton,
                                         &meterNumeratorLabel, &meterNumeratorSlider,
                                         &meterDenominatorLabel, &meterDenominatorSlider,
@@ -1146,14 +1669,26 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
                                         &modeLabel, &modeSelector, &subdivisionLabel, &subdivisionSlider,
                                         &velocityLabel, &velocitySlider, &transposeLabel, &transposeSlider,
                                         &rotationLabel, &rotationSlider, &reverseButton,
-                                        &velocityStepsLabel, &velocityStepsEditor, &pitchStepsLabel, &pitchStepsEditor,
-                                        &drumNotesLabel, &drumNotesEditor,
+                                        &drumVelocityBitsLabel, &drumVelocityBitsEditor,
+                                        &drumNotesLabel, &drumNotesEditor, &patternPreviewLabel,
+                                        &patternColourLabel, &patternColourSelector,
+                                        &patternTagsLabel, &patternTagsEditor, &patternFavouriteButton,
                                         &copyPatternButton, &pastePatternButton, &duplicatePatternButton,
+                                        &cutPatternButton, &clearPatternButton, &pasteScopeSelector,
+                                        &independentButton,
                                         &undoButton, &redoButton,
                                         &savePatternButton, &loadPatternButton,
                                         &rangeLabel, &rangeFirstSlider, &rangeLastSlider,
                                         &transposeRangeButton, &applyRangeButton })
-        component->setVisible(!open);
+        component->setVisible(editor);
+    for (juce::Component* component : std::initializer_list<juce::Component*> {
+        &drumVelocityBitsLabel, &drumVelocityBitsEditor, &drumNotesLabel, &drumNotesEditor })
+        component->setVisible(editor && rhythmic);
+    for (juce::Component* component : std::initializer_list<juce::Component*> {
+        &octaveLabel, &octaveSlider, &forteSearchLabel, &forteSearchEditor,
+        &forteLabel, &forteNumberSelector, &forteSelectionLabel })
+        component->setVisible(editor && !rhythmic);
+    independentButton.setEnabled(audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()).linkId.size() > 0);
     for (juce::Component* component : std::initializer_list<juce::Component*> { &presetSearchLabel, &presetSearchEditor,
                                         &presetCategoryFilterLabel, &presetCategoryFilter,
                                         &favouritesOnlyButton, &presetList,
@@ -1166,7 +1701,18 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
                                         &updatePresetButton, &duplicatePresetButton,
                                         &deletePresetButton, &favouritePresetButton,
                                         &importPresetButton, &exportPresetButton })
-        component->setVisible(open);
+        component->setVisible(browserOpen);
+    presetList.setVisible(browserOpen || patternBrowserOpen);
+    for (juce::Component* component : std::initializer_list<juce::Component*> {
+        &patternSearchLabel, &patternSearchEditor, &bankDetailsLabel, &bankTagsLabel,
+        &bankHelpLabel,
+        &bankNameEditor, &bankTagsEditor, &bankColourSelector,
+        &bankFavouritesButton, &bankFavouriteButton,
+        &assignCopyButton, &assignLinkButton, &auditionButton, &bankSaveButton,
+        &saveCurrentToBankButton })
+        component->setVisible(patternBrowserOpen);
+    bankEmptyLabel.setVisible(patternBrowserOpen && filteredPatterns.empty());
+    presetList.updateContent();
     resized();
 }
 
@@ -1197,6 +1743,13 @@ void NSeqArpKeysAudioProcessorEditor::updatePresetDisplay()
 
 void NSeqArpKeysAudioProcessorEditor::timerCallback()
 {
+    juce::StringArray sounding;
+    for (int key = 0; key < 128; ++key)
+        if (audioProcessor.isKeySounding(key))
+            sounding.add(juce::MidiMessage::getMidiNoteName(key, true, true, 4));
+    juce::String active = sounding.isEmpty() ? "No active keys" : "Playing: " + sounding.joinIntoString("  ·  ");
+    activeKeysLabel.setText(active, juce::dontSendNotification);
+    activeKeysLabel.setTooltip(active);
     previewSoundButton.setToggleState(audioProcessor.isPreviewSoundEnabled(), juce::dontSendNotification);
     // Host automation may update the global parameter without restoring state.
     if (!meterNumeratorSlider.isMouseButtonDown())
@@ -1244,7 +1797,7 @@ void NSeqArpKeysAudioProcessorEditor::loadPreset(int index)
 {
     if (index < 0 || index >= static_cast<int>(presets.size())) return;
     const auto preset = presets[static_cast<size_t>(index)];
-    auto state = juce::XmlDocument::parse(preset.stateXml);
+    auto state = parseSafeXml(preset.stateXml);
     if (!validPresetState(state.get()))
     {
         showPresetStatus("Preset data is invalid.", true);
@@ -1294,7 +1847,7 @@ bool NSeqArpKeysAudioProcessorEditor::writePreset(PresetEntry& preset)
         showPresetStatus("Preset details are too long.", true);
         return false;
     }
-    auto state = juce::XmlDocument::parse(preset.stateXml);
+    auto state = parseSafeXml(preset.stateXml);
     if (!validPresetState(state.get()))
     {
         showPresetStatus("Cannot save invalid preset state.", true);
@@ -1438,12 +1991,12 @@ void NSeqArpKeysAudioProcessorEditor::importPreset()
             if (safeThis == nullptr) return;
             const auto file = chooser.getResult();
             if (file == juce::File()) return;
-            if (file.getSize() > 1024 * 1024)
+            if (file.getSize() > 16 * 1024 * 1024)
             {
                 safeThis->showPresetStatus("Preset file is too large.", true);
                 return;
             }
-            auto xml = juce::XmlDocument::parse(file);
+            auto xml = parseSafeXmlFile(file, 16 * 1024 * 1024);
             if (xml == nullptr || !xml->hasTagName("NSeqPreset")
                 || xml->getIntAttribute("version") != 1
                 || !validPresetState(xml->getChildByName("NSeqArpKeys")))
@@ -1486,7 +2039,7 @@ void NSeqArpKeysAudioProcessorEditor::exportSelectedPreset()
             auto file = chooser.getResult();
             if (file == juce::File()) return;
             file = file.withFileExtension(".nseqpreset");
-            auto state = juce::XmlDocument::parse(preset.stateXml);
+            auto state = parseSafeXml(preset.stateXml);
             if (!validPresetState(state.get()))
             {
                 safeThis->showPresetStatus("Preset data is invalid.", true);

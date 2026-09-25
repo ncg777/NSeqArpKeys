@@ -18,8 +18,8 @@ The macOS archive also contains an Audio Unit bundle.
 
 | OS | VST3 folder | Audio Unit folder |
 | --- | --- | --- |
-| Windows x64 | `C:\Program Files\Common Files\VST3` | � |
-| Linux x64 | `~/.vst3` | � |
+| Windows x64 | `C:\Program Files\Common Files\VST3` | — |
+| Linux x64 | `~/.vst3` | — |
 | macOS Intel / Apple Silicon | `~/Library/Audio/Plug-Ins/VST3` | `~/Library/Audio/Plug-Ins/Components` |
 
 Copy the entire plug-in bundle into the indicated folder, then rescan plug-ins
@@ -37,46 +37,48 @@ The editable [HTML manual](docs/NSeqArpKeys-Manual.html) and
 [printable PDF](output/pdf/NSeqArpKeys-Manual.pdf) cover all controls, Forte
 sets, presets, and troubleshooting.
 
-## Version 1.2.0 pattern editing
+## Version 1.3.0 pattern editing
 
-The **Global Steps/QN** control keeps its existing host parameter ID and default
-value. **Steps/QN** on a key is 0 to inherit that value, or 1–16 to override it.
-Two held keys may therefore have different rates. The meter numerator remains a
-global grouping setting; the denominator control defines steps per quarter note.
-Old projects without a per-key Steps/QN value continue to inherit the global
-value.
+**Global Steps/QN** keeps its host parameter ID and default. The selected
+key's **Steps/QN** is 0 to inherit the global value, or 1-16 to override it.
+Multiple keys can play at different rates. Timing changes preserve phase.
 
-Choose **Melodic** for Forte-mapped integer bitsets or **Rhythmic** for bits
-0–15 mapped to the 16 editable drum MIDI notes. No Forte set is needed in
-Rhythmic mode. Set **Channel** to match the receiving instrument; switching
-modes preserves it. Leave both lanes empty to start, and keep **Transpose**
-at 0 for the original drum mapping. A velocity value scales with how hard the key is
-struck. The velocity lane has values 0–127 (0 silences that event), and the
-pitch lane offsets each step in semitones. Shorter lanes cycle within the
-pattern, and both lanes restart at each pattern loop. **Rotate**
-shifts the integer sequence in time; **Reverse** reverses its order. The lanes
-do not reverse or rotate with it. **Copy**, **Paste**, and **Duplicate to next
-key** work on complete independent assignments. **Assign range** copies the
-selected key into the inclusive MIDI range; **Transpose by key** offsets each
-copy by its distance from the source key. A range assignment is an independent
-copy that can be edited afterward. Assign range is one Undo action. Undo/Redo
-last for the current editor session and reset when a whole preset/project is loaded.
+Choose **Melodic** for Forte-mapped integers or **Rhythmic** for packed drum
+lanes. Rhythmic mode accepts 1-16 MIDI pitches. Each pitch has 1-7 velocity
+bits, with at most 32 bits total. The default one-bit widths preserve older
+16-lane masks: `5` triggers lanes 1 and 3. Zero is a rest; nonzero lane
+levels map to velocity 1-127, then scale with base and trigger velocity.
+For two lanes with widths `2 3`, step `17` produces levels 1/3 and 4/7.
+A signed negative integer can represent a mask with bit 31 set. Set
+**Channel** to match the receiving instrument; switching modes preserves it.
+
+The editor shows the sequence length in parentheses after **Pattern**, a
+preview of the first 16 steps, and active keys. It shows Forte and Octave
+controls in Melodic mode and drum pitches and velocity bits in Rhythmic mode.
+A dark theme uses pattern colours in the preview and pattern bank.
+
+**Copy**, **Cut**, **Clear** and **Paste** support full assignments and selective
+paste of sequence, timing, or expression. **Duplicate to next key** and
+**Assign range** create independent copies. **Pattern Bank** searches names
+and tags, filters favourites, and edits name, tags, colour and favourite
+status. Assign a bank pattern as an independent copy or a shared link.
+Linked keys follow edits to any member; **Make independent** breaks the link.
+Right-click the keyboard to assign the selected bank pattern. Whole presets
+embed shared pattern definitions, so exported setups reopen without the
+local bank. Bank entries can be auditioned from the browser.
 
 **Save pattern** and **Load pattern** use `.nseqpattern` files, separate from
-whole performance `.nseqpreset` files. They open in the pattern-bank folder
-under the application-data directory. Loading a pattern replaces the selected
-key's assignment and restarts that key if active, preserving trigger velocity.
-Other keys keep playing. Loading a pattern can be undone.
+whole `.nseqpreset` files. Loading one pattern affects only the selected key
+and can be undone. Undo/Redo lasts for the editor session and resets on a
+whole-preset or project restore.
 
-Changes to tempo, Global Steps/QN or a key's Steps/QN preserve musical phase;
-other edits restart the affected key. Invalid integer input is outlined in red
-and leaves the last valid value playing. Patterns and lanes accept up to 4096
-space-separated integers.
+Invalid integer input is outlined in red and leaves the last valid value
+playing. Pattern input accepts at most 4096 signed integers and 45,056
+characters. Names, tags, preset details, imported files and saved state are
+also bounded before use.
 
-The [release roadmap](docs/1.2.0-roadmap.md) defines the 1.2.0 feature set and
-keeps the pattern-bank browser, linked ranges, advanced rhythm, modulation and
-performance milestones for future releases. See the
-[implementation status](docs/1.2.0-implementation-status.md) for validation.
+The [1.3.0 release notes](docs/release-notes-1.3.0.md) summarize compatibility
+and the [user manual](docs/NSeqArpKeys-Manual.html) explains the controls.
 
 ## Note lengths
 
@@ -134,7 +136,7 @@ and verifies the ZIP. Archives are written to `release/`.
 
 [The GitHub Actions workflow](.github/workflows/build-release.yml) builds and
 runs this packaging script on Windows, Linux, and macOS. Every run uploads the
-three ZIPs as workflow artifacts. Pushing a `v1.2.0` tag publishes them as a
+three ZIPs as workflow artifacts. Pushing a `v1.3.0` tag publishes them as a
 GitHub release after all three builds succeed.
 
 ## Repository map

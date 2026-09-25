@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include "Engine/GateRunnerEngine.h"
 #include "Domain/AssignmentState.h"
+#include <string_view>
 
 namespace
 {
@@ -225,6 +226,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     };
 
     std::vector<std::pair<int, KeyAssignment>> updates;
+    std::unique_ptr<std::pair<int, KeyAssignment>> audition;
     {
         const juce::ScopedLock lock(m_assignmentsLock);
         for (int key : m_pendingAssignmentUpdates)
@@ -233,6 +235,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         for (int key : m_pendingTimingUpdates)
             m_scheduler.setSubdivision(key, m_assignments[static_cast<size_t>(key)].subdivision);
         m_pendingTimingUpdates.clear();
+        audition = std::move(m_pendingAudition);
     }
     for (const auto& [key, assignment] : updates)
         if (m_scheduler.isKeyActive(key))
@@ -259,6 +262,8 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     else
         for (int key : stopKeys)
             emitStopKey(key, 0);
+    if (audition)
+        emitTrigger(audition->first, 0, audition->second);
 
     int cursor = 0;
     auto processUntil = [&](int end)
@@ -305,6 +310,8 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
 
     processUntil(buffer.getNumSamples());
+    for (int key = 0; key < 128; ++key)
+        m_soundingKeys[static_cast<size_t>(key)].store(m_scheduler.isKeyActive(key));
     m_previewSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
     // Keep the synth and MIDI clock advancing so toggling preview never changes
     // note timing or leaves stale voices when sound is enabled again.
@@ -340,6 +347,8 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     const juce::ScopedLock lock(m_assignmentsLock);
     state->setAttribute("currentPresetId", m_currentPresetId);
+    state->setAttribute("formatVersion", 2);
+    std::set<std::string> embeddedLinks;
     for (int k = 0; k < 128; ++k)
     {
         const auto& a = m_assignments[k];
@@ -350,6 +359,12 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         auto* child = state->createNewChildElement("Assignment");
         child->setAttribute("key",          k);
         AssignmentState::write(*child, a);
+        if (!a.linkId.empty() && embeddedLinks.insert(a.linkId).second)
+        {
+            auto* definition = state->createNewChildElement("SharedPattern");
+            definition->setAttribute("id", juce::String(a.linkId));
+            AssignmentState::write(*definition, a);
+        }
     }
 
     juce::AudioProcessor::copyXmlToBinary(*state, destData);
@@ -357,6 +372,16 @@ void NSeqArpKeysAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
 void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
+    if (data == nullptr || sizeInBytes <= 0 || sizeInBytes > 16 * 1024 * 1024)
+        return;
+    if (sizeInBytes > 8)
+    {
+        const std::string_view xmlBytes(static_cast<const char*>(data) + 8,
+                                        static_cast<size_t>(sizeInBytes - 8));
+        if (xmlBytes.find("<!DOCTYPE") != std::string_view::npos
+            || xmlBytes.find("<!ENTITY") != std::string_view::npos)
+            return;
+    }
     auto state = juce::AudioProcessor::getXmlFromBinary(data, sizeInBytes);
     if (state == nullptr || !state->hasTagName("NSeqArpKeys"))
         return;
@@ -375,11 +400,24 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
     m_assignments.fill(KeyAssignment{});
     m_pendingAssignmentUpdates.clear();
     m_pendingTimingUpdates.clear();
-    m_currentPresetId = state->getStringAttribute("currentPresetId");
+    m_pendingAudition.reset();
+    m_currentPresetId = state->getStringAttribute("currentPresetId").substring(0, 80);
+    std::map<std::string, KeyAssignment> embeddedPatterns;
+    for (auto* child : state->getChildIterator())
+        if (child->hasTagName("SharedPattern") && embeddedPatterns.size() < 128)
+        {
+            const auto id = child->getStringAttribute("id").substring(0, 80).toStdString();
+            if (id.empty()) continue;
+            auto definition = AssignmentState::read(*child);
+            definition.linkId = id;
+            embeddedPatterns[id] = std::move(definition);
+        }
+    int assignmentCount = 0;
     for (auto* child : state->getChildIterator())
     {
         if (!child->hasTagName("Assignment"))
             continue;
+        if (++assignmentCount > 128) break;
 
         int k = child->getIntAttribute("key", -1);
         if (k < 0 || k >= 128)
@@ -387,6 +425,9 @@ void NSeqArpKeysAudioProcessor::setStateInformation(const void* data, int sizeIn
 
         auto& a = m_assignments[k];
         a = AssignmentState::read(*child);
+        if (!a.linkId.empty())
+            if (auto definition = embeddedPatterns.find(a.linkId); definition != embeddedPatterns.end())
+                a = definition->second;
         m_pendingAssignmentUpdates.insert(k);
     }
     m_stateRestoreRevision.fetch_add(1);
@@ -426,6 +467,14 @@ void NSeqArpKeysAudioProcessor::setAssignmentForKey(int key, const KeyAssignment
     else
         m_pendingAssignmentUpdates.insert(key);
     current = assignment;
+    if (!assignment.linkId.empty())
+        for (int other = 0; other < 128; ++other)
+            if (other != key && m_assignments[static_cast<size_t>(other)].linkId == assignment.linkId
+                && !(m_assignments[static_cast<size_t>(other)] == assignment))
+            {
+                m_assignments[static_cast<size_t>(other)] = assignment;
+                m_pendingAssignmentUpdates.insert(other);
+            }
 }
 
 void NSeqArpKeysAudioProcessor::copyAssignmentToRange(int sourceKey, int first, int last,
@@ -439,6 +488,7 @@ void NSeqArpKeysAudioProcessor::copyAssignmentToRange(int sourceKey, int first, 
     {
         auto copy = source;
         copy.rootKey = sourceKey;
+        copy.linkId.clear();
         if (transpose) copy.transpose = juce::jlimit(-127, 127, source.transpose + key - sourceKey);
         m_assignments[static_cast<size_t>(key)] = std::move(copy);
         m_pendingAssignmentUpdates.insert(key);
@@ -447,64 +497,49 @@ void NSeqArpKeysAudioProcessor::copyAssignmentToRange(int sourceKey, int first, 
 
 void NSeqArpKeysAudioProcessor::setPatternForKey(int key, const std::string& text)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        auto& assignment = m_assignments[static_cast<size_t>(key)];
-        const auto previous = assignment.sequence;
-        if (assignment.setSequenceFromString(text) && assignment.sequence != previous)
-            m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    if (assignment.setSequenceFromString(text)) setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setForteForKey(int key, const std::string& forteStr)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].setForteFromString(forteStr);
-        m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    assignment.setForteFromString(forteStr);
+    setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setChannelForKey(int key, int channel)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].channel = juce::jlimit(1, 16, channel);
-        m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    assignment.channel = juce::jlimit(1, 16, channel);
+    setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setOctaveForKey(int key, int octave)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].octave = juce::jlimit(0, 10, octave);
-        m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    assignment.octave = juce::jlimit(0, 10, octave);
+    setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setGateForKey(int key, float gate)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].gate = juce::jlimit(0.0f, 2.0f, gate);
-        m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    assignment.gate = juce::jlimit(0.0f, 2.0f, gate);
+    setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setFixedLengthStepsForKey(int key, float steps)
 {
-    if (key >= 0 && key < 128)
-    {
-        const juce::ScopedLock lock(m_assignmentsLock);
-        m_assignments[static_cast<size_t>(key)].fixedLengthSteps = juce::jlimit(0.0f, 16.0f, steps);
-        m_pendingAssignmentUpdates.insert(key);
-    }
+    if (key < 0 || key >= 128) return;
+    auto assignment = getAssignmentForKey(key);
+    assignment.fixedLengthSteps = juce::jlimit(0.0f, 16.0f, steps);
+    setAssignmentForKey(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::queuePreviewMidiMessage(const juce::MidiMessage& message)
@@ -533,6 +568,13 @@ void NSeqArpKeysAudioProcessor::requestStopAll()
     m_nextPendingPreviewSamplePosition = 0;
     m_pendingStopAll = true;
     m_pendingStopKeys.clear();
+}
+
+void NSeqArpKeysAudioProcessor::auditionPattern(int key, const KeyAssignment& assignment)
+{
+    if (key < 0 || key >= 128) return;
+    const juce::ScopedLock lock(m_assignmentsLock);
+    m_pendingAudition = std::make_unique<std::pair<int, KeyAssignment>>(key, assignment);
 }
 
 void NSeqArpKeysAudioProcessor::setLatchEnabled(bool enabled)

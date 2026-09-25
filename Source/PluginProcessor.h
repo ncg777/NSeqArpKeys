@@ -69,6 +69,9 @@ public:
     void queuePreviewMidiMessage(const juce::MidiMessage& message);
     void requestStopKey(int key);
     void requestStopAll();
+    void auditionPattern(int key, const KeyAssignment& assignment);
+    bool isKeySounding(int key) const { return key >= 0 && key < 128
+        && m_soundingKeys[static_cast<size_t>(key)].load(); }
     void setLatchEnabled(bool enabled);
     bool isLatchEnabled() const;
     void setPreviewSoundEnabled(bool enabled) { m_previewSoundEnabled.store(enabled); }
@@ -106,11 +109,13 @@ private:
     juce::CriticalSection m_pendingPreviewMidiLock;
     int m_nextPendingPreviewSamplePosition = 0;
     std::set<int> m_pendingStopKeys;
+    std::unique_ptr<std::pair<int, KeyAssignment>> m_pendingAudition;
     bool m_pendingStopAll = false;
     std::atomic<bool> m_latchEnabled { false };
     bool m_latchWasEnabled = false;
     std::array<bool, 128> m_heldTriggerKeys {};
     std::array<int, 128> m_triggerVelocities {};
+    std::array<std::atomic<bool>, 128> m_soundingKeys {};
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)

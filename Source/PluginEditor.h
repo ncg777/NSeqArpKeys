@@ -17,6 +17,7 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent&) override;
 
 private:
     // MidiKeyboardStateListener – key selection
@@ -33,6 +34,14 @@ private:
     void redoKeyEdit();
     void syncEditHistory();
     void updateTimingDisplay();
+    void updateModeVisibility();
+    void updatePatternPreview();
+    void setPatternBrowserOpen(bool open);
+    void loadPatternLibrary();
+    void filterPatternLibrary();
+    void assignSelectedPattern(bool linked);
+    void makeSelectedIndependent();
+    void saveSelectedPatternMetadata();
     bool validateIntegerInput(juce::TextEditor&, std::vector<int>&, int minimum, int maximum,
                               int exactCount = -1);
     void updateForteSearchResults();
@@ -80,6 +89,7 @@ private:
 
     // -------------------------------------------------------------------------
     NSeqArpKeysAudioProcessor& audioProcessor;
+    juce::LookAndFeel_V4 theme;
     juce::TooltipWindow tooltipWindow { this, 500 };
 
     juce::MidiKeyboardState     keyboardState;
@@ -95,6 +105,7 @@ private:
     juce::Label presetNameLabel;
     juce::TextButton previousPresetButton, nextPresetButton;
     juce::TextButton browsePresetsButton, savePresetButton;
+    juce::TextButton browsePatternsButton;
 
     // Per-key assignment controls
     juce::Slider       channelSlider;
@@ -102,11 +113,15 @@ private:
     juce::Slider       gateSlider;
     juce::Slider       fixedLengthStepsSlider;
     juce::TextEditor   patternTextEditor;
-    juce::TextEditor   patternNameEditor, velocityStepsEditor, pitchStepsEditor, drumNotesEditor;
+    juce::TextEditor   patternNameEditor, drumVelocityBitsEditor, drumNotesEditor;
     juce::ComboBox     modeSelector;
     juce::Slider       subdivisionSlider, velocitySlider, transposeSlider, rotationSlider;
     juce::ToggleButton reverseButton;
     juce::TextButton copyPatternButton, pastePatternButton, duplicatePatternButton;
+    juce::TextButton cutPatternButton, clearPatternButton, independentButton;
+    juce::ComboBox pasteScopeSelector, patternColourSelector;
+    juce::TextEditor patternTagsEditor;
+    juce::ToggleButton patternFavouriteButton;
     juce::TextButton savePatternButton, loadPatternButton, applyRangeButton;
     juce::TextButton undoButton, redoButton;
     juce::Slider rangeFirstSlider, rangeLastSlider;
@@ -127,17 +142,33 @@ private:
     juce::Label fixedLengthStepsLabel;
     juce::Label patternLabel;
     juce::Label patternNameLabel, modeLabel, subdivisionLabel, velocityLabel;
-    juce::Label transposeLabel, rotationLabel, velocityStepsLabel, pitchStepsLabel;
+    juce::Label transposeLabel, rotationLabel, drumVelocityBitsLabel;
     juce::Label drumNotesLabel, rangeLabel;
+    juce::Label patternTagsLabel, patternColourLabel, patternPreviewLabel;
     juce::Label forteLabel;
     juce::Label forteSearchLabel;
     juce::Label forteSelectionLabel;
     juce::Label selectedKeyLabel;
+    juce::Label activeKeysLabel;
 
     std::vector<PresetEntry> presets;
     std::vector<int> filteredPresets;
     int selectedPresetIndex = -1;
     bool browserOpen = false;
+    bool patternBrowserOpen = false;
+    struct PatternEntry { juce::String id; juce::File file; KeyAssignment assignment; };
+    std::vector<PatternEntry> patternLibrary;
+    std::vector<int> filteredPatterns;
+    int selectedPatternIndex = -1;
+    int auditioningKey = -1;
+    juce::TextEditor patternSearchEditor, bankNameEditor, bankTagsEditor;
+    juce::ComboBox bankColourSelector;
+    juce::Label patternSearchLabel, bankDetailsLabel, bankTagsLabel;
+    juce::Label bankEmptyLabel, bankHelpLabel;
+    juce::ToggleButton bankFavouritesButton;
+    juce::ToggleButton bankFavouriteButton;
+    juce::TextButton assignCopyButton, assignLinkButton, auditionButton, bankSaveButton;
+    juce::TextButton saveCurrentToBankButton;
     juce::String loadedPresetSnapshot;
     juce::String lastObservedState;
     juce::String lastDisplayedPresetId;

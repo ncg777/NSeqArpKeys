@@ -42,12 +42,11 @@ void PatternScheduler::triggerKey(int key,
     pat.subdivision    = assignment.subdivision;
     pat.velocity       = std::max(1, juce::jlimit(1, 127, assignment.velocity)
                        * juce::jlimit(1, 127, triggerVelocity) / 127);
-    pat.velocitySteps  = assignment.velocitySteps;
     pat.lastStepDuration = computeStepDuration(bpm, numerator,
                                   assignment.effectiveSubdivision(denominator));
     pat.gate           = assignment.gate;
     pat.fixedLengthSteps = assignment.fixedLengthSteps;
-    pat.stepNotes      = GateRunnerEngine::computeAllSteps(assignment);
+    pat.stepNotes      = GateRunnerEngine::computeAllStepEvents(assignment);
     pat.numSteps       = static_cast<int>(pat.stepNotes.size());
     pat.noteLengthSteps.assign(pat.numSteps, 1);
 
@@ -154,22 +153,16 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
         for (auto i = firstStep; i <= lastStep; ++i)
         {
             const int stepIdx = static_cast<int>(i % pat.numSteps);
-            // Expression lanes repeat within the pattern loop, like pitchSteps.
-            // Muted steps own neither an onset nor an off: their off must never
-            // release a still-sounding overlapping note from another step.
-            const int stepVelocity = pat.velocitySteps.empty() ? 127
-                : juce::jlimit(0, 127, pat.velocitySteps[static_cast<size_t>(stepIdx) % pat.velocitySteps.size()]);
-            if (stepVelocity == 0)
-                continue;
-            const int velocity = std::max(1, pat.velocity * stepVelocity / 127);
             const double noteOnTime = static_cast<double>(i) * stepDur;
             const double noteOffTime = noteOnTime
                 + (pat.fixedLengthSteps + pat.gate * pat.noteLengthSteps[stepIdx]) * stepDur;
 
-            for (int note : pat.stepNotes[stepIdx])
+            for (const auto& hit : pat.stepNotes[stepIdx])
             {
+                const int note = hit.note;
                 if (note < 0 || note >= 128)
                     continue;
+                const int velocity = std::max(1, pat.velocity * hit.velocityLevel / 127);
                 if (noteOnTime >= blockStart && noteOnTime < blockEnd)
                     events.push_back({ noteOnTime - blockStart, noteOnTime - blockStart, key, note, velocity, true });
                 if (noteOffTime >= blockStart && noteOffTime < blockEnd)
