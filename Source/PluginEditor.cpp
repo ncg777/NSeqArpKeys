@@ -1233,7 +1233,7 @@ void NSeqArpKeysAudioProcessorEditor::importPatternBank()
         [safeThis](const juce::FileChooser& chooser)
         {
             if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
-            auto xml = parseSafeXmlFile(chooser.getResult(), 16 * 1024 * 1024);
+            auto xml = parseSafeXmlFile(chooser.getResult(), PatternBankFile::maxFileBytes);
             std::vector<PatternBankFile::Entry> entries;
             juce::String error;
             if (xml == nullptr || !PatternBankFile::read(*xml, entries, error))
@@ -1282,10 +1282,10 @@ void NSeqArpKeysAudioProcessorEditor::exportPatternBank()
     std::vector<PatternBankFile::Entry> entries;
     for (const auto& pattern : patternLibrary)
         entries.push_back({ pattern.id, pattern.assignment });
-    auto xml = PatternBankFile::write(entries);
-    if (xml->toString().getNumBytesAsUTF8() > 16 * 1024 * 1024)
+    juce::String content, error;
+    if (!PatternBankFile::serialize(entries, content, error))
     {
-        showBankStatus("Pattern bank is too large to export as one file.", true);
+        showBankStatus(error, true);
         return;
     }
     presetChooser = std::make_unique<juce::FileChooser>(
@@ -1296,17 +1296,33 @@ void NSeqArpKeysAudioProcessorEditor::exportPatternBank()
     presetChooser->launchAsync(juce::FileBrowserComponent::saveMode
                               | juce::FileBrowserComponent::canSelectFiles
                               | juce::FileBrowserComponent::warnAboutOverwriting,
-        [safeThis, content = xml->toString(), count = static_cast<int>(entries.size())]
+        [safeThis, content, count = static_cast<int>(entries.size())]
         (const juce::FileChooser& chooser)
         {
             if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
             const auto target = chooser.getResult().withFileExtension(".nseqbank");
-            juce::TemporaryFile temporary(target);
-            const bool saved = temporary.getFile().replaceWithText(content)
-                && temporary.overwriteTargetFileWithTemporary();
-            safeThis->showBankStatus(saved
-                ? "Exported " + juce::String(count) + " patterns to " + target.getFileName()
-                : "Could not export pattern bank.", !saved);
+            const auto save = [safeThis, target, content, count]
+            {
+                if (safeThis == nullptr) return;
+                juce::TemporaryFile temporary(target);
+                const bool saved = temporary.getFile().replaceWithText(content)
+                    && temporary.overwriteTargetFileWithTemporary();
+                safeThis->showBankStatus(saved
+                    ? "Exported " + juce::String(count) + " patterns to " + target.getFileName()
+                    : "Could not export pattern bank.", !saved);
+            };
+            // The native chooser confirmed its selected path, which may differ
+            // from the final filename after appending/replacing the extension.
+            if (target != chooser.getResult() && target.exists())
+                juce::AlertWindow::showAsync(juce::MessageBoxOptions()
+                    .withIconType(juce::MessageBoxIconType::WarningIcon)
+                    .withTitle("Replace pattern bank?")
+                    .withMessage("Replace \"" + target.getFileName() + "\" with the exported bank?")
+                    .withButton("Replace").withButton("Cancel")
+                    .withAssociatedComponent(safeThis.getComponent()),
+                    [save](int result) { if (result == 1) save(); });
+            else
+                save();
         });
 }
 
