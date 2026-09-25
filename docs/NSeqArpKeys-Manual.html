@@ -23,6 +23,7 @@
     ul, ol { margin: 2mm 0 5mm; padding-left: 6mm; }
     li { padding-left: 1mm; margin-bottom: 2mm; }
     code { font: 9pt Consolas, "Courier New", monospace; background: #edf3f8; padding: 0.2mm 1mm; border-radius: 2px; }
+    a { color: #0b6d9a; }
     strong { color: #172f4b; }
     .cover { min-height: 245mm; padding-top: 28mm; break-after: page; display: flex; flex-direction: column; }
     .eyebrow { color: #1d6c9e; font-size: 9pt; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10mm; }
@@ -59,6 +60,17 @@
     .mini-card { border: 1px solid #d5e2eb; padding: 4mm; break-inside: avoid; }
     .mini-card h3 { margin-top: 0; }
     .footer-note { border-top: 1px solid #c9d8e5; padding-top: 4mm; color: #63788d; font-size: 9pt; }
+    .companion-list { margin: 2mm 0 3mm; }
+    .companion-list li { margin-bottom: 2mm; }
+    .mapping-table { max-width: 140mm; }
+    .mapping-table td:first-child { font-weight: bold; }
+    .forte-appendix { font-size: 8.3pt; line-height: 1.24; }
+    .forte-appendix h2 { margin-bottom: 4mm; }
+    .forte-appendix table { font-size: 8pt; line-height: 1.18; margin-top: 3mm; }
+    .forte-appendix td, .forte-appendix th { padding: 0.45mm 2mm; }
+    .forte-appendix td:first-child { white-space: nowrap; font-weight: bold; }
+    .forte-appendix td:nth-child(2), .forte-appendix td:nth-child(3) { font-family: Consolas, "Courier New", monospace; white-space: nowrap; }
+    .forte-appendix thead { display: table-header-group; }
     @media screen {
       body { background: #e9eff4; padding: 20px; }
       main { background: white; box-shadow: 0 4px 24px #8799a644; padding: 35px 48px; }
@@ -70,15 +82,38 @@
   <section class="cover">
     <div class="eyebrow">VST3 / AU MIDI pattern plug-ins</div>
     <img class="cover-logo" src="../assets/brand/logo.svg" alt="NSeqArpKeys logo">
-    <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
+    <p class="subtitle">Turn integer sequences into melodies and chords through Forte pitch-class sets.</p>
     <div class="rule"></div>
-    <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate and Fixed Steps, then save the complete setup as a preset.</p>
+    <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
+    <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
     <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.3.1 | September 2026</span></div>
   </section>
 
   <section>
-    <h2>1. Get started</h2>
-    <p class="lead">Load NSeqArpKeys as an instrument plug-in in a compatible DAW.</p>
+    <h2>1. How integer patterns become notes</h2>
+    <p class="lead">A short sequence of numbers becomes a melody, chords, and rests when you choose a Forte set.</p>
+    <p>In <strong>Melodic</strong> mode, each space-separated integer in <strong>Pattern</strong> is one step. The chosen <strong>Forte Set</strong> supplies pitch classes (0 = C through 11 = B); NSeqArpKeys repeats them in ascending order across octaves. The <strong>Octave</strong> control chooses the starting position, called the anchor below.</p>
+    <p>Read the magnitude of a step in binary from right to left. The rightmost bit, bit 0, selects the anchor note; bit 1 selects the next note in the expanded set; bit 2 selects the note after that. Several set bits play together. A positive number walks upward, a negative number walks downward from the same anchor, and zero starts no note.</p>
+    <div class="example"><strong>Hear the mapping</strong><p>Choose <code>7-35.11</code>, the diatonic set <code>[0 2 4 5 7 9 11]</code> (C D E F G A B), and set Octave to <code>4</code>. The anchor is C (MIDI 48), followed upward by D (50), E (52), and F (53).</p></div>
+    <table class="mapping-table">
+      <thead><tr><th>Step</th><th>Binary magnitude</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>001</td><td>C</td></tr>
+        <tr><td>2</td><td>010</td><td>D</td></tr>
+        <tr><td>4</td><td>100</td><td>E</td></tr>
+        <tr><td>3</td><td>011</td><td>C + D</td></tr>
+        <tr><td>5</td><td>101</td><td>C + E</td></tr>
+        <tr><td>7</td><td>111</td><td>C + D + E</td></tr>
+        <tr><td>0</td><td>000</td><td>Rest</td></tr>
+        <tr><td>-2</td><td>010</td><td>B below the anchor (MIDI 47)</td></tr>
+      </tbody>
+    </table>
+    <p>Enter <code>1 2 4 8 3 5 7 0</code> to hear single notes become chords. Keep the sequence and choose another Forte Set to hear new pitch material with the same bit relationships. The MIDI key you press triggers its assigned pattern; it does not transpose the output. <strong>Transpose</strong> changes output pitch separately. The appendix lists every base Forte set, its pitch classes, and its interval vector.</p>
+  </section>
+
+  <section class="page">
+    <h2>2. Get started</h2>
+    <p>Load NSeqArpKeys as an instrument plug-in in a compatible DAW.</p>
     <h3>Install</h3>
     <div>
       <div class="mini-card"><h3>Plug-in</h3><p>Copy the complete <code>NSeqArpKeys.vst3</code> bundle to your VST3 folder and rescan in your DAW. The macOS archive also includes <code>NSeqArpKeys.component</code> for Audio Units.</p></div>
@@ -92,10 +127,17 @@
       <li>Click the same key again, or use <strong>Stop Key</strong> or <strong>Stop All</strong>, to stop a latched pattern.</li>
     </ol>
     <p class="small">A melodic key needs both a nonzero Pattern step and a Forte Set. Rhythmic mode uses Drum notes instead. The Init preset is deliberately silent.</p>
+    <h3>Make patterns with companion apps</h3>
+    <ul class="companion-list">
+      <li><strong>Sequence Operator</strong> (<a href="https://ncg777.github.io/sequence-operator/">ncg777.github.io/sequence-operator/</a>) creates and transforms integer sequences. Copy its result into a Melodic <strong>Pattern</strong> to hear those numbers as notes and chords.</li>
+      <li><strong>Rhythm Navigator</strong> (<a href="https://ncg777.github.io/rhythm-navigator/">ncg777.github.io/rhythm-navigator/</a>) supplies onset patterns. Put the Sequence Operator values at those onsets and <code>0</code> at rests. For drums, use <strong>Combined sequence → Copy</strong> in its drum sequencer and paste the decimal masks into a Rhythmic <strong>Pattern</strong>. Use at most 16 lanes, set <strong>Velocity bits/lane</strong> to <code>1</code>, enter Drum notes in its displayed bit order, and set <strong>Steps/QN</strong> to its displayed denominator when that is 16 or less.</li>
+      <li><strong>KComplexExplorer</strong> (<a href="https://ncg777.github.io/KComplexExplorer/">ncg777.github.io/KComplexExplorer/</a>) lets you audition and compare pitch-class sets, inspect their Forte numbers and interval vectors, and generate harmonic matrices. Choose a set in <strong>Find Set / Forte Set</strong>; different trigger keys can use different sets. Its padded suffix <code>.09</code> appears as <code>.9</code> in NSeqArpKeys.</li>
+    </ul>
+    <p>Use KComplexExplorer for the pitch collection, Sequence Operator for the note-mask stream, and Rhythm Navigator for its timing; then trigger the finished pattern from a MIDI key in NSeqArpKeys.</p>
   </section>
 
   <section class="page editor-page">
-    <h2>2. Work in the editor</h2>
+    <h2>3. Work in the editor</h2>
     <p>The keyboard selects a trigger note. The controls below it edit the assignment for that key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, subdivision and expression.</p>
     <table class="controls-table">
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
@@ -128,9 +170,9 @@
   </section>
 
   <section class="page patterns-page">
-    <h2>3. Patterns, pitch, and timing</h2>
+    <h2>4. Patterns, pitch, and timing</h2>
     <h3>Pattern values</h3>
-    <p>Enter whole numbers separated by spaces. Each number is one step. Positive numbers are bit masks over ascending notes of the selected Forte set. Negative numbers select in the opposite direction from the Octave base. Zero starts no new note.</p>
+    <p>Enter whole numbers separated by spaces. Each number is one step. Positive numbers are bit masks over ascending notes of the selected Forte set. Negative numbers use the bits of their absolute value in the opposite direction from the Octave anchor. The least significant bit selects the anchor in both directions. Zero starts no new note.</p>
     <div class="example"><strong>Example - four steps</strong><span class="mono">1 2 3 0</span><p><code>1</code> plays the first available note, <code>2</code> the next, and <code>3</code> plays both together. <code>0</code> creates a rest after the chord.</p></div>
     <p>Octave moves the base position used by these bit masks. Channel sets the outgoing MIDI channel from 1 to 16. Notes outside MIDI's 0-127 range are ignored.</p>
     <h3>Gate across zero steps</h3>
@@ -145,14 +187,14 @@
   </section>
 
   <section class="page">
-    <h2>4. Forte sets</h2>
-    <p>A Forte set supplies the pitch classes from which Pattern values choose notes. Each menu match shows its Forte ID, any common name, and its pitch classes in brackets.</p>
+    <h2>5. Forte sets</h2>
+    <p>A Forte set supplies the pitch classes from which Pattern values choose notes. Each menu match shows its Forte ID, any common name, and its pitch classes in brackets. The number before the dot identifies the set class; the suffix <code>.0</code> through <code>.11</code> transposes its listed pitch classes upward by that many semitones modulo 12. The interval vector stays the same under transposition. The appendix gives every base set and the rule for reading its transpositions.</p>
     <ol>
       <li>Select the MIDI key you want to configure.</li>
       <li>Type part of an ID, a common name such as <code>diatonic</code>, or pitch classes in <strong>Find Set</strong>.</li>
       <li>Open <strong>Forte Set</strong> and choose a match. The selected set is shown underneath.</li>
     </ol>
-    <div class="example"><strong>Example</strong><p><code>7-35.11 - diatonic scale [0 2 4 5 7 9 11]</code> contains seven pitch classes. With this set, <code>1 2 4 8</code> walks upward through its first four scale positions.</p></div>
+    <div class="example"><strong>Example</strong><p>Base <code>7-35.0</code> is <code>[0 1 3 5 6 8 10]</code>. Adding 11 semitones modulo 12 gives <code>7-35.11 - diatonic scale [0 2 4 5 7 9 11]</code>. With this set, <code>1 2 4 8</code> walks upward through C, D, E, F at the selected Octave anchor.</p></div>
     <p>Choose <strong>(No set)</strong> to clear the selected key's set. A melodic pattern without a set is silent; rhythmic mode uses Drum notes independently. Changing search text only filters the menu; choose a result to change the assignment.</p>
     <h3>Live performance</h3>
     <p>Normally, a pattern runs only while its trigger note is held. Latch changes note release behavior: the first trigger keeps the pattern running, and another trigger of the same key switches it off. Turning Latch off stops patterns whose trigger keys are no longer held.</p>
@@ -160,7 +202,7 @@
   </section>
 
   <section class="page">
-    <h2>5. Presets</h2>
+    <h2>6. Presets</h2>
     <p>A preset captures the meter, latch setting, selected key, and all 128 key assignments. The library has six factory examples and can hold your own presets.</p>
     <h3>Browse and load</h3>
     <p>Open <strong>Browse Presets</strong>. Search names, categories, tags, and descriptions; narrow results with the Category menu or <strong>Favourites only</strong>. Select a row to inspect its details, then click <strong>Load</strong>. Loading replaces the current setup and stops any active patterns.</p>
@@ -183,7 +225,7 @@
   </section>
 
   <section class="page">
-    <h2>6. If something is not working</h2>
+    <h2>7. If something is not working</h2>
     <table>
       <thead><tr><th>What you notice</th><th>What to check</th></tr></thead>
       <tbody>
@@ -200,6 +242,372 @@
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
     <p class="footer-note">NSeqArpKeys 1.3.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+  </section>
+
+  <section class="page forte-appendix">
+    <h2>Appendix A. Forte pitch classes and interval vectors</h2>
+    <p>This table lists all 352 base IDs in NSeqArpKeys's Forte catalogue, including the empty set. Pitch classes use C = 0, C#/D&#9837; = 1, D = 2, D#/E&#9837; = 3, E = 4, F = 5, F#/G&#9837; = 6, G = 7, G#/A&#9837; = 8, A = 9, A#/B&#9837; = 10, and B = 11. The displayed pitch classes belong to the <code>.0</code> form of each ID.</p>
+    <p>For any other suffix <code>.n</code>, add <code>n</code> to each listed pitch class modulo 12, then sort the results. For example, <code>7-35.0</code> is <code>[0 1 3 5 6 8 10]</code>; <code>7-35.11</code> is <code>[0 2 4 5 7 9 11]</code>. Symmetric sets can have fewer than 12 distinct transpositions, so the selector only shows distinct forms. The empty set supplies no melodic notes.</p>
+    <p>The interval vector <code>&lt;1 2 3 4 5 6&gt;</code> counts unordered pitch-class pairs at each interval class in semitones, folding intervals larger than six back toward zero. For instance, <code>[0 4 7]</code> has one pair each at interval classes 3, 4, and 5, so its vector is <code>&lt;0 0 1 1 1 0&gt;</code>. Transposition leaves the vector unchanged. The table is generated from the plug-in's <code>ForteCSV.cpp</code> catalogue.</p>
+    <!-- FORTE_TABLE_START -->
+<table class="forte-table">
+  <thead><tr><th>Forte ID (.0)</th><th>Pitch classes</th><th>Interval vector &lt;1 2 3 4 5 6&gt;</th></tr></thead>
+  <tbody>
+    <tr><td>0-1.0</td><td>[]</td><td>&lt;0 0 0 0 0 0&gt;</td></tr>
+    <tr><td>1-1.0</td><td>[0]</td><td>&lt;0 0 0 0 0 0&gt;</td></tr>
+    <tr><td>2-1.0</td><td>[0 1]</td><td>&lt;1 0 0 0 0 0&gt;</td></tr>
+    <tr><td>2-2.0</td><td>[0 2]</td><td>&lt;0 1 0 0 0 0&gt;</td></tr>
+    <tr><td>2-3.0</td><td>[0 3]</td><td>&lt;0 0 1 0 0 0&gt;</td></tr>
+    <tr><td>2-4.0</td><td>[0 4]</td><td>&lt;0 0 0 1 0 0&gt;</td></tr>
+    <tr><td>2-5.0</td><td>[0 5]</td><td>&lt;0 0 0 0 1 0&gt;</td></tr>
+    <tr><td>2-6.0</td><td>[0 6]</td><td>&lt;0 0 0 0 0 1&gt;</td></tr>
+    <tr><td>3-1.0</td><td>[0 1 2]</td><td>&lt;2 1 0 0 0 0&gt;</td></tr>
+    <tr><td>3-2A.0</td><td>[0 1 3]</td><td>&lt;1 1 1 0 0 0&gt;</td></tr>
+    <tr><td>3-2B.0</td><td>[0 2 3]</td><td>&lt;1 1 1 0 0 0&gt;</td></tr>
+    <tr><td>3-3A.0</td><td>[0 1 4]</td><td>&lt;1 0 1 1 0 0&gt;</td></tr>
+    <tr><td>3-3B.0</td><td>[0 3 4]</td><td>&lt;1 0 1 1 0 0&gt;</td></tr>
+    <tr><td>3-4A.0</td><td>[0 1 5]</td><td>&lt;1 0 0 1 1 0&gt;</td></tr>
+    <tr><td>3-4B.0</td><td>[0 4 5]</td><td>&lt;1 0 0 1 1 0&gt;</td></tr>
+    <tr><td>3-5A.0</td><td>[0 1 6]</td><td>&lt;1 0 0 0 1 1&gt;</td></tr>
+    <tr><td>3-5B.0</td><td>[0 5 6]</td><td>&lt;1 0 0 0 1 1&gt;</td></tr>
+    <tr><td>3-6.0</td><td>[0 2 4]</td><td>&lt;0 2 0 1 0 0&gt;</td></tr>
+    <tr><td>3-7A.0</td><td>[0 2 5]</td><td>&lt;0 1 1 0 1 0&gt;</td></tr>
+    <tr><td>3-7B.0</td><td>[0 3 5]</td><td>&lt;0 1 1 0 1 0&gt;</td></tr>
+    <tr><td>3-8A.0</td><td>[0 2 6]</td><td>&lt;0 1 0 1 0 1&gt;</td></tr>
+    <tr><td>3-8B.0</td><td>[0 4 6]</td><td>&lt;0 1 0 1 0 1&gt;</td></tr>
+    <tr><td>3-9.0</td><td>[0 2 7]</td><td>&lt;0 1 0 0 2 0&gt;</td></tr>
+    <tr><td>3-10.0</td><td>[0 3 6]</td><td>&lt;0 0 2 0 0 1&gt;</td></tr>
+    <tr><td>3-11A.0</td><td>[0 3 7]</td><td>&lt;0 0 1 1 1 0&gt;</td></tr>
+    <tr><td>3-11B.0</td><td>[0 4 7]</td><td>&lt;0 0 1 1 1 0&gt;</td></tr>
+    <tr><td>3-12.0</td><td>[0 4 8]</td><td>&lt;0 0 0 3 0 0&gt;</td></tr>
+    <tr><td>4-1.0</td><td>[0 1 2 3]</td><td>&lt;3 2 1 0 0 0&gt;</td></tr>
+    <tr><td>4-2A.0</td><td>[0 1 2 4]</td><td>&lt;2 2 1 1 0 0&gt;</td></tr>
+    <tr><td>4-2B.0</td><td>[0 2 3 4]</td><td>&lt;2 2 1 1 0 0&gt;</td></tr>
+    <tr><td>4-3.0</td><td>[0 1 3 4]</td><td>&lt;2 1 2 1 0 0&gt;</td></tr>
+    <tr><td>4-4A.0</td><td>[0 1 2 5]</td><td>&lt;2 1 1 1 1 0&gt;</td></tr>
+    <tr><td>4-4B.0</td><td>[0 3 4 5]</td><td>&lt;2 1 1 1 1 0&gt;</td></tr>
+    <tr><td>4-5A.0</td><td>[0 1 2 6]</td><td>&lt;2 1 0 1 1 1&gt;</td></tr>
+    <tr><td>4-5B.0</td><td>[0 4 5 6]</td><td>&lt;2 1 0 1 1 1&gt;</td></tr>
+    <tr><td>4-6.0</td><td>[0 1 2 7]</td><td>&lt;2 1 0 0 2 1&gt;</td></tr>
+    <tr><td>4-7.0</td><td>[0 1 4 5]</td><td>&lt;2 0 1 2 1 0&gt;</td></tr>
+    <tr><td>4-8.0</td><td>[0 1 5 6]</td><td>&lt;2 0 0 1 2 1&gt;</td></tr>
+    <tr><td>4-9.0</td><td>[0 1 6 7]</td><td>&lt;2 0 0 0 2 2&gt;</td></tr>
+    <tr><td>4-10.0</td><td>[0 2 3 5]</td><td>&lt;1 2 2 0 1 0&gt;</td></tr>
+    <tr><td>4-11A.0</td><td>[0 1 3 5]</td><td>&lt;1 2 1 1 1 0&gt;</td></tr>
+    <tr><td>4-11B.0</td><td>[0 2 4 5]</td><td>&lt;1 2 1 1 1 0&gt;</td></tr>
+    <tr><td>4-12A.0</td><td>[0 2 3 6]</td><td>&lt;1 1 2 1 0 1&gt;</td></tr>
+    <tr><td>4-12B.0</td><td>[0 3 4 6]</td><td>&lt;1 1 2 1 0 1&gt;</td></tr>
+    <tr><td>4-13A.0</td><td>[0 1 3 6]</td><td>&lt;1 1 2 0 1 1&gt;</td></tr>
+    <tr><td>4-13B.0</td><td>[0 3 5 6]</td><td>&lt;1 1 2 0 1 1&gt;</td></tr>
+    <tr><td>4-14A.0</td><td>[0 2 3 7]</td><td>&lt;1 1 1 1 2 0&gt;</td></tr>
+    <tr><td>4-14B.0</td><td>[0 4 5 7]</td><td>&lt;1 1 1 1 2 0&gt;</td></tr>
+    <tr><td>4-z15A.0</td><td>[0 1 4 6]</td><td>&lt;1 1 1 1 1 1&gt;</td></tr>
+    <tr><td>4-z15B.0</td><td>[0 2 5 6]</td><td>&lt;1 1 1 1 1 1&gt;</td></tr>
+    <tr><td>4-16A.0</td><td>[0 1 5 7]</td><td>&lt;1 1 0 1 2 1&gt;</td></tr>
+    <tr><td>4-16B.0</td><td>[0 2 6 7]</td><td>&lt;1 1 0 1 2 1&gt;</td></tr>
+    <tr><td>4-17.0</td><td>[0 3 4 7]</td><td>&lt;1 0 2 2 1 0&gt;</td></tr>
+    <tr><td>4-18A.0</td><td>[0 1 4 7]</td><td>&lt;1 0 2 1 1 1&gt;</td></tr>
+    <tr><td>4-18B.0</td><td>[0 3 6 7]</td><td>&lt;1 0 2 1 1 1&gt;</td></tr>
+    <tr><td>4-19A.0</td><td>[0 1 4 8]</td><td>&lt;1 0 1 3 1 0&gt;</td></tr>
+    <tr><td>4-19B.0</td><td>[0 3 4 8]</td><td>&lt;1 0 1 3 1 0&gt;</td></tr>
+    <tr><td>4-20.0</td><td>[0 1 5 8]</td><td>&lt;1 0 1 2 2 0&gt;</td></tr>
+    <tr><td>4-21.0</td><td>[0 2 4 6]</td><td>&lt;0 3 0 2 0 1&gt;</td></tr>
+    <tr><td>4-22A.0</td><td>[0 2 4 7]</td><td>&lt;0 2 1 1 2 0&gt;</td></tr>
+    <tr><td>4-22B.0</td><td>[0 3 5 7]</td><td>&lt;0 2 1 1 2 0&gt;</td></tr>
+    <tr><td>4-23.0</td><td>[0 2 5 7]</td><td>&lt;0 2 1 0 3 0&gt;</td></tr>
+    <tr><td>4-24.0</td><td>[0 2 4 8]</td><td>&lt;0 2 0 3 0 1&gt;</td></tr>
+    <tr><td>4-25.0</td><td>[0 2 6 8]</td><td>&lt;0 2 0 2 0 2&gt;</td></tr>
+    <tr><td>4-26.0</td><td>[0 3 5 8]</td><td>&lt;0 1 2 1 2 0&gt;</td></tr>
+    <tr><td>4-27A.0</td><td>[0 2 5 8]</td><td>&lt;0 1 2 1 1 1&gt;</td></tr>
+    <tr><td>4-27B.0</td><td>[0 3 6 8]</td><td>&lt;0 1 2 1 1 1&gt;</td></tr>
+    <tr><td>4-28.0</td><td>[0 3 6 9]</td><td>&lt;0 0 4 0 0 2&gt;</td></tr>
+    <tr><td>4-z29A.0</td><td>[0 1 3 7]</td><td>&lt;1 1 1 1 1 1&gt;</td></tr>
+    <tr><td>4-z29B.0</td><td>[0 4 6 7]</td><td>&lt;1 1 1 1 1 1&gt;</td></tr>
+    <tr><td>5-1.0</td><td>[0 1 2 3 4]</td><td>&lt;4 3 2 1 0 0&gt;</td></tr>
+    <tr><td>5-2A.0</td><td>[0 1 2 3 5]</td><td>&lt;3 3 2 1 1 0&gt;</td></tr>
+    <tr><td>5-2B.0</td><td>[0 2 3 4 5]</td><td>&lt;3 3 2 1 1 0&gt;</td></tr>
+    <tr><td>5-3A.0</td><td>[0 1 2 4 5]</td><td>&lt;3 2 2 2 1 0&gt;</td></tr>
+    <tr><td>5-3B.0</td><td>[0 1 3 4 5]</td><td>&lt;3 2 2 2 1 0&gt;</td></tr>
+    <tr><td>5-4A.0</td><td>[0 1 2 3 6]</td><td>&lt;3 2 2 1 1 1&gt;</td></tr>
+    <tr><td>5-4B.0</td><td>[0 3 4 5 6]</td><td>&lt;3 2 2 1 1 1&gt;</td></tr>
+    <tr><td>5-5A.0</td><td>[0 1 2 3 7]</td><td>&lt;3 2 1 1 2 1&gt;</td></tr>
+    <tr><td>5-5B.0</td><td>[0 4 5 6 7]</td><td>&lt;3 2 1 1 2 1&gt;</td></tr>
+    <tr><td>5-6A.0</td><td>[0 1 2 5 6]</td><td>&lt;3 1 1 2 2 1&gt;</td></tr>
+    <tr><td>5-6B.0</td><td>[0 1 4 5 6]</td><td>&lt;3 1 1 2 2 1&gt;</td></tr>
+    <tr><td>5-7A.0</td><td>[0 1 2 6 7]</td><td>&lt;3 1 0 1 3 2&gt;</td></tr>
+    <tr><td>5-7B.0</td><td>[0 1 5 6 7]</td><td>&lt;3 1 0 1 3 2&gt;</td></tr>
+    <tr><td>5-8.0</td><td>[0 2 3 4 6]</td><td>&lt;2 3 2 2 0 1&gt;</td></tr>
+    <tr><td>5-9A.0</td><td>[0 1 2 4 6]</td><td>&lt;2 3 1 2 1 1&gt;</td></tr>
+    <tr><td>5-9B.0</td><td>[0 2 4 5 6]</td><td>&lt;2 3 1 2 1 1&gt;</td></tr>
+    <tr><td>5-10A.0</td><td>[0 1 3 4 6]</td><td>&lt;2 2 3 1 1 1&gt;</td></tr>
+    <tr><td>5-10B.0</td><td>[0 2 3 5 6]</td><td>&lt;2 2 3 1 1 1&gt;</td></tr>
+    <tr><td>5-11A.0</td><td>[0 2 3 4 7]</td><td>&lt;2 2 2 2 2 0&gt;</td></tr>
+    <tr><td>5-11B.0</td><td>[0 3 4 5 7]</td><td>&lt;2 2 2 2 2 0&gt;</td></tr>
+    <tr><td>5-z12.0</td><td>[0 1 3 5 6]</td><td>&lt;2 2 2 1 2 1&gt;</td></tr>
+    <tr><td>5-13A.0</td><td>[0 1 2 4 8]</td><td>&lt;2 2 1 3 1 1&gt;</td></tr>
+    <tr><td>5-13B.0</td><td>[0 2 3 4 8]</td><td>&lt;2 2 1 3 1 1&gt;</td></tr>
+    <tr><td>5-14A.0</td><td>[0 1 2 5 7]</td><td>&lt;2 2 1 1 3 1&gt;</td></tr>
+    <tr><td>5-14B.0</td><td>[0 2 5 6 7]</td><td>&lt;2 2 1 1 3 1&gt;</td></tr>
+    <tr><td>5-15.0</td><td>[0 1 2 6 8]</td><td>&lt;2 2 0 2 2 2&gt;</td></tr>
+    <tr><td>5-16A.0</td><td>[0 1 3 4 7]</td><td>&lt;2 1 3 2 1 1&gt;</td></tr>
+    <tr><td>5-16B.0</td><td>[0 3 4 6 7]</td><td>&lt;2 1 3 2 1 1&gt;</td></tr>
+    <tr><td>5-z17.0</td><td>[0 1 3 4 8]</td><td>&lt;2 1 2 3 2 0&gt;</td></tr>
+    <tr><td>5-z18A.0</td><td>[0 1 4 5 7]</td><td>&lt;2 1 2 2 2 1&gt;</td></tr>
+    <tr><td>5-z18B.0</td><td>[0 2 3 6 7]</td><td>&lt;2 1 2 2 2 1&gt;</td></tr>
+    <tr><td>5-19A.0</td><td>[0 1 3 6 7]</td><td>&lt;2 1 2 1 2 2&gt;</td></tr>
+    <tr><td>5-19B.0</td><td>[0 1 4 6 7]</td><td>&lt;2 1 2 1 2 2&gt;</td></tr>
+    <tr><td>5-20A.0</td><td>[0 1 5 6 8]</td><td>&lt;2 1 1 2 3 1&gt;</td></tr>
+    <tr><td>5-20B.0</td><td>[0 2 3 7 8]</td><td>&lt;2 1 1 2 3 1&gt;</td></tr>
+    <tr><td>5-21A.0</td><td>[0 1 4 5 8]</td><td>&lt;2 0 2 4 2 0&gt;</td></tr>
+    <tr><td>5-21B.0</td><td>[0 3 4 7 8]</td><td>&lt;2 0 2 4 2 0&gt;</td></tr>
+    <tr><td>5-22.0</td><td>[0 1 4 7 8]</td><td>&lt;2 0 2 3 2 1&gt;</td></tr>
+    <tr><td>5-23A.0</td><td>[0 2 3 5 7]</td><td>&lt;1 3 2 1 3 0&gt;</td></tr>
+    <tr><td>5-23B.0</td><td>[0 2 4 5 7]</td><td>&lt;1 3 2 1 3 0&gt;</td></tr>
+    <tr><td>5-24A.0</td><td>[0 1 3 5 7]</td><td>&lt;1 3 1 2 2 1&gt;</td></tr>
+    <tr><td>5-24B.0</td><td>[0 2 4 6 7]</td><td>&lt;1 3 1 2 2 1&gt;</td></tr>
+    <tr><td>5-25A.0</td><td>[0 2 3 5 8]</td><td>&lt;1 2 3 1 2 1&gt;</td></tr>
+    <tr><td>5-25B.0</td><td>[0 3 5 6 8]</td><td>&lt;1 2 3 1 2 1&gt;</td></tr>
+    <tr><td>5-26A.0</td><td>[0 2 4 5 8]</td><td>&lt;1 2 2 3 1 1&gt;</td></tr>
+    <tr><td>5-26B.0</td><td>[0 3 4 6 8]</td><td>&lt;1 2 2 3 1 1&gt;</td></tr>
+    <tr><td>5-27A.0</td><td>[0 1 3 5 8]</td><td>&lt;1 2 2 2 3 0&gt;</td></tr>
+    <tr><td>5-27B.0</td><td>[0 3 5 7 8]</td><td>&lt;1 2 2 2 3 0&gt;</td></tr>
+    <tr><td>5-28A.0</td><td>[0 2 3 6 8]</td><td>&lt;1 2 2 2 1 2&gt;</td></tr>
+    <tr><td>5-28B.0</td><td>[0 2 5 6 8]</td><td>&lt;1 2 2 2 1 2&gt;</td></tr>
+    <tr><td>5-29A.0</td><td>[0 1 3 6 8]</td><td>&lt;1 2 2 1 3 1&gt;</td></tr>
+    <tr><td>5-29B.0</td><td>[0 2 5 7 8]</td><td>&lt;1 2 2 1 3 1&gt;</td></tr>
+    <tr><td>5-30A.0</td><td>[0 1 4 6 8]</td><td>&lt;1 2 1 3 2 1&gt;</td></tr>
+    <tr><td>5-30B.0</td><td>[0 2 4 7 8]</td><td>&lt;1 2 1 3 2 1&gt;</td></tr>
+    <tr><td>5-31A.0</td><td>[0 1 3 6 9]</td><td>&lt;1 1 4 1 1 2&gt;</td></tr>
+    <tr><td>5-31B.0</td><td>[0 2 3 6 9]</td><td>&lt;1 1 4 1 1 2&gt;</td></tr>
+    <tr><td>5-32A.0</td><td>[0 1 4 6 9]</td><td>&lt;1 1 3 2 2 1&gt;</td></tr>
+    <tr><td>5-32B.0</td><td>[0 3 5 8 9]</td><td>&lt;1 1 3 2 2 1&gt;</td></tr>
+    <tr><td>5-33.0</td><td>[0 2 4 6 8]</td><td>&lt;0 4 0 4 0 2&gt;</td></tr>
+    <tr><td>5-34.0</td><td>[0 2 4 6 9]</td><td>&lt;0 3 2 2 2 1&gt;</td></tr>
+    <tr><td>5-35.0</td><td>[0 2 4 7 9]</td><td>&lt;0 3 2 1 4 0&gt;</td></tr>
+    <tr><td>5-z36A.0</td><td>[0 1 2 4 7]</td><td>&lt;2 2 2 1 2 1&gt;</td></tr>
+    <tr><td>5-z36B.0</td><td>[0 3 5 6 7]</td><td>&lt;2 2 2 1 2 1&gt;</td></tr>
+    <tr><td>5-z37.0</td><td>[0 3 4 5 8]</td><td>&lt;2 1 2 3 2 0&gt;</td></tr>
+    <tr><td>5-z38A.0</td><td>[0 1 2 5 8]</td><td>&lt;2 1 2 2 2 1&gt;</td></tr>
+    <tr><td>5-z38B.0</td><td>[0 3 6 7 8]</td><td>&lt;2 1 2 2 2 1&gt;</td></tr>
+    <tr><td>6-1.0</td><td>[0 1 2 3 4 5]</td><td>&lt;5 4 3 2 1 0&gt;</td></tr>
+    <tr><td>6-2A.0</td><td>[0 1 2 3 4 6]</td><td>&lt;4 4 3 2 1 1&gt;</td></tr>
+    <tr><td>6-2B.0</td><td>[0 2 3 4 5 6]</td><td>&lt;4 4 3 2 1 1&gt;</td></tr>
+    <tr><td>6-z3A.0</td><td>[0 1 2 3 5 6]</td><td>&lt;4 3 3 2 2 1&gt;</td></tr>
+    <tr><td>6-z3B.0</td><td>[0 1 3 4 5 6]</td><td>&lt;4 3 3 2 2 1&gt;</td></tr>
+    <tr><td>6-z4.0</td><td>[0 1 2 4 5 6]</td><td>&lt;4 3 2 3 2 1&gt;</td></tr>
+    <tr><td>6-5A.0</td><td>[0 1 2 3 6 7]</td><td>&lt;4 2 2 2 3 2&gt;</td></tr>
+    <tr><td>6-5B.0</td><td>[0 1 4 5 6 7]</td><td>&lt;4 2 2 2 3 2&gt;</td></tr>
+    <tr><td>6-z6.0</td><td>[0 1 2 5 6 7]</td><td>&lt;4 2 1 2 4 2&gt;</td></tr>
+    <tr><td>6-7.0</td><td>[0 1 2 6 7 8]</td><td>&lt;4 2 0 2 4 3&gt;</td></tr>
+    <tr><td>6-8.0</td><td>[0 2 3 4 5 7]</td><td>&lt;3 4 3 2 3 0&gt;</td></tr>
+    <tr><td>6-9A.0</td><td>[0 1 2 3 5 7]</td><td>&lt;3 4 2 2 3 1&gt;</td></tr>
+    <tr><td>6-9B.0</td><td>[0 2 4 5 6 7]</td><td>&lt;3 4 2 2 3 1&gt;</td></tr>
+    <tr><td>6-z10A.0</td><td>[0 1 3 4 5 7]</td><td>&lt;3 3 3 3 2 1&gt;</td></tr>
+    <tr><td>6-z10B.0</td><td>[0 2 3 4 6 7]</td><td>&lt;3 3 3 3 2 1&gt;</td></tr>
+    <tr><td>6-z11A.0</td><td>[0 1 2 4 5 7]</td><td>&lt;3 3 3 2 3 1&gt;</td></tr>
+    <tr><td>6-z11B.0</td><td>[0 2 3 5 6 7]</td><td>&lt;3 3 3 2 3 1&gt;</td></tr>
+    <tr><td>6-z12A.0</td><td>[0 1 2 4 6 7]</td><td>&lt;3 3 2 2 3 2&gt;</td></tr>
+    <tr><td>6-z12B.0</td><td>[0 1 3 5 6 7]</td><td>&lt;3 3 2 2 3 2&gt;</td></tr>
+    <tr><td>6-z13.0</td><td>[0 1 3 4 6 7]</td><td>&lt;3 2 4 2 2 2&gt;</td></tr>
+    <tr><td>6-14A.0</td><td>[0 1 3 4 5 8]</td><td>&lt;3 2 3 4 3 0&gt;</td></tr>
+    <tr><td>6-14B.0</td><td>[0 3 4 5 7 8]</td><td>&lt;3 2 3 4 3 0&gt;</td></tr>
+    <tr><td>6-15A.0</td><td>[0 1 2 4 5 8]</td><td>&lt;3 2 3 4 2 1&gt;</td></tr>
+    <tr><td>6-15B.0</td><td>[0 3 4 6 7 8]</td><td>&lt;3 2 3 4 2 1&gt;</td></tr>
+    <tr><td>6-16A.0</td><td>[0 1 4 5 6 8]</td><td>&lt;3 2 2 4 3 1&gt;</td></tr>
+    <tr><td>6-16B.0</td><td>[0 2 3 4 7 8]</td><td>&lt;3 2 2 4 3 1&gt;</td></tr>
+    <tr><td>6-z17A.0</td><td>[0 1 2 4 7 8]</td><td>&lt;3 2 2 3 3 2&gt;</td></tr>
+    <tr><td>6-z17B.0</td><td>[0 1 4 6 7 8]</td><td>&lt;3 2 2 3 3 2&gt;</td></tr>
+    <tr><td>6-18A.0</td><td>[0 1 2 5 7 8]</td><td>&lt;3 2 2 2 4 2&gt;</td></tr>
+    <tr><td>6-18B.0</td><td>[0 1 3 6 7 8]</td><td>&lt;3 2 2 2 4 2&gt;</td></tr>
+    <tr><td>6-z19A.0</td><td>[0 1 3 4 7 8]</td><td>&lt;3 1 3 4 3 1&gt;</td></tr>
+    <tr><td>6-z19B.0</td><td>[0 1 4 5 7 8]</td><td>&lt;3 1 3 4 3 1&gt;</td></tr>
+    <tr><td>6-20.0</td><td>[0 1 4 5 8 9]</td><td>&lt;3 0 3 6 3 0&gt;</td></tr>
+    <tr><td>6-21A.0</td><td>[0 2 3 4 6 8]</td><td>&lt;2 4 2 4 1 2&gt;</td></tr>
+    <tr><td>6-21B.0</td><td>[0 2 4 5 6 8]</td><td>&lt;2 4 2 4 1 2&gt;</td></tr>
+    <tr><td>6-22A.0</td><td>[0 1 2 4 6 8]</td><td>&lt;2 4 1 4 2 2&gt;</td></tr>
+    <tr><td>6-22B.0</td><td>[0 2 4 6 7 8]</td><td>&lt;2 4 1 4 2 2&gt;</td></tr>
+    <tr><td>6-z23.0</td><td>[0 2 3 5 6 8]</td><td>&lt;2 3 4 2 2 2&gt;</td></tr>
+    <tr><td>6-z24A.0</td><td>[0 1 3 4 6 8]</td><td>&lt;2 3 3 3 3 1&gt;</td></tr>
+    <tr><td>6-z24B.0</td><td>[0 2 4 5 7 8]</td><td>&lt;2 3 3 3 3 1&gt;</td></tr>
+    <tr><td>6-z25A.0</td><td>[0 1 3 5 6 8]</td><td>&lt;2 3 3 2 4 1&gt;</td></tr>
+    <tr><td>6-z25B.0</td><td>[0 2 3 5 7 8]</td><td>&lt;2 3 3 2 4 1&gt;</td></tr>
+    <tr><td>6-z26.0</td><td>[0 1 3 5 7 8]</td><td>&lt;2 3 2 3 4 1&gt;</td></tr>
+    <tr><td>6-27A.0</td><td>[0 1 3 4 6 9]</td><td>&lt;2 2 5 2 2 2&gt;</td></tr>
+    <tr><td>6-27B.0</td><td>[0 3 5 6 8 9]</td><td>&lt;2 2 5 2 2 2&gt;</td></tr>
+    <tr><td>6-z28.0</td><td>[0 1 3 4 7 9]</td><td>&lt;2 2 4 3 2 2&gt;</td></tr>
+    <tr><td>6-z29.0</td><td>[0 2 3 6 7 9]</td><td>&lt;2 2 4 2 3 2&gt;</td></tr>
+    <tr><td>6-30A.0</td><td>[0 1 3 6 7 9]</td><td>&lt;2 2 4 2 2 3&gt;</td></tr>
+    <tr><td>6-30B.0</td><td>[0 2 3 6 8 9]</td><td>&lt;2 2 4 2 2 3&gt;</td></tr>
+    <tr><td>6-31A.0</td><td>[0 1 4 5 7 9]</td><td>&lt;2 2 3 4 3 1&gt;</td></tr>
+    <tr><td>6-31B.0</td><td>[0 2 4 5 8 9]</td><td>&lt;2 2 3 4 3 1&gt;</td></tr>
+    <tr><td>6-32.0</td><td>[0 2 4 5 7 9]</td><td>&lt;1 4 3 2 5 0&gt;</td></tr>
+    <tr><td>6-33A.0</td><td>[0 2 3 5 7 9]</td><td>&lt;1 4 3 2 4 1&gt;</td></tr>
+    <tr><td>6-33B.0</td><td>[0 2 4 6 7 9]</td><td>&lt;1 4 3 2 4 1&gt;</td></tr>
+    <tr><td>6-34A.0</td><td>[0 1 3 5 7 9]</td><td>&lt;1 4 2 4 2 2&gt;</td></tr>
+    <tr><td>6-34B.0</td><td>[0 2 4 6 8 9]</td><td>&lt;1 4 2 4 2 2&gt;</td></tr>
+    <tr><td>6-35.0</td><td>[0 2 4 6 8 10]</td><td>&lt;0 6 0 6 0 3&gt;</td></tr>
+    <tr><td>6-z36A.0</td><td>[0 1 2 3 4 7]</td><td>&lt;4 3 3 2 2 1&gt;</td></tr>
+    <tr><td>6-z36B.0</td><td>[0 3 4 5 6 7]</td><td>&lt;4 3 3 2 2 1&gt;</td></tr>
+    <tr><td>6-z37.0</td><td>[0 1 2 3 4 8]</td><td>&lt;4 3 2 3 2 1&gt;</td></tr>
+    <tr><td>6-z38.0</td><td>[0 1 2 3 7 8]</td><td>&lt;4 2 1 2 4 2&gt;</td></tr>
+    <tr><td>6-z39A.0</td><td>[0 2 3 4 5 8]</td><td>&lt;3 3 3 3 2 1&gt;</td></tr>
+    <tr><td>6-z39B.0</td><td>[0 3 4 5 6 8]</td><td>&lt;3 3 3 3 2 1&gt;</td></tr>
+    <tr><td>6-z40A.0</td><td>[0 1 2 3 5 8]</td><td>&lt;3 3 3 2 3 1&gt;</td></tr>
+    <tr><td>6-z40B.0</td><td>[0 3 5 6 7 8]</td><td>&lt;3 3 3 2 3 1&gt;</td></tr>
+    <tr><td>6-z41A.0</td><td>[0 1 2 3 6 8]</td><td>&lt;3 3 2 2 3 2&gt;</td></tr>
+    <tr><td>6-z41B.0</td><td>[0 2 5 6 7 8]</td><td>&lt;3 3 2 2 3 2&gt;</td></tr>
+    <tr><td>6-z42.0</td><td>[0 1 2 3 6 9]</td><td>&lt;3 2 4 2 2 2&gt;</td></tr>
+    <tr><td>6-z43A.0</td><td>[0 1 2 5 6 8]</td><td>&lt;3 2 2 3 3 2&gt;</td></tr>
+    <tr><td>6-z43B.0</td><td>[0 2 3 6 7 8]</td><td>&lt;3 2 2 3 3 2&gt;</td></tr>
+    <tr><td>6-z44A.0</td><td>[0 1 2 5 6 9]</td><td>&lt;3 1 3 4 3 1&gt;</td></tr>
+    <tr><td>6-z44B.0</td><td>[0 3 4 7 8 9]</td><td>&lt;3 1 3 4 3 1&gt;</td></tr>
+    <tr><td>6-z45.0</td><td>[0 2 3 4 6 9]</td><td>&lt;2 3 4 2 2 2&gt;</td></tr>
+    <tr><td>6-z46A.0</td><td>[0 1 2 4 6 9]</td><td>&lt;2 3 3 3 3 1&gt;</td></tr>
+    <tr><td>6-z46B.0</td><td>[0 3 5 7 8 9]</td><td>&lt;2 3 3 3 3 1&gt;</td></tr>
+    <tr><td>6-z47A.0</td><td>[0 1 2 4 7 9]</td><td>&lt;2 3 3 2 4 1&gt;</td></tr>
+    <tr><td>6-z47B.0</td><td>[0 2 5 7 8 9]</td><td>&lt;2 3 3 2 4 1&gt;</td></tr>
+    <tr><td>6-z48.0</td><td>[0 1 2 5 7 9]</td><td>&lt;2 3 2 3 4 1&gt;</td></tr>
+    <tr><td>6-z49.0</td><td>[0 1 3 5 6 9]</td><td>&lt;2 2 4 3 2 2&gt;</td></tr>
+    <tr><td>6-z50.0</td><td>[0 1 4 6 7 9]</td><td>&lt;2 2 4 2 3 2&gt;</td></tr>
+    <tr><td>7-1.0</td><td>[0 1 2 3 4 5 6]</td><td>&lt;6 5 4 3 2 1&gt;</td></tr>
+    <tr><td>7-2A.0</td><td>[0 1 2 3 4 5 7]</td><td>&lt;5 5 4 3 3 1&gt;</td></tr>
+    <tr><td>7-2B.0</td><td>[0 2 3 4 5 6 7]</td><td>&lt;5 5 4 3 3 1&gt;</td></tr>
+    <tr><td>7-3A.0</td><td>[0 1 2 3 4 5 8]</td><td>&lt;5 4 4 4 3 1&gt;</td></tr>
+    <tr><td>7-3B.0</td><td>[0 3 4 5 6 7 8]</td><td>&lt;5 4 4 4 3 1&gt;</td></tr>
+    <tr><td>7-4A.0</td><td>[0 1 2 3 4 6 7]</td><td>&lt;5 4 4 3 3 2&gt;</td></tr>
+    <tr><td>7-4B.0</td><td>[0 1 3 4 5 6 7]</td><td>&lt;5 4 4 3 3 2&gt;</td></tr>
+    <tr><td>7-5A.0</td><td>[0 1 2 3 5 6 7]</td><td>&lt;5 4 3 3 4 2&gt;</td></tr>
+    <tr><td>7-5B.0</td><td>[0 1 2 4 5 6 7]</td><td>&lt;5 4 3 3 4 2&gt;</td></tr>
+    <tr><td>7-6A.0</td><td>[0 1 2 3 4 7 8]</td><td>&lt;5 3 3 4 4 2&gt;</td></tr>
+    <tr><td>7-6B.0</td><td>[0 1 4 5 6 7 8]</td><td>&lt;5 3 3 4 4 2&gt;</td></tr>
+    <tr><td>7-7A.0</td><td>[0 1 2 3 6 7 8]</td><td>&lt;5 3 2 3 5 3&gt;</td></tr>
+    <tr><td>7-7B.0</td><td>[0 1 2 5 6 7 8]</td><td>&lt;5 3 2 3 5 3&gt;</td></tr>
+    <tr><td>7-8.0</td><td>[0 2 3 4 5 6 8]</td><td>&lt;4 5 4 4 2 2&gt;</td></tr>
+    <tr><td>7-9A.0</td><td>[0 1 2 3 4 6 8]</td><td>&lt;4 5 3 4 3 2&gt;</td></tr>
+    <tr><td>7-9B.0</td><td>[0 2 4 5 6 7 8]</td><td>&lt;4 5 3 4 3 2&gt;</td></tr>
+    <tr><td>7-10A.0</td><td>[0 1 2 3 4 6 9]</td><td>&lt;4 4 5 3 3 2&gt;</td></tr>
+    <tr><td>7-10B.0</td><td>[0 2 3 4 5 6 9]</td><td>&lt;4 4 5 3 3 2&gt;</td></tr>
+    <tr><td>7-11A.0</td><td>[0 1 3 4 5 6 8]</td><td>&lt;4 4 4 4 4 1&gt;</td></tr>
+    <tr><td>7-11B.0</td><td>[0 2 3 4 5 7 8]</td><td>&lt;4 4 4 4 4 1&gt;</td></tr>
+    <tr><td>7-z12.0</td><td>[0 1 2 3 4 7 9]</td><td>&lt;4 4 4 3 4 2&gt;</td></tr>
+    <tr><td>7-13A.0</td><td>[0 1 2 4 5 6 8]</td><td>&lt;4 4 3 5 3 2&gt;</td></tr>
+    <tr><td>7-13B.0</td><td>[0 2 3 4 6 7 8]</td><td>&lt;4 4 3 5 3 2&gt;</td></tr>
+    <tr><td>7-14A.0</td><td>[0 1 2 3 5 7 8]</td><td>&lt;4 4 3 3 5 2&gt;</td></tr>
+    <tr><td>7-14B.0</td><td>[0 1 3 5 6 7 8]</td><td>&lt;4 4 3 3 5 2&gt;</td></tr>
+    <tr><td>7-15.0</td><td>[0 1 2 4 6 7 8]</td><td>&lt;4 4 2 4 4 3&gt;</td></tr>
+    <tr><td>7-16A.0</td><td>[0 1 2 3 5 6 9]</td><td>&lt;4 3 5 4 3 2&gt;</td></tr>
+    <tr><td>7-16B.0</td><td>[0 1 3 4 5 6 9]</td><td>&lt;4 3 5 4 3 2&gt;</td></tr>
+    <tr><td>7-z17.0</td><td>[0 1 2 4 5 6 9]</td><td>&lt;4 3 4 5 4 1&gt;</td></tr>
+    <tr><td>7-z18A.0</td><td>[0 1 4 5 6 7 9]</td><td>&lt;4 3 4 4 4 2&gt;</td></tr>
+    <tr><td>7-z18B.0</td><td>[0 1 4 6 7 8 9]</td><td>&lt;4 3 4 4 4 2&gt;</td></tr>
+    <tr><td>7-19A.0</td><td>[0 1 2 3 6 7 9]</td><td>&lt;4 3 4 3 4 3&gt;</td></tr>
+    <tr><td>7-19B.0</td><td>[0 1 2 3 6 8 9]</td><td>&lt;4 3 4 3 4 3&gt;</td></tr>
+    <tr><td>7-20A.0</td><td>[0 1 2 5 6 7 9]</td><td>&lt;4 3 3 4 5 2&gt;</td></tr>
+    <tr><td>7-20B.0</td><td>[0 1 2 5 7 8 9]</td><td>&lt;4 3 3 4 5 2&gt;</td></tr>
+    <tr><td>7-21A.0</td><td>[0 1 2 4 5 8 9]</td><td>&lt;4 2 4 6 4 1&gt;</td></tr>
+    <tr><td>7-21B.0</td><td>[0 1 3 4 5 8 9]</td><td>&lt;4 2 4 6 4 1&gt;</td></tr>
+    <tr><td>7-22.0</td><td>[0 1 2 5 6 8 9]</td><td>&lt;4 2 4 5 4 2&gt;</td></tr>
+    <tr><td>7-23A.0</td><td>[0 2 3 4 5 7 9]</td><td>&lt;3 5 4 3 5 1&gt;</td></tr>
+    <tr><td>7-23B.0</td><td>[0 2 4 5 6 7 9]</td><td>&lt;3 5 4 3 5 1&gt;</td></tr>
+    <tr><td>7-24A.0</td><td>[0 1 2 3 5 7 9]</td><td>&lt;3 5 3 4 4 2&gt;</td></tr>
+    <tr><td>7-24B.0</td><td>[0 2 4 6 7 8 9]</td><td>&lt;3 5 3 4 4 2&gt;</td></tr>
+    <tr><td>7-25A.0</td><td>[0 2 3 4 6 7 9]</td><td>&lt;3 4 5 3 4 2&gt;</td></tr>
+    <tr><td>7-25B.0</td><td>[0 2 3 5 6 7 9]</td><td>&lt;3 4 5 3 4 2&gt;</td></tr>
+    <tr><td>7-26A.0</td><td>[0 1 3 4 5 7 9]</td><td>&lt;3 4 4 5 3 2&gt;</td></tr>
+    <tr><td>7-26B.0</td><td>[0 2 4 5 6 8 9]</td><td>&lt;3 4 4 5 3 2&gt;</td></tr>
+    <tr><td>7-27A.0</td><td>[0 1 2 4 5 7 9]</td><td>&lt;3 4 4 4 5 1&gt;</td></tr>
+    <tr><td>7-27B.0</td><td>[0 2 4 5 7 8 9]</td><td>&lt;3 4 4 4 5 1&gt;</td></tr>
+    <tr><td>7-28A.0</td><td>[0 1 3 5 6 7 9]</td><td>&lt;3 4 4 4 3 3&gt;</td></tr>
+    <tr><td>7-28B.0</td><td>[0 2 3 4 6 8 9]</td><td>&lt;3 4 4 4 3 3&gt;</td></tr>
+    <tr><td>7-29A.0</td><td>[0 1 2 4 6 7 9]</td><td>&lt;3 4 4 3 5 2&gt;</td></tr>
+    <tr><td>7-29B.0</td><td>[0 2 3 5 7 8 9]</td><td>&lt;3 4 4 3 5 2&gt;</td></tr>
+    <tr><td>7-30A.0</td><td>[0 1 2 4 6 8 9]</td><td>&lt;3 4 3 5 4 2&gt;</td></tr>
+    <tr><td>7-30B.0</td><td>[0 1 3 5 7 8 9]</td><td>&lt;3 4 3 5 4 2&gt;</td></tr>
+    <tr><td>7-31A.0</td><td>[0 1 3 4 6 7 9]</td><td>&lt;3 3 6 3 3 3&gt;</td></tr>
+    <tr><td>7-31B.0</td><td>[0 2 3 5 6 8 9]</td><td>&lt;3 3 6 3 3 3&gt;</td></tr>
+    <tr><td>7-32A.0</td><td>[0 1 3 4 6 8 9]</td><td>&lt;3 3 5 4 4 2&gt;</td></tr>
+    <tr><td>7-32B.0</td><td>[0 1 3 5 6 8 9]</td><td>&lt;3 3 5 4 4 2&gt;</td></tr>
+    <tr><td>7-33.0</td><td>[0 1 2 4 6 8 10]</td><td>&lt;2 6 2 6 2 3&gt;</td></tr>
+    <tr><td>7-34.0</td><td>[0 1 3 4 6 8 10]</td><td>&lt;2 5 4 4 4 2&gt;</td></tr>
+    <tr><td>7-35.0</td><td>[0 1 3 5 6 8 10]</td><td>&lt;2 5 4 3 6 1&gt;</td></tr>
+    <tr><td>7-z36A.0</td><td>[0 1 2 3 5 6 8]</td><td>&lt;4 4 4 3 4 2&gt;</td></tr>
+    <tr><td>7-z36B.0</td><td>[0 2 3 5 6 7 8]</td><td>&lt;4 4 4 3 4 2&gt;</td></tr>
+    <tr><td>7-z37.0</td><td>[0 1 3 4 5 7 8]</td><td>&lt;4 3 4 5 4 1&gt;</td></tr>
+    <tr><td>7-z38A.0</td><td>[0 1 2 4 5 7 8]</td><td>&lt;4 3 4 4 4 2&gt;</td></tr>
+    <tr><td>7-z38B.0</td><td>[0 1 3 4 6 7 8]</td><td>&lt;4 3 4 4 4 2&gt;</td></tr>
+    <tr><td>8-1.0</td><td>[0 1 2 3 4 5 6 7]</td><td>&lt;7 6 5 4 4 2&gt;</td></tr>
+    <tr><td>8-2A.0</td><td>[0 1 2 3 4 5 6 8]</td><td>&lt;6 6 5 5 4 2&gt;</td></tr>
+    <tr><td>8-2B.0</td><td>[0 2 3 4 5 6 7 8]</td><td>&lt;6 6 5 5 4 2&gt;</td></tr>
+    <tr><td>8-3.0</td><td>[0 1 2 3 4 5 6 9]</td><td>&lt;6 5 6 5 4 2&gt;</td></tr>
+    <tr><td>8-4A.0</td><td>[0 1 2 3 4 5 7 8]</td><td>&lt;6 5 5 5 5 2&gt;</td></tr>
+    <tr><td>8-4B.0</td><td>[0 1 3 4 5 6 7 8]</td><td>&lt;6 5 5 5 5 2&gt;</td></tr>
+    <tr><td>8-5A.0</td><td>[0 1 2 3 4 6 7 8]</td><td>&lt;6 5 4 5 5 3&gt;</td></tr>
+    <tr><td>8-5B.0</td><td>[0 1 2 4 5 6 7 8]</td><td>&lt;6 5 4 5 5 3&gt;</td></tr>
+    <tr><td>8-6.0</td><td>[0 1 2 3 5 6 7 8]</td><td>&lt;6 5 4 4 6 3&gt;</td></tr>
+    <tr><td>8-7.0</td><td>[0 1 2 3 4 5 8 9]</td><td>&lt;6 4 5 6 5 2&gt;</td></tr>
+    <tr><td>8-8.0</td><td>[0 1 2 3 4 7 8 9]</td><td>&lt;6 4 4 5 6 3&gt;</td></tr>
+    <tr><td>8-9.0</td><td>[0 1 2 3 6 7 8 9]</td><td>&lt;6 4 4 4 6 4&gt;</td></tr>
+    <tr><td>8-10.0</td><td>[0 2 3 4 5 6 7 9]</td><td>&lt;5 6 6 4 5 2&gt;</td></tr>
+    <tr><td>8-11A.0</td><td>[0 1 2 3 4 5 7 9]</td><td>&lt;5 6 5 5 5 2&gt;</td></tr>
+    <tr><td>8-11B.0</td><td>[0 2 4 5 6 7 8 9]</td><td>&lt;5 6 5 5 5 2&gt;</td></tr>
+    <tr><td>8-12A.0</td><td>[0 1 3 4 5 6 7 9]</td><td>&lt;5 5 6 5 4 3&gt;</td></tr>
+    <tr><td>8-12B.0</td><td>[0 2 3 4 5 6 8 9]</td><td>&lt;5 5 6 5 4 3&gt;</td></tr>
+    <tr><td>8-13A.0</td><td>[0 1 2 3 4 6 7 9]</td><td>&lt;5 5 6 4 5 3&gt;</td></tr>
+    <tr><td>8-13B.0</td><td>[0 2 3 5 6 7 8 9]</td><td>&lt;5 5 6 4 5 3&gt;</td></tr>
+    <tr><td>8-14A.0</td><td>[0 1 2 4 5 6 7 9]</td><td>&lt;5 5 5 5 6 2&gt;</td></tr>
+    <tr><td>8-14B.0</td><td>[0 2 3 4 5 7 8 9]</td><td>&lt;5 5 5 5 6 2&gt;</td></tr>
+    <tr><td>8-z15A.0</td><td>[0 1 2 3 4 6 8 9]</td><td>&lt;5 5 5 5 5 3&gt;</td></tr>
+    <tr><td>8-z15B.0</td><td>[0 1 3 5 6 7 8 9]</td><td>&lt;5 5 5 5 5 3&gt;</td></tr>
+    <tr><td>8-16A.0</td><td>[0 1 2 3 5 7 8 9]</td><td>&lt;5 5 4 5 6 3&gt;</td></tr>
+    <tr><td>8-16B.0</td><td>[0 1 2 4 6 7 8 9]</td><td>&lt;5 5 4 5 6 3&gt;</td></tr>
+    <tr><td>8-17.0</td><td>[0 1 3 4 5 6 8 9]</td><td>&lt;5 4 6 6 5 2&gt;</td></tr>
+    <tr><td>8-18A.0</td><td>[0 1 2 3 5 6 8 9]</td><td>&lt;5 4 6 5 5 3&gt;</td></tr>
+    <tr><td>8-18B.0</td><td>[0 1 3 4 6 7 8 9]</td><td>&lt;5 4 6 5 5 3&gt;</td></tr>
+    <tr><td>8-19A.0</td><td>[0 1 2 4 5 6 8 9]</td><td>&lt;5 4 5 7 5 2&gt;</td></tr>
+    <tr><td>8-19B.0</td><td>[0 1 3 4 5 7 8 9]</td><td>&lt;5 4 5 7 5 2&gt;</td></tr>
+    <tr><td>8-20.0</td><td>[0 1 2 4 5 7 8 9]</td><td>&lt;5 4 5 6 6 2&gt;</td></tr>
+    <tr><td>8-21.0</td><td>[0 1 2 3 4 6 8 10]</td><td>&lt;4 7 4 6 4 3&gt;</td></tr>
+    <tr><td>8-22A.0</td><td>[0 1 2 3 5 6 8 10]</td><td>&lt;4 6 5 5 6 2&gt;</td></tr>
+    <tr><td>8-22B.0</td><td>[0 1 2 3 5 7 9 10]</td><td>&lt;4 6 5 5 6 2&gt;</td></tr>
+    <tr><td>8-23.0</td><td>[0 1 2 3 5 7 8 10]</td><td>&lt;4 6 5 4 7 2&gt;</td></tr>
+    <tr><td>8-24.0</td><td>[0 1 2 4 5 6 8 10]</td><td>&lt;4 6 4 7 4 3&gt;</td></tr>
+    <tr><td>8-25.0</td><td>[0 1 2 4 6 7 8 10]</td><td>&lt;4 6 4 6 4 4&gt;</td></tr>
+    <tr><td>8-26.0</td><td>[0 1 3 4 5 7 8 10]</td><td>&lt;4 5 6 5 6 2&gt;</td></tr>
+    <tr><td>8-27A.0</td><td>[0 1 2 4 5 7 8 10]</td><td>&lt;4 5 6 5 5 3&gt;</td></tr>
+    <tr><td>8-27B.0</td><td>[0 1 2 4 6 7 9 10]</td><td>&lt;4 5 6 5 5 3&gt;</td></tr>
+    <tr><td>8-28.0</td><td>[0 1 3 4 6 7 9 10]</td><td>&lt;4 4 8 4 4 4&gt;</td></tr>
+    <tr><td>8-z29A.0</td><td>[0 1 2 3 5 6 7 9]</td><td>&lt;5 5 5 5 5 3&gt;</td></tr>
+    <tr><td>8-z29B.0</td><td>[0 2 3 4 6 7 8 9]</td><td>&lt;5 5 5 5 5 3&gt;</td></tr>
+    <tr><td>9-1.0</td><td>[0 1 2 3 4 5 6 7 8]</td><td>&lt;8 7 6 6 6 3&gt;</td></tr>
+    <tr><td>9-2A.0</td><td>[0 1 2 3 4 5 6 7 9]</td><td>&lt;7 7 7 6 6 3&gt;</td></tr>
+    <tr><td>9-2B.0</td><td>[0 2 3 4 5 6 7 8 9]</td><td>&lt;7 7 7 6 6 3&gt;</td></tr>
+    <tr><td>9-3A.0</td><td>[0 1 2 3 4 5 6 8 9]</td><td>&lt;7 6 7 7 6 3&gt;</td></tr>
+    <tr><td>9-3B.0</td><td>[0 1 3 4 5 6 7 8 9]</td><td>&lt;7 6 7 7 6 3&gt;</td></tr>
+    <tr><td>9-4A.0</td><td>[0 1 2 3 4 5 7 8 9]</td><td>&lt;7 6 6 7 7 3&gt;</td></tr>
+    <tr><td>9-4B.0</td><td>[0 1 2 4 5 6 7 8 9]</td><td>&lt;7 6 6 7 7 3&gt;</td></tr>
+    <tr><td>9-5A.0</td><td>[0 1 2 3 4 6 7 8 9]</td><td>&lt;7 6 6 6 7 4&gt;</td></tr>
+    <tr><td>9-5B.0</td><td>[0 1 2 3 5 6 7 8 9]</td><td>&lt;7 6 6 6 7 4&gt;</td></tr>
+    <tr><td>9-6.0</td><td>[0 1 2 3 4 5 6 8 10]</td><td>&lt;6 8 6 7 6 3&gt;</td></tr>
+    <tr><td>9-7A.0</td><td>[0 1 2 3 4 5 7 8 10]</td><td>&lt;6 7 7 6 7 3&gt;</td></tr>
+    <tr><td>9-7B.0</td><td>[0 1 2 3 4 5 7 9 10]</td><td>&lt;6 7 7 6 7 3&gt;</td></tr>
+    <tr><td>9-8A.0</td><td>[0 1 2 3 4 6 7 8 10]</td><td>&lt;6 7 6 7 6 4&gt;</td></tr>
+    <tr><td>9-8B.0</td><td>[0 1 2 3 4 6 8 9 10]</td><td>&lt;6 7 6 7 6 4&gt;</td></tr>
+    <tr><td>9-9.0</td><td>[0 1 2 3 5 6 7 8 10]</td><td>&lt;6 7 6 6 8 3&gt;</td></tr>
+    <tr><td>9-10.0</td><td>[0 1 2 3 4 6 7 9 10]</td><td>&lt;6 6 8 6 6 4&gt;</td></tr>
+    <tr><td>9-11A.0</td><td>[0 1 2 3 5 6 7 9 10]</td><td>&lt;6 6 7 7 7 3&gt;</td></tr>
+    <tr><td>9-11B.0</td><td>[0 1 2 3 5 6 8 9 10]</td><td>&lt;6 6 7 7 7 3&gt;</td></tr>
+    <tr><td>9-12.0</td><td>[0 1 2 4 5 6 8 9 10]</td><td>&lt;6 6 6 9 6 3&gt;</td></tr>
+    <tr><td>10-1.0</td><td>[0 1 2 3 4 5 6 7 8 9]</td><td>&lt;9 8 8 8 8 4&gt;</td></tr>
+    <tr><td>10-2.0</td><td>[0 1 2 3 4 5 6 7 8 10]</td><td>&lt;8 9 8 8 8 4&gt;</td></tr>
+    <tr><td>10-3.0</td><td>[0 1 2 3 4 5 6 7 9 10]</td><td>&lt;8 8 9 8 8 4&gt;</td></tr>
+    <tr><td>10-4.0</td><td>[0 1 2 3 4 5 6 8 9 10]</td><td>&lt;8 8 8 9 8 4&gt;</td></tr>
+    <tr><td>10-5.0</td><td>[0 1 2 3 4 5 7 8 9 10]</td><td>&lt;8 8 8 8 9 4&gt;</td></tr>
+    <tr><td>10-6.0</td><td>[0 1 2 3 4 6 7 8 9 10]</td><td>&lt;8 8 8 8 8 5&gt;</td></tr>
+    <tr><td>11-1.0</td><td>[0 1 2 3 4 5 6 7 8 9 10]</td><td>&lt;10 10 10 10 10 5&gt;</td></tr>
+    <tr><td>12-1.0</td><td>[0 1 2 3 4 5 6 7 8 9 10 11]</td><td>&lt;12 12 12 12 12 6&gt;</td></tr>
+  </tbody>
+</table>
+<!-- FORTE_TABLE_END -->
   </section>
 </main></body>
 </html>
