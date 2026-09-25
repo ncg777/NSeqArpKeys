@@ -6,10 +6,10 @@
 
 #pragma once
 
-namespace FourthAtlasData
+namespace FactoryPatternsData
 {
-    extern const char*   FourthAtlas_zip;
-    const int            FourthAtlas_zipSize = 1136977;
+    extern const char*   FactoryPatterns_zip;
+    const int            FactoryPatterns_zipSize = 1137209;
 
     // Number of elements in the namedResourceList and originalFileNames arrays.
     const int namedResourceListSize = 1;

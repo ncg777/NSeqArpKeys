@@ -15,10 +15,12 @@
   using a nonzero melodic transpose may sound different from version 1.3.1.
 
 The plug-in keeps the same host parameters and project state format as 1.3.1.
+The on-screen keyboard now labels MIDI note 60 as C4, matching the selected-key
+label and the preset instructions.
 
-## Fourth Atlas banks
+## Factory Patterns banks
 
-- The plug-in includes Fourth Atlas's twelve 1,000-pattern banks and a
+- The plug-in includes twelve Factory Patterns banks of 1,000 patterns and a
   120-pattern starter bank. Select one in the Pattern Bank browser; the banks
   are available without importing files.
 - Every included pattern has a zero transpose value, so no bank migration is

@@ -4,11 +4,11 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
               pluginVSTCategory="kPlugCategSynth" pluginVST3Category="Instrument,Synth"
               pluginAUMainType="'aumu'" pluginFormats="buildVST3,buildAU" version="1.4.0"
-              binaryDataNamespace="FourthAtlasData">
+              binaryDataNamespace="FactoryPatternsData">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="AtlasBanks" name="Built-in Banks">
-      <FILE id="AtlasZip" name="FourthAtlas.zip" compile="0" resource="1"
-            file="banks/FourthAtlas/FourthAtlas.zip"/>
+      <FILE id="FactoryZip" name="FactoryPatterns.zip" compile="0" resource="1"
+            file="banks/FactoryPatterns/FactoryPatterns.zip"/>
     </GROUP>
     <GROUP id="BrandAssets" name="Brand">
       <FILE id="BrandIconBig" name="icon-512.png" compile="0" resource="0" file="assets/brand/icon-512.png"/>

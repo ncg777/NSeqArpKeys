@@ -3,8 +3,8 @@
 #include "Domain/AssignmentState.h"
 #include "Domain/SafeXml.h"
 #include "Domain/PatternBankFile.h"
-#if __has_include("FourthAtlasData.h")
-#include "FourthAtlasData.h"
+#if __has_include("FactoryPatternsData.h")
+#include "FactoryPatternsData.h"
 #else
 #include <BinaryData.h>
 #endif
@@ -14,7 +14,7 @@ namespace
 {
 struct BuiltInBank { const char* filename; const char* label; };
 constexpr BuiltInBank builtInBanks[] {
-    { "00-START-HERE.nseqbank", "Fourth Atlas: Starter" },
+    { "00-START-HERE.nseqbank", "Factory Patterns: Starter" },
     { "01-filigree-melodic.nseqbank", "Filigree: Melodic" },
     { "02-filigree-rhythmic.nseqbank", "Filigree: Rhythmic" },
     { "03-antiphon-melodic.nseqbank", "Antiphon: Melodic" },
@@ -118,6 +118,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     theme.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff172431));
     setLookAndFeel(&theme);
     // ----- Keyboard -----------------------------------------------------------
+    keyboardComponent.setOctaveForMiddleC(4); // Match C4 = MIDI 60 throughout the editor.
     addAndMakeVisible(keyboardComponent);
     keyboardState.addListener(this);
     keyboardComponent.addMouseListener(this, true);
@@ -1227,8 +1228,8 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary(const juce::String& pre
     const int source = bankSourceSelector.getSelectedId();
     if (source >= 2 && source - 2 < static_cast<int>(std::size(builtInBanks)))
     {
-        juce::MemoryInputStream bytes(FourthAtlasData::FourthAtlas_zip,
-                                      FourthAtlasData::FourthAtlas_zipSize, false);
+        juce::MemoryInputStream bytes(FactoryPatternsData::FactoryPatterns_zip,
+                                      FactoryPatternsData::FactoryPatterns_zipSize, false);
         juce::ZipFile archive(bytes);
         const auto* zipEntry = archive.getEntry(builtInBanks[source - 2].filename);
         if (zipEntry != nullptr && zipEntry->uncompressedSize <= PatternBankFile::maxFileBytes)

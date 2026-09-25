@@ -3,7 +3,7 @@
 #include "../Source/Domain/AssignmentHistory.h"
 #include "../Source/Domain/PatternBankFile.h"
 #include "../Source/Domain/SafeXml.h"
-#include "FourthAtlasData.h"
+#include "FactoryPatternsData.h"
 #include <algorithm>
 #include <stdexcept>
 #include <limits>
@@ -303,9 +303,9 @@ int main()
     require(parsedXml != nullptr && PatternBankFile::read(*parsedXml, imported, bankError));
     require(imported.empty());
 
-    // The compiled Fourth Atlas banks must be accepted by the import reader.
-    juce::MemoryInputStream atlasBytes(FourthAtlasData::FourthAtlas_zip,
-                                       FourthAtlasData::FourthAtlas_zipSize, false);
+    // The compiled factory banks must be accepted by the import reader.
+    juce::MemoryInputStream atlasBytes(FactoryPatternsData::FactoryPatterns_zip,
+                                       FactoryPatternsData::FactoryPatterns_zipSize, false);
     juce::ZipFile atlasArchive(atlasBytes);
     require(atlasArchive.getNumEntries() == 13);
     const juce::StringArray bankNames {

@@ -7673,7 +7673,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\banks\FourthAtlas\FourthAtlas.zip">
+    <None Include="..\..\banks\FactoryPatterns\FactoryPatterns.zip">
       <Filter>NSeqArpKeys\Built-in Banks</Filter>
     </None>
     <None Include="..\..\assets\brand\icon-512.png">

@@ -165,7 +165,7 @@ each copied assignment. Existing presets and pattern files keep their saved
 transpose numbers, which now have this set-degree meaning in melodic mode.
 See the [1.4.0 release notes](docs/release-notes-1.4.0.md).
 
-The plug-in includes [Fourth Atlas](banks/FourthAtlas/README.md) as built-in
+The plug-in includes [Factory Patterns](banks/FactoryPatterns/README.md) as built-in
 Pattern Bank choices: twelve 1,000-pattern banks and a 120-pattern starter
 bank. Choose a bank directly in the Pattern Bank browser; no import is needed.
 

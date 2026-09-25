@@ -35,10 +35,10 @@ juce_add_plugin(NSeqArpKeys
 
 juce_generate_juce_header(NSeqArpKeys)
 
-juce_add_binary_data(FourthAtlasData
-    NAMESPACE FourthAtlasData
-    HEADER_NAME FourthAtlasData.h
-    SOURCES banks/FourthAtlas/FourthAtlas.zip)
+juce_add_binary_data(FactoryPatternsData
+    NAMESPACE FactoryPatternsData
+    HEADER_NAME FactoryPatternsData.h
+    SOURCES banks/FactoryPatterns/FactoryPatterns.zip)
 
 target_sources(NSeqArpKeys PRIVATE
     Source/CollectionUtils.cpp
@@ -59,7 +59,7 @@ target_compile_definitions(NSeqArpKeys PUBLIC
     JUCE_VST3_CAN_REPLACE_VST2=0)
 
 target_link_libraries(NSeqArpKeys PRIVATE
-    FourthAtlasData
+    FactoryPatternsData
     juce::juce_audio_utils
     juce::juce_midi_ci
     PUBLIC
@@ -80,7 +80,7 @@ if (BUILD_TESTING)
     juce_generate_juce_header(NSeqArpKeysDomainTests)
     target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
     target_link_libraries(NSeqArpKeysDomainTests PRIVATE
-        NSeqArpKeys FourthAtlasData juce::juce_audio_utils juce::juce_recommended_config_flags)
+        NSeqArpKeys FactoryPatternsData juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
     juce_add_console_app(NSeqArpKeysStateTests PRODUCT_NAME "NSeqArpKeys State Tests")
     juce_generate_juce_header(NSeqArpKeysStateTests)

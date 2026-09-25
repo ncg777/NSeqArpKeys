@@ -69,8 +69,8 @@ Then rescan plug-ins in your DAW and load NSeqArpKeys as an instrument.
 Open NSeqArpKeys-Manual.pdf for installation, controls, pattern editing,
 Forte set search, presets, and troubleshooting.
 
-The Pattern Bank includes twelve Fourth Atlas melodic and rhythmic banks
-and a starter bank inside the plug-in.
+Factory Patterns includes twelve melodic and rhythmic banks and a starter
+bank inside the plug-in.
 
 Quick start: load the Single Note Pulse preset, then hold C4 (MIDI 60).
 Release the key to stop. Enable Latch to hear the pattern while editing;

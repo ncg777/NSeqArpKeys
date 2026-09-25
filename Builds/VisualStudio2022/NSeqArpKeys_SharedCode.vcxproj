@@ -4227,7 +4227,7 @@
     <ClInclude Include="..\..\JuceLibraryCode\JucePluginDefines.h"/>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\banks\FourthAtlas\FourthAtlas.zip"/>
+    <None Include="..\..\banks\FactoryPatterns\FactoryPatterns.zip"/>
     <None Include="..\..\assets\brand\icon-512.png"/>
     <None Include="..\..\assets\brand\icon-128.png"/>
     <None Include="C:\JUCE\modules\juce_audio_devices\native\oboe\src\common\README.md"/>
