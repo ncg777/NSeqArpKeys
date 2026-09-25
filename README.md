@@ -45,7 +45,9 @@ C (MIDI 48); the following notes are D (50) and E (52).
 Try `1 2 4 8 3 5 7 0` to hear a melody turn into overlapping chords. Keep
 the numbers and change the Forte Set to hear the same bit pattern mapped onto
 different pitches. The trigger key starts the assigned pattern; it does not
-transpose these notes. **Transpose** changes the output pitch separately.
+transpose these notes. **Transpose** moves melodic notes through the selected
+Forte set by its note count (one step means the next set note). Rhythmic
+patterns transpose drum pitches by semitones.
 See the [manual's mapping guide](docs/NSeqArpKeys-Manual.html) and its complete
 Forte pitch-class and interval-vector appendix.
 
@@ -152,6 +154,21 @@ IDs. Export includes every bank entry, regardless of the current search or
 favourites filter. See the [bank file format](docs/pattern-bank-format.md) and
 [1.3.1 release notes](docs/release-notes-1.3.1.md).
 
+## Version 1.4.0 Forte-set transposition
+
+Melodic **Transpose** now counts notes of the selected Forte set, keeping
+every output pitch in that set. For the diatonic set, a value of `+1` moves
+C to D; `+7` moves C up an octave. Negative values move down the same ordered
+set. Notes shifted beyond MIDI 0-127 are omitted. Rhythmic transposition
+continues to use semitones. **Transpose by key** applies the same rule to
+each copied assignment. Existing presets and pattern files keep their saved
+transpose numbers, which now have this set-degree meaning in melodic mode.
+See the [1.4.0 release notes](docs/release-notes-1.4.0.md).
+
+The plug-in includes [Fourth Atlas](banks/FourthAtlas/README.md) as built-in
+Pattern Bank choices: twelve 1,000-pattern banks and a 120-pattern starter
+bank. Choose a bank directly in the Pattern Bank browser; no import is needed.
+
 ## Note lengths
 
 One step lasts `60 / (BPM × effective Steps/QN)` seconds. At 120 BPM and Steps/QN 4,
@@ -208,7 +225,7 @@ and verifies the ZIP. Archives are written to `release/`.
 
 [The GitHub Actions workflow](.github/workflows/build-release.yml) builds and
 runs this packaging script on Windows, Linux, and macOS. Every run uploads the
-three ZIPs as workflow artifacts. Pushing a `v1.3.1` tag publishes them as a
+three ZIPs as workflow artifacts. Pushing a `v1.4.0` tag publishes them as a
 GitHub release after all three builds succeed.
 
 ## Repository map

@@ -39,7 +39,8 @@ std::vector<int> GateRunnerEngine::buildScale(const Pcs12& forte)
 std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scale,
                                                      int pitchClassCount,
                                                      int stepValue,
-                                                     int octave)
+                                                     int octave,
+                                                     int transpose)
 {
     std::vector<int> notes;
 
@@ -68,7 +69,9 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
             && bitIndex < static_cast<int>(bits.size())
             && bits[bitIndex] == 1)
         {
-            notes.push_back(scale[idx]);
+            const int shiftedIndex = idx + transpose;
+            if (shiftedIndex >= 0 && shiftedIndex < static_cast<int>(scale.size()))
+                notes.push_back(scale[shiftedIndex]);
         }
     }
 
@@ -123,11 +126,13 @@ GateRunnerEngine::computeAllStepEvents(const KeyAssignment& assignment, size_t m
             }
         }
         else
-            for (int note : computeStepNotes(scale, k, values[step].melodicValue(), assignment.octave))
+            for (int note : computeStepNotes(scale, k, values[step].melodicValue(),
+                                             assignment.octave, assignment.transpose))
                 notes.push_back({ note, 127 });
 
-        for (auto& note : notes)
-            note.note += assignment.transpose;
+        if (assignment.mode == KeyAssignment::Mode::rhythmic)
+            for (auto& note : notes)
+                note.note += assignment.transpose;
         notes.erase(std::remove_if(notes.begin(), notes.end(),
             [](const StepNote& note) { return note.note < 0 || note.note > 127; }), notes.end());
         result.push_back(std::move(notes));

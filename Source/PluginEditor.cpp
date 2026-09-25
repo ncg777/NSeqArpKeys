@@ -3,9 +3,32 @@
 #include "Domain/AssignmentState.h"
 #include "Domain/SafeXml.h"
 #include "Domain/PatternBankFile.h"
+#if __has_include("FourthAtlasData.h")
+#include "FourthAtlasData.h"
+#else
+#include <BinaryData.h>
+#endif
+#include <iterator>
 
 namespace
 {
+struct BuiltInBank { const char* filename; const char* label; };
+constexpr BuiltInBank builtInBanks[] {
+    { "00-START-HERE.nseqbank", "Fourth Atlas: Starter" },
+    { "01-filigree-melodic.nseqbank", "Filigree: Melodic" },
+    { "02-filigree-rhythmic.nseqbank", "Filigree: Rhythmic" },
+    { "03-antiphon-melodic.nseqbank", "Antiphon: Melodic" },
+    { "04-antiphon-rhythmic.nseqbank", "Antiphon: Rhythmic" },
+    { "05-embers-melodic.nseqbank", "Embers: Melodic" },
+    { "06-embers-rhythmic.nseqbank", "Embers: Rhythmic" },
+    { "07-kaleidoscope-melodic.nseqbank", "Kaleidoscope: Melodic" },
+    { "08-kaleidoscope-rhythmic.nseqbank", "Kaleidoscope: Rhythmic" },
+    { "09-lattice-melodic.nseqbank", "Lattice: Melodic" },
+    { "10-lattice-rhythmic.nseqbank", "Lattice: Rhythmic" },
+    { "11-orbit-melodic.nseqbank", "Orbit: Melodic" },
+    { "12-orbit-rhythmic.nseqbank", "Orbit: Rhythmic" },
+};
+
 juce::File presetDirectory()
 {
     const auto custom = juce::SystemStats::getEnvironmentVariable("NSEQARPKEYS_PRESET_DIR", {});
@@ -312,6 +335,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     addLabel(transposeLabel, "Transpose");
     addAndMakeVisible(transposeSlider);
     transposeSlider.setRange(-127, 127, 1);
+    transposeSlider.setTooltip("Melodic: move through the selected Forte set by this many notes. Rhythmic: shift drum pitches by semitones.");
     transposeSlider.onValueChange = [changeAssignment, this]
     {
         changeAssignment([this](KeyAssignment& a) { a.transpose = static_cast<int>(transposeSlider.getValue()); });
@@ -615,15 +639,21 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     patternSearchEditor.setInputRestrictions(80);
     patternSearchEditor.setTextToShowWhenEmpty("Search names and tags", juce::Colours::grey);
     patternSearchEditor.onTextChange = [this] { filterPatternLibrary(); };
+    bankSourceSelector.addItem("My patterns", 1);
+    for (int i = 0; i < static_cast<int>(std::size(builtInBanks)); ++i)
+        bankSourceSelector.addItem(builtInBanks[i].label, i + 2);
+    bankSourceSelector.setSelectedId(2, juce::dontSendNotification);
+    bankSourceSelector.onChange = [this] { loadPatternLibrary(); };
+    addAndMakeVisible(bankSourceSelector);
     bankFavouritesButton.setButtonText("Favourites only");
     bankFavouritesButton.onClick = [this] { filterPatternLibrary(); };
     bankFavouriteButton.setButtonText("Favourite this pattern");
     bankNameEditor.setInputRestrictions(80);
     bankTagsEditor.setInputRestrictions(200);
     bankTagsLabel.setText("Tags", juce::dontSendNotification);
-    bankEmptyLabel.setText("No saved patterns yet\nSave the current pattern to start your bank.", juce::dontSendNotification);
+    bankEmptyLabel.setText("No patterns match this search.", juce::dontSendNotification);
     bankEmptyLabel.setJustificationType(juce::Justification::centred);
-    bankHelpLabel.setText("Assign the selected pattern to the current MIDI key as a copy or link.", juce::dontSendNotification);
+    bankHelpLabel.setText("Assign as a copy or link. Built-in patterns are read-only.", juce::dontSendNotification);
     for (const auto& component : { &patternSearchLabel, &bankDetailsLabel, &bankTagsLabel,
                                    &bankEmptyLabel, &bankHelpLabel, &bankStatusLabel })
         addAndMakeVisible(*component);
@@ -748,6 +778,8 @@ void NSeqArpKeysAudioProcessorEditor::resized()
         patternSearchEditor.setBounds(searchRow.removeFromLeft(350));
         searchRow.removeFromLeft(12);
         bankFavouritesButton.setBounds(searchRow.removeFromLeft(180));
+        searchRow.removeFromLeft(12);
+        bankSourceSelector.setBounds(searchRow.removeFromLeft(240));
         area.removeFromTop(12);
         auto left = area.removeFromLeft(400);
         area.removeFromLeft(18);
@@ -1184,27 +1216,53 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
     stopPatternAudition();
     patternLibrary.clear();
     selectedPatternIndex = -1;
-    auto directory = patternDirectory();
-    if (directory.createDirectory().failed()) { filterPatternLibrary(); return; }
-    juce::Array<juce::File> files;
-    directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpattern");
-    for (const auto& file : files)
+    const int source = bankSourceSelector.getSelectedId();
+    if (source >= 2 && source - 2 < static_cast<int>(std::size(builtInBanks)))
     {
-        if (file.getSize() <= 0 || file.getSize() > 1024 * 1024) continue;
-        auto xml = parseSafeXmlFile(file, 1024 * 1024);
-        if (xml == nullptr || !xml->hasTagName("NSeqPattern")
-            || xml->getIntAttribute("version") != 1
-            || xml->getNumChildElements() != 1) continue;
-        auto* child = xml->getFirstChildElement();
-        if (child == nullptr || !child->hasTagName("Assignment")
-            || child->getStringAttribute("sequence").length() > 45056) continue;
-        PatternEntry entry;
-        entry.id = xml->getStringAttribute("id", file.getFileNameWithoutExtension()).substring(0, 80);
-        entry.file = file;
-        entry.assignment = AssignmentState::read(*child);
-        if (entry.assignment.name.empty())
-            entry.assignment.name = file.getFileNameWithoutExtension().substring(0, 80).toStdString();
-        patternLibrary.push_back(std::move(entry));
+        juce::MemoryInputStream bytes(FourthAtlasData::FourthAtlas_zip,
+                                      FourthAtlasData::FourthAtlas_zipSize, false);
+        juce::ZipFile archive(bytes);
+        const auto* zipEntry = archive.getEntry(builtInBanks[source - 2].filename);
+        if (zipEntry != nullptr && zipEntry->uncompressedSize <= PatternBankFile::maxFileBytes)
+        {
+            std::unique_ptr<juce::InputStream> stream(archive.createStreamForEntry(*zipEntry));
+            if (stream != nullptr)
+            {
+                auto xml = parseSafeXml(stream->readEntireStreamAsString());
+                std::vector<PatternBankFile::Entry> entries;
+                juce::String error;
+                if (xml != nullptr && PatternBankFile::read(*xml, entries, error))
+                    for (auto& entry : entries)
+                        patternLibrary.push_back({ entry.id, {}, std::move(entry.assignment), true });
+                else
+                    showBankStatus(error.isNotEmpty() ? error : "Could not load the built-in bank.", true);
+            }
+        }
+    }
+    else
+    {
+        auto directory = patternDirectory();
+        if (directory.createDirectory().failed()) { filterPatternLibrary(); return; }
+        juce::Array<juce::File> files;
+        directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpattern");
+        for (const auto& file : files)
+        {
+            if (file.getSize() <= 0 || file.getSize() > 1024 * 1024) continue;
+            auto xml = parseSafeXmlFile(file, 1024 * 1024);
+            if (xml == nullptr || !xml->hasTagName("NSeqPattern")
+                || xml->getIntAttribute("version") != 1
+                || xml->getNumChildElements() != 1) continue;
+            auto* child = xml->getFirstChildElement();
+            if (child == nullptr || !child->hasTagName("Assignment")
+                || child->getStringAttribute("sequence").length() > 45056) continue;
+            PatternEntry entry;
+            entry.id = xml->getStringAttribute("id", file.getFileNameWithoutExtension()).substring(0, 80);
+            entry.file = file;
+            entry.assignment = AssignmentState::read(*child);
+            if (entry.assignment.name.empty())
+                entry.assignment.name = file.getFileNameWithoutExtension().substring(0, 80).toStdString();
+            patternLibrary.push_back(std::move(entry));
+        }
     }
     std::sort(patternLibrary.begin(), patternLibrary.end(), [](const PatternEntry& a, const PatternEntry& b)
     {
@@ -1247,6 +1305,7 @@ void NSeqArpKeysAudioProcessorEditor::importPatternBank()
                 safeThis->showBankStatus("Could not create the pattern bank folder.", true);
                 return;
             }
+            safeThis->bankSourceSelector.setSelectedId(1, juce::dontSendNotification);
             safeThis->loadPatternLibrary();
             int added = 0, updated = 0;
             for (const auto& entry : entries)
@@ -1398,6 +1457,7 @@ void NSeqArpKeysAudioProcessorEditor::saveSelectedPatternMetadata()
 {
     if (selectedPatternIndex < 0 || selectedPatternIndex >= static_cast<int>(patternLibrary.size())) return;
     auto& entry = patternLibrary[static_cast<size_t>(selectedPatternIndex)];
+    if (entry.builtIn) return;
     const auto name = bankNameEditor.getText().trim();
     if (name.isEmpty()) return;
     entry.assignment.name = name.toStdString();
@@ -1707,16 +1767,20 @@ void NSeqArpKeysAudioProcessorEditor::selectedRowsChanged(int row)
         if (nextIndex != selectedPatternIndex) stopPatternAudition();
         selectedPatternIndex = nextIndex;
         const bool selected = selectedPatternIndex >= 0;
-        for (auto* button : { &assignCopyButton, &assignLinkButton, &auditionButton, &bankSaveButton })
+        const bool editable = selected
+            && !patternLibrary[static_cast<size_t>(selectedPatternIndex)].builtIn;
+        for (auto* button : { &assignCopyButton, &assignLinkButton, &auditionButton })
             button->setEnabled(selected);
+        bankSaveButton.setEnabled(editable);
         for (juce::Component* field : std::initializer_list<juce::Component*> {
             &bankNameEditor, &bankTagsEditor, &bankColourSelector, &bankFavouriteButton })
-            field->setEnabled(selected);
+            field->setEnabled(editable);
         if (selected)
         {
             const auto& a = patternLibrary[static_cast<size_t>(selectedPatternIndex)].assignment;
             bankDetailsLabel.setText(juce::String(a.sequence.size()) + " steps · "
-                + (a.mode == KeyAssignment::Mode::rhythmic ? "Rhythmic" : "Melodic"),
+                + (a.mode == KeyAssignment::Mode::rhythmic ? "Rhythmic" : "Melodic")
+                + (editable ? " · My patterns" : " · Built-in"),
                 juce::dontSendNotification);
             bankNameEditor.setText(a.name, false);
             bankTagsEditor.setText(a.tags, false);
@@ -1849,7 +1913,8 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
         component->setVisible(browserOpen);
     presetList.setVisible(browserOpen || patternBrowserOpen);
     for (juce::Component* component : std::initializer_list<juce::Component*> {
-        &patternSearchLabel, &patternSearchEditor, &bankDetailsLabel, &bankTagsLabel,
+        &patternSearchLabel, &patternSearchEditor, &bankSourceSelector,
+        &bankDetailsLabel, &bankTagsLabel,
         &bankHelpLabel,
         &bankNameEditor, &bankTagsEditor, &bankColourSelector,
         &bankFavouritesButton, &bankFavouriteButton,

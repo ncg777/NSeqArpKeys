@@ -3,8 +3,11 @@
 #include "../Source/Domain/AssignmentHistory.h"
 #include "../Source/Domain/PatternBankFile.h"
 #include "../Source/Domain/SafeXml.h"
+#include "FourthAtlasData.h"
+#include <algorithm>
 #include <stdexcept>
 #include <limits>
+#include <set>
 
 void require(bool condition)
 {
@@ -78,9 +81,59 @@ int main()
     pattern.setForteFromString("1-1.0");
     notes = GateRunnerEngine::computeAllSteps(pattern);
     require(notes.size() == 2 && notes[0].size() == 1 && notes[1].empty());
-    pattern.transpose = 12;
+    pattern.transpose = 1;
     notes = GateRunnerEngine::computeAllSteps(pattern);
-    require(notes[0][0] == 60);
+    require(notes[0] == std::vector<int>({ 60 }));
+    pattern.transpose = 7;
+    require(GateRunnerEngine::computeAllSteps(pattern)[0].empty());
+    pattern.setForteFromString("7-35.11");
+    pattern.sequence = { 1, 3, -2 };
+    pattern.transpose = 1;
+    notes = GateRunnerEngine::computeAllSteps(pattern);
+    require(notes[0] == std::vector<int>({ 50 }));
+    require(notes[1] == std::vector<int>({ 50, 52 }));
+    require(notes[2] == std::vector<int>({ 48 }));
+    pattern.transpose = -1;
+    notes = GateRunnerEngine::computeAllSteps(pattern);
+    require(notes[0] == std::vector<int>({ 47 }));
+    require(notes[1] == std::vector<int>({ 47, 48 }));
+    pattern.transpose = 7;
+    notes = GateRunnerEngine::computeAllSteps(pattern);
+    require(notes[0] == std::vector<int>({ 60 }));
+    const auto selectedPitches = pattern.forte.asSequence();
+    for (const auto& step : notes)
+        for (const int note : step)
+            require(std::find(selectedPitches.begin(), selectedPitches.end(), note % 12)
+                    != selectedPitches.end());
+    pattern.octave = 0;
+    pattern.transpose = -1;
+    notes = GateRunnerEngine::computeAllSteps(pattern);
+    require(notes[0].empty() && notes[1] == std::vector<int>({ 0 })
+        && notes[2].empty());
+    pattern = KeyAssignment{};
+    pattern.mode = KeyAssignment::Mode::rhythmic;
+    pattern.drumLaneCount = 1;
+    pattern.sequence = { 1 };
+    pattern.transpose = 1;
+    require(GateRunnerEngine::computeAllSteps(pattern)[0] == std::vector<int>({ 37 }));
+    // Every catalogue transposition, in both bit directions, stays in its set.
+    KeyAssignment cataloguePattern;
+    cataloguePattern.sequence = { std::numeric_limits<int>::max(),
+                                  -std::numeric_limits<int>::max() };
+    for (const auto& forteId : Pcs12::getSortedForteNumbers())
+    {
+        cataloguePattern.setForteFromString(forteId);
+        const auto pitchClasses = cataloguePattern.forte.asSequence();
+        for (const int shift : { -127, -13, -1, 0, 1, 13, 127 })
+        {
+            cataloguePattern.transpose = shift;
+            for (const auto& step : GateRunnerEngine::computeAllSteps(cataloguePattern))
+                for (const int note : step)
+                    require(std::find(pitchClasses.begin(), pitchClasses.end(), note % 12)
+                            != pitchClasses.end());
+        }
+    }
+    pattern = KeyAssignment{};
     require(pattern.effectiveSubdivision(4) == 4);
     pattern.subdivision = 3;
     require(pattern.effectiveSubdivision(4) == 3);
@@ -236,4 +289,46 @@ int main()
     parsedXml = SafeXml::parse(content);
     require(parsedXml != nullptr && PatternBankFile::read(*parsedXml, imported, bankError));
     require(imported.empty());
+
+    // The compiled Fourth Atlas banks must be accepted by the import reader.
+    juce::MemoryInputStream atlasBytes(FourthAtlasData::FourthAtlas_zip,
+                                       FourthAtlasData::FourthAtlas_zipSize, false);
+    juce::ZipFile atlasArchive(atlasBytes);
+    require(atlasArchive.getNumEntries() == 13);
+    const juce::StringArray bankNames {
+        "00-START-HERE.nseqbank", "01-filigree-melodic.nseqbank",
+        "02-filigree-rhythmic.nseqbank", "03-antiphon-melodic.nseqbank",
+        "04-antiphon-rhythmic.nseqbank", "05-embers-melodic.nseqbank",
+        "06-embers-rhythmic.nseqbank", "07-kaleidoscope-melodic.nseqbank",
+        "08-kaleidoscope-rhythmic.nseqbank", "09-lattice-melodic.nseqbank",
+        "10-lattice-rhythmic.nseqbank", "11-orbit-melodic.nseqbank",
+        "12-orbit-rhythmic.nseqbank"
+    };
+    std::set<std::string> atlasIds;
+    std::set<std::string> starterIds;
+    for (int bank = 0; bank <= 12; ++bank)
+    {
+        const auto* zipEntry = atlasArchive.getEntry(bank);
+        require(zipEntry != nullptr && zipEntry->filename == bankNames[bank]
+                && zipEntry->uncompressedSize <= PatternBankFile::maxFileBytes);
+        std::unique_ptr<juce::InputStream> stream(atlasArchive.createStreamForEntry(*zipEntry));
+        require(stream != nullptr);
+        const auto xml = SafeXml::parse(stream->readEntireStreamAsString());
+        require(xml != nullptr);
+        juce::String error;
+        std::vector<PatternBankFile::Entry> entries;
+        require(PatternBankFile::read(*xml, entries, error));
+        require(entries.size() == (bank == 0 ? 120u : 1000u));
+        for (const auto& entry : entries)
+        {
+            require(entry.assignment.transpose == 0);
+            if (bank == 0)
+                starterIds.insert(entry.id.toStdString());
+            else
+                require(atlasIds.insert(entry.id.toStdString()).second);
+        }
+    }
+    require(atlasIds.size() == 12000 && starterIds.size() == 120);
+    for (const auto& id : starterIds)
+        require(atlasIds.count(id) == 1);
 }

@@ -112,6 +112,7 @@ struct KeyAssignment
     int drumLaneCount = 16;
     /** Shared bit width for every rhythmic lane, as in GateRunner. */
     int drumVelocityBits = 1;
+    /** Forte-set degrees in melodic mode; semitones in rhythmic mode. */
     int transpose = 0;
     int velocity = 100;
     int rotation = 0;

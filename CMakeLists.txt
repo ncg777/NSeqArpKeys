@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.3.1 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.4.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -35,6 +35,11 @@ juce_add_plugin(NSeqArpKeys
 
 juce_generate_juce_header(NSeqArpKeys)
 
+juce_add_binary_data(FourthAtlasData
+    NAMESPACE FourthAtlasData
+    HEADER_NAME FourthAtlasData.h
+    SOURCES banks/FourthAtlas/FourthAtlas.zip)
+
 target_sources(NSeqArpKeys PRIVATE
     Source/CollectionUtils.cpp
     Source/Numbers.cpp
@@ -54,6 +59,7 @@ target_compile_definitions(NSeqArpKeys PUBLIC
     JUCE_VST3_CAN_REPLACE_VST2=0)
 
 target_link_libraries(NSeqArpKeys PRIVATE
+    FourthAtlasData
     juce::juce_audio_utils
     juce::juce_midi_ci
     PUBLIC
@@ -74,7 +80,7 @@ if (BUILD_TESTING)
     juce_generate_juce_header(NSeqArpKeysDomainTests)
     target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
     target_link_libraries(NSeqArpKeysDomainTests PRIVATE
-        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
+        NSeqArpKeys FourthAtlasData juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
     juce_add_console_app(NSeqArpKeysStateTests PRODUCT_NAME "NSeqArpKeys State Tests")
     juce_generate_juce_header(NSeqArpKeysStateTests)

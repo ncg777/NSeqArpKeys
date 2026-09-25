@@ -1,6 +1,6 @@
 {
   "Name": "NSeqArpKeys",
-  "Version": "1.2.0",
+  "Version": "1.4.0",
   "Factory Info": {
     "Vendor": "yourcompany",
     "URL": "",
@@ -8,8 +8,8 @@
     "Flags": {
       "Unicode": true,
       "Classes Discardable": false,
-      "Component Non Discardable": false
-    }
+      "Component Non Discardable": false,
+    },
   },
   "Classes": [
     {
@@ -17,44 +17,44 @@
       "Category": "Audio Module Class",
       "Name": "NSeqArpKeys",
       "Vendor": "yourcompany",
-      "Version": "1.2.0",
+      "Version": "1.4.0",
       "SDKVersion": "VST 3.7.12",
       "Sub Categories": [
         "Instrument",
-        "Synth"
+        "Synth",
       ],
       "Class Flags": 2,
       "Cardinality": 2147483647,
       "Snapshots": [
-      ]
+      ],
     },
     {
       "CID": "ABCDEF011234ABCD4D616E754539666A",
       "Category": "Component Controller Class",
       "Name": "NSeqArpKeys",
       "Vendor": "yourcompany",
-      "Version": "1.2.0",
+      "Version": "1.4.0",
       "SDKVersion": "VST 3.7.12",
       "Sub Categories": [
         "Instrument",
-        "Synth"
+        "Synth",
       ],
       "Class Flags": 2,
       "Cardinality": 2147483647,
       "Snapshots": [
-      ]
+      ],
     },
     {
       "CID": "ABCDEF01C0DEF00D4D616E754539666A",
       "Category": "Plugin Compatibility Class",
       "Name": "NSeqArpKeys",
       "Vendor": "yourcompany",
-      "Version": "1.2.0",
+      "Version": "1.4.0",
       "SDKVersion": "VST 3.7.12",
       "Class Flags": 0,
       "Cardinality": 2147483647,
       "Snapshots": [
-      ]
-    }
-  ]
+      ],
+    },
+  ],
 }
