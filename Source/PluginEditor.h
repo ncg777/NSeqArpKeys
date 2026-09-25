@@ -40,6 +40,9 @@ private:
     void stopPatternAudition();
     void loadPatternLibrary();
     void filterPatternLibrary();
+    void importPatternBank();
+    void exportPatternBank();
+    void showBankStatus(const juce::String& message, bool error = false);
     void assignSelectedPattern(bool linked);
     void makeSelectedIndependent();
     void saveSelectedPatternMetadata();
@@ -166,11 +169,12 @@ private:
     juce::TextEditor patternSearchEditor, bankNameEditor, bankTagsEditor;
     juce::ComboBox bankColourSelector;
     juce::Label patternSearchLabel, bankDetailsLabel, bankTagsLabel;
-    juce::Label bankEmptyLabel, bankHelpLabel;
+    juce::Label bankEmptyLabel, bankHelpLabel, bankStatusLabel;
     juce::ToggleButton bankFavouritesButton;
     juce::ToggleButton bankFavouriteButton;
     juce::TextButton assignCopyButton, assignLinkButton, auditionButton, bankSaveButton;
     juce::TextButton saveCurrentToBankButton;
+    juce::TextButton importBankButton, exportBankButton;
     juce::String loadedPresetSnapshot;
     juce::String lastObservedState;
     juce::String lastDisplayedPresetId;

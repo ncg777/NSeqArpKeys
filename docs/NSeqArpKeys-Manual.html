@@ -73,7 +73,7 @@
     <p class="subtitle">User manual for the pattern-driven keyboard instrument.</p>
     <div class="rule"></div>
     <p class="cover-note">Assign a sequence and a Forte pitch-class set to any MIDI key. Hold the key to play the pattern, or latch it while you edit. Shape note lengths with Gate and Fixed Steps, then save the complete setup as a preset.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.3.0 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.3.1 | September 2026</span></div>
   </section>
 
   <section>
@@ -116,6 +116,7 @@
         <tr><td><strong>Cut / Clear / Copy / Paste</strong></td><td>Remove or copy an assignment. Paste all settings, just sequence, timing, or expression.</td></tr>
         <tr><td><strong>Duplicate / Make independent</strong></td><td>Duplicate to the next key as a separate copy, or break a shared pattern link.</td></tr>
         <tr><td><strong>Save pattern / Load pattern</strong></td><td>Store or recall a single assignment as a <code>.nseqpattern</code> file.</td></tr>
+        <tr><td><strong>Import bank / Export bank</strong></td><td>Merge a whole pattern bank from a <code>.nseqbank</code> XML file, or save the whole bank to one file.</td></tr>
         <tr><td><strong>MIDI range / Transpose by key / Assign range</strong></td><td>Copy an assignment into the inclusive range, optionally transposed according to each key's distance from the source.</td></tr>
         <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
       </tbody>
@@ -177,8 +178,8 @@
       </tbody>
     </table>
     <div class="callout"><strong>Where presets live:</strong> in the OS application-data folder under <code>NSeqArpKeys/Presets</code> (for example, <code>%APPDATA%\NSeqArpKeys\Presets</code> on Windows). The plug-in formats share this folder on each OS.</div>
-    <h3>Individual pattern files</h3>
-    <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Pattern Bank searches names and tags, filters favourites, edits colour and details, auditions a selected pattern, and assigns it as an independent copy or shared link. Linked keys follow edits to any member; Make independent breaks the link on the selected key. Duplicate and range assignment always make independent copies. Whole presets embed shared definitions and key assignments, so they reopen without the local bank. Loading one pattern affects only the selected key. Undo/Redo lasts for the editor session and resets when loading a whole preset or project.</p>
+    <h3>Pattern files and whole-bank transfer</h3>
+    <p>Save pattern and Load pattern use the separate <code>NSeqArpKeys/Patterns</code> folder. Pattern Bank searches names and tags, filters favourites, edits colour and details, auditions a selected pattern, and assigns it as an independent copy or shared link. Import bank and Export bank transfer all bank entries in one <code>.nseqbank</code> XML file. Import updates local entries with matching IDs, adds new entries, and retains other local entries. An entry without an ID receives one on import. Export includes all entries even when a search or favourites filter is active. Linked keys follow edits to any member; Make independent breaks the link on the selected key. Duplicate and range assignment always make independent copies. Whole presets embed shared definitions and key assignments, so they reopen without the local bank. Loading one pattern affects only the selected key. Undo/Redo lasts for the editor session and resets when loading a whole preset or project.</p>
   </section>
 
   <section class="page">
@@ -198,7 +199,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.3.0 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.3.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 </main></body>
 </html>

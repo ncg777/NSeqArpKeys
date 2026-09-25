@@ -2,6 +2,7 @@
 #include "Engine/GateRunnerEngine.h"
 #include "Domain/AssignmentState.h"
 #include "Domain/SafeXml.h"
+#include "Domain/PatternBankFile.h"
 
 namespace
 {
@@ -624,14 +625,14 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     bankEmptyLabel.setJustificationType(juce::Justification::centred);
     bankHelpLabel.setText("Assign the selected pattern to the current MIDI key as a copy or link.", juce::dontSendNotification);
     for (const auto& component : { &patternSearchLabel, &bankDetailsLabel, &bankTagsLabel,
-                                   &bankEmptyLabel, &bankHelpLabel })
+                                   &bankEmptyLabel, &bankHelpLabel, &bankStatusLabel })
         addAndMakeVisible(*component);
     for (auto* component : std::initializer_list<juce::Component*> { &patternSearchEditor,
                              &bankNameEditor, &bankTagsEditor, &bankColourSelector,
                              &bankFavouritesButton, &bankFavouriteButton,
                              &assignCopyButton, &assignLinkButton,
                              &auditionButton, &bankSaveButton,
-                             &saveCurrentToBankButton }) addAndMakeVisible(*component);
+                             &saveCurrentToBankButton, &importBankButton, &exportBankButton }) addAndMakeVisible(*component);
     for (int i = 0; i < colours.size(); ++i) bankColourSelector.addItem(colours[i], i + 1);
     assignCopyButton.setButtonText("Assign copy");
     assignLinkButton.setButtonText("Assign link");
@@ -639,6 +640,10 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     bankSaveButton.setButtonText("Save details");
     saveCurrentToBankButton.setButtonText("Save current pattern to bank");
     saveCurrentToBankButton.onClick = [this] { savePatternToBank(); };
+    importBankButton.setButtonText("Import bank");
+    exportBankButton.setButtonText("Export bank");
+    importBankButton.onClick = [this] { importPatternBank(); };
+    exportBankButton.onClick = [this] { exportPatternBank(); };
     assignCopyButton.onClick = [this] { assignSelectedPattern(false); };
     assignLinkButton.onClick = [this] { assignSelectedPattern(true); };
     auditionButton.onClick = [this]
@@ -737,6 +742,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
 
     if (patternBrowserOpen)
     {
+        bankStatusLabel.setBounds(area.removeFromBottom(24));
         auto searchRow = area.removeFromTop(32);
         patternSearchLabel.setBounds(searchRow.removeFromLeft(100));
         patternSearchEditor.setBounds(searchRow.removeFromLeft(350));
@@ -769,7 +775,12 @@ void NSeqArpKeysAudioProcessorEditor::resized()
         actionRow.removeFromLeft(8);
         bankSaveButton.setBounds(actionRow.removeFromLeft(125));
         area.removeFromTop(20);
-        saveCurrentToBankButton.setBounds(area.removeFromTop(36).removeFromLeft(240));
+        auto transferRow = area.removeFromTop(36);
+        saveCurrentToBankButton.setBounds(transferRow.removeFromLeft(240));
+        transferRow.removeFromLeft(8);
+        importBankButton.setBounds(transferRow.removeFromLeft(115));
+        transferRow.removeFromLeft(8);
+        exportBankButton.setBounds(transferRow.removeFromLeft(115));
         return;
     }
     if (browserOpen)
@@ -1203,6 +1214,100 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
     for (int i = 0; i < static_cast<int>(patternLibrary.size()); ++i)
         if (patternLibrary[static_cast<size_t>(i)].id == selectedId) selectedPatternIndex = i;
     filterPatternLibrary();
+}
+
+void NSeqArpKeysAudioProcessorEditor::showBankStatus(const juce::String& message, bool error)
+{
+    bankStatusLabel.setColour(juce::Label::textColourId,
+        error ? juce::Colour(0xffff9292) : juce::Colour(0xffa6dfb2));
+    bankStatusLabel.setText(message, juce::dontSendNotification);
+}
+
+void NSeqArpKeysAudioProcessorEditor::importPatternBank()
+{
+    presetChooser = std::make_unique<juce::FileChooser>(
+        "Import NSeqArpKeys pattern bank", juce::File(), "*.nseqbank");
+    auto safeThis = juce::Component::SafePointer<NSeqArpKeysAudioProcessorEditor>(this);
+    presetChooser->launchAsync(juce::FileBrowserComponent::openMode
+                              | juce::FileBrowserComponent::canSelectFiles,
+        [safeThis](const juce::FileChooser& chooser)
+        {
+            if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
+            auto xml = parseSafeXmlFile(chooser.getResult(), 16 * 1024 * 1024);
+            std::vector<PatternBankFile::Entry> entries;
+            juce::String error;
+            if (xml == nullptr || !PatternBankFile::read(*xml, entries, error))
+            {
+                safeThis->showBankStatus(error.isNotEmpty() ? error : "Could not read pattern bank file.", true);
+                return;
+            }
+            auto directory = patternDirectory();
+            if (directory.createDirectory().failed())
+            {
+                safeThis->showBankStatus("Could not create the pattern bank folder.", true);
+                return;
+            }
+            safeThis->loadPatternLibrary();
+            int added = 0, updated = 0;
+            for (const auto& entry : entries)
+            {
+                juce::File target;
+                for (const auto& existing : safeThis->patternLibrary)
+                    if (existing.id == entry.id) { target = existing.file; break; }
+                const bool replacing = target != juce::File();
+                if (!replacing)
+                {
+                    do { target = directory.getChildFile(juce::Uuid().toString() + ".nseqpattern"); }
+                    while (target.exists());
+                }
+                auto pattern = PatternBankFile::writePattern(entry);
+                if (!writeXmlFile(target, *pattern))
+                {
+                    safeThis->loadPatternLibrary();
+                    safeThis->showBankStatus("Import stopped: could not write a pattern ("
+                        + juce::String(added) + " added, " + juce::String(updated) + " updated).", true);
+                    return;
+                }
+                if (replacing) ++updated; else ++added;
+            }
+            safeThis->loadPatternLibrary();
+            safeThis->showBankStatus("Imported bank: " + juce::String(added) + " added, "
+                + juce::String(updated) + " updated.");
+        });
+}
+
+void NSeqArpKeysAudioProcessorEditor::exportPatternBank()
+{
+    loadPatternLibrary();
+    std::vector<PatternBankFile::Entry> entries;
+    for (const auto& pattern : patternLibrary)
+        entries.push_back({ pattern.id, pattern.assignment });
+    auto xml = PatternBankFile::write(entries);
+    if (xml->toString().getNumBytesAsUTF8() > 16 * 1024 * 1024)
+    {
+        showBankStatus("Pattern bank is too large to export as one file.", true);
+        return;
+    }
+    presetChooser = std::make_unique<juce::FileChooser>(
+        "Export NSeqArpKeys pattern bank",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+            .getChildFile("NSeqArpKeys.nseqbank"), "*.nseqbank");
+    auto safeThis = juce::Component::SafePointer<NSeqArpKeysAudioProcessorEditor>(this);
+    presetChooser->launchAsync(juce::FileBrowserComponent::saveMode
+                              | juce::FileBrowserComponent::canSelectFiles
+                              | juce::FileBrowserComponent::warnAboutOverwriting,
+        [safeThis, content = xml->toString(), count = static_cast<int>(entries.size())]
+        (const juce::FileChooser& chooser)
+        {
+            if (safeThis == nullptr || chooser.getResult() == juce::File()) return;
+            const auto target = chooser.getResult().withFileExtension(".nseqbank");
+            juce::TemporaryFile temporary(target);
+            const bool saved = temporary.getFile().replaceWithText(content)
+                && temporary.overwriteTargetFileWithTemporary();
+            safeThis->showBankStatus(saved
+                ? "Exported " + juce::String(count) + " patterns to " + target.getFileName()
+                : "Could not export pattern bank.", !saved);
+        });
 }
 
 void NSeqArpKeysAudioProcessorEditor::filterPatternLibrary()
@@ -1733,7 +1838,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
         &bankNameEditor, &bankTagsEditor, &bankColourSelector,
         &bankFavouritesButton, &bankFavouriteButton,
         &assignCopyButton, &assignLinkButton, &auditionButton, &bankSaveButton,
-        &saveCurrentToBankButton })
+        &saveCurrentToBankButton, &importBankButton, &exportBankButton, &bankStatusLabel })
         component->setVisible(patternBrowserOpen);
     bankEmptyLabel.setVisible(patternBrowserOpen && filteredPatterns.empty());
     presetList.updateContent();

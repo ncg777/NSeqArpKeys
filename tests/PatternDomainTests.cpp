@@ -1,6 +1,8 @@
 #include "../Source/Engine/GateRunnerEngine.h"
 
 #include "../Source/Domain/AssignmentHistory.h"
+#include "../Source/Domain/PatternBankFile.h"
+#include "../Source/Domain/SafeXml.h"
 #include <stdexcept>
 #include <limits>
 
@@ -127,4 +129,39 @@ int main()
     int count = 0;
     while (history.undo(get, set) >= 0) ++count;
     require(count == 100);
+
+    // Whole-bank files preserve the complete assignment and stable IDs.
+    KeyAssignment bankPattern;
+    bankPattern.name = "Generated rhythm";
+    bankPattern.tags = "test generated";
+    bankPattern.favourite = true;
+    bankPattern.mode = KeyAssignment::Mode::rhythmic;
+    bankPattern.drumVelocityBits = 2;
+    bankPattern.sequence = { 9, 0, 3 };
+    bankPattern.linkId = "project-only-link";
+    const auto exported = PatternBankFile::write({ { "external-1", bankPattern } });
+    auto parsedXml = SafeXml::parse(exported->toString());
+    require(parsedXml != nullptr);
+    std::vector<PatternBankFile::Entry> imported;
+    juce::String bankError;
+    require(PatternBankFile::read(*parsedXml, imported, bankError));
+    require(imported.size() == 1 && imported[0].id == "external-1");
+    bankPattern.linkId.clear();
+    require(imported[0].assignment == bankPattern);
+
+    auto* first = parsedXml->getFirstChildElement();
+    auto* assignment = first->getFirstChildElement();
+    assignment->setAttribute("sequence", "1 bad 3");
+    require(!PatternBankFile::read(*parsedXml, imported, bankError));
+    require(imported.size() == 1 && imported[0].id == "external-1");
+    assignment->setAttribute("sequence", "9 0 3");
+    auto* duplicate = new juce::XmlElement(*first);
+    parsedXml->addChildElement(duplicate);
+    require(!PatternBankFile::read(*parsedXml, imported, bankError));
+    parsedXml->removeChildElement(duplicate, true);
+    first->removeAttribute("id");
+    require(PatternBankFile::read(*parsedXml, imported, bankError));
+    require(imported.size() == 1 && imported[0].id.isNotEmpty());
+    parsedXml->setAttribute("version", 2);
+    require(!PatternBankFile::read(*parsedXml, imported, bankError));
 }
