@@ -58,11 +58,12 @@ inline std::unique_ptr<juce::XmlElement> parse(const juce::String& text)
 
 inline std::unique_ptr<juce::XmlElement> readFile(const juce::File& file, int64_t limit)
 {
+    if (limit <= 0 || limit > 16 * 1024 * 1024) return {};
     auto input = file.createInputStream();
     if (input == nullptr || input->getTotalLength() <= 0 || input->getTotalLength() > limit)
         return {};
     juce::MemoryBlock data;
-    input->readIntoMemoryBlock(data, static_cast<juce::ssize_t>(limit + 1));
+    input->readIntoMemoryBlock(data, static_cast<int>(limit + 1));
     if (data.getSize() == 0 || data.getSize() > static_cast<size_t>(limit)) return {};
     return parse(juce::String::createStringFromData(data.getData(), static_cast<int>(data.getSize())));
 }
