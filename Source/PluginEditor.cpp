@@ -246,16 +246,22 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
 
     addAndMakeVisible(patternTextEditor);
     patternTextEditor.setInputRestrictions(45056);
-    patternTextEditor.setTooltip("Signed integer steps. Up to 4096 items; invalid input stays unapplied.");
+    patternTextEditor.setTooltip("Melodic: signed 32-bit integers. Rhythmic: decimal masks up to 112 bits. Up to 4096 steps.");
     patternTextEditor.onTextChange = [this]
     {
-        std::vector<int> values;
-        if (!validateIntegerInput(patternTextEditor, values,
-                                  std::numeric_limits<int>::min(), std::numeric_limits<int>::max())) return;
+        auto assignment = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+        if (!assignment.setSequenceFromString(patternTextEditor.getText().toStdString()))
+        {
+            patternTextEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
+            patternTextEditor.setTooltip("Not applied: enter up to 4096 valid "
+                + juce::String(assignment.mode == KeyAssignment::Mode::rhythmic
+                    ? "decimal masks (0 to 2^112-1)." : "signed 32-bit integers."));
+            return;
+        }
+        patternTextEditor.removeColour(juce::TextEditor::outlineColourId);
         recordKeyEdit();
-        audioProcessor.setPatternForKey(audioProcessor.getSelectedKey(),
-                                        patternTextEditor.getText().toStdString());
-        patternLabel.setText("Pattern (" + juce::String(values.size()) + ")", juce::dontSendNotification);
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), assignment);
+        patternLabel.setText("Pattern (" + juce::String(assignment.sequence.size()) + ")", juce::dontSendNotification);
         updatePatternPreview();
     };
 
@@ -327,23 +333,14 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     {
         changeAssignment([this](KeyAssignment& a) { a.reverse = reverseButton.getToggleState(); });
     };
-    addLabel(drumVelocityBitsLabel, "Velocity bits");
-    addAndMakeVisible(drumVelocityBitsEditor);
-    drumVelocityBitsEditor.setInputRestrictions(48);
-    drumVelocityBitsEditor.setTooltip("One width (1-7) per drum pitch; total at most 32 bits. Lane 1 is least significant. Zero means no hit.");
-    drumVelocityBitsEditor.onTextChange = [this, changeAssignment]
+    addLabel(drumVelocityBitsLabel, "Velocity bits/lane");
+    addAndMakeVisible(drumVelocityBitsSlider);
+    drumVelocityBitsSlider.setRange(1, 7, 1);
+    drumVelocityBitsSlider.setTooltip("One shared width (1-7 bits) for every drum pitch. Lane 1 uses the least significant bits; zero means rest.");
+    drumVelocityBitsSlider.onValueChange = [this, changeAssignment]
     {
-        std::vector<int> widths;
-        if (!validateIntegerInput(drumVelocityBitsEditor, widths, 1, 7,
-            audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()).drumLaneCount)) return;
-        if (std::accumulate(widths.begin(), widths.end(), 0) > 32)
-        {
-            drumVelocityBitsEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
-            drumVelocityBitsEditor.setTooltip("Not applied: widths must total at most 32 bits.");
-            return;
-        }
-        changeAssignment([&widths](KeyAssignment& a) {
-            std::copy(widths.begin(), widths.end(), a.drumVelocityBits.begin());
+        changeAssignment([this](KeyAssignment& a) {
+            a.drumVelocityBits = static_cast<int>(drumVelocityBitsSlider.getValue());
         });
         updatePatternPreview();
     };
@@ -367,10 +364,6 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
             for (size_t i = 0; i < notes.size(); ++i)
                 a.drumNotes[i] = juce::jlimit(0, 127, notes[i]);
         });
-        const auto a = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
-        juce::StringArray widths;
-        for (int i = 0; i < a.drumLaneCount; ++i) widths.add(juce::String(a.drumVelocityBits[static_cast<size_t>(i)]));
-        drumVelocityBitsEditor.setText(widths.joinIntoString(" "), false);
         updatePatternPreview();
     };
     addLabel(patternColourLabel, "Colour");
@@ -899,7 +892,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     if (rhythmic)
     {
         makeRow(drumNotesLabel, drumNotesEditor);
-        makeRow(drumVelocityBitsLabel, drumVelocityBitsEditor);
+        makeRow(drumVelocityBitsLabel, drumVelocityBitsSlider);
     }
     else
     {
@@ -977,12 +970,22 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
         for (int n : values) parts.add(juce::String(n));
         return parts.joinIntoString(" ");
     };
-    drumVelocityBitsEditor.setText(valuesText(std::vector<int>(a.drumVelocityBits.begin(),
-        a.drumVelocityBits.begin() + juce::jlimit(1, 16, a.drumLaneCount))), false);
+    drumVelocityBitsSlider.setValue(a.drumVelocityBits, juce::dontSendNotification);
     drumNotesEditor.setText(valuesText(std::vector<int>(a.drumNotes.begin(),
         a.drumNotes.begin() + juce::jlimit(1, 16, a.drumLaneCount))), false);
-    for (auto* editor : { &patternTextEditor, &drumVelocityBitsEditor, &drumNotesEditor })
+    for (auto* editor : { &patternTextEditor, &drumNotesEditor })
         editor->removeColour(juce::TextEditor::outlineColourId);
+    if (a.mode == KeyAssignment::Mode::melodic
+        && std::any_of(a.sequence.begin(), a.sequence.end(),
+            [](const SequenceValue& value) { return !value.fitsMelodicInt(); }))
+    {
+        patternTextEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::orangered);
+        patternTextEditor.setTooltip("This rhythmic mask exceeds the melodic 32-bit range. Switch back to Rhythmic or edit the pattern.");
+    }
+    else
+        patternTextEditor.setTooltip(a.mode == KeyAssignment::Mode::rhythmic
+            ? "Positive decimal masks up to 112 bits; up to 4096 steps."
+            : "Signed 32-bit integers; up to 4096 steps.");
     patternTagsEditor.setText(a.tags, false);
     patternFavouriteButton.setToggleState(a.favourite, juce::dontSendNotification);
     static const char* palette[] { "#62D6C6", "#77B9FF", "#B99BFF", "#F4BD68", "#EF8B83" };
@@ -1669,7 +1672,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
                                         &modeLabel, &modeSelector, &subdivisionLabel, &subdivisionSlider,
                                         &velocityLabel, &velocitySlider, &transposeLabel, &transposeSlider,
                                         &rotationLabel, &rotationSlider, &reverseButton,
-                                        &drumVelocityBitsLabel, &drumVelocityBitsEditor,
+                                        &drumVelocityBitsLabel, &drumVelocityBitsSlider,
                                         &drumNotesLabel, &drumNotesEditor, &patternPreviewLabel,
                                         &patternColourLabel, &patternColourSelector,
                                         &patternTagsLabel, &patternTagsEditor, &patternFavouriteButton,
@@ -1682,7 +1685,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
                                         &transposeRangeButton, &applyRangeButton })
         component->setVisible(editor);
     for (juce::Component* component : std::initializer_list<juce::Component*> {
-        &drumVelocityBitsLabel, &drumVelocityBitsEditor, &drumNotesLabel, &drumNotesEditor })
+        &drumVelocityBitsLabel, &drumVelocityBitsSlider, &drumNotesLabel, &drumNotesEditor })
         component->setVisible(editor && rhythmic);
     for (juce::Component* component : std::initializer_list<juce::Component*> {
         &octaveLabel, &octaveSlider, &forteSearchLabel, &forteSearchEditor,

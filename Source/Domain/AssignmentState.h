@@ -37,14 +37,15 @@ inline void write(juce::XmlElement& element, const KeyAssignment& a)
     };
     child->setAttribute("drumNotes", sequenceText(
         std::vector<int>(a.drumNotes.begin(), a.drumNotes.begin() + juce::jlimit(1, 16, a.drumLaneCount))));
-    child->setAttribute("drumVelocityBits", sequenceText(
-        std::vector<int>(a.drumVelocityBits.begin(), a.drumVelocityBits.begin() + juce::jlimit(1, 16, a.drumLaneCount))));
+    child->setAttribute("drumVelocityBits", a.drumVelocityBits);
 }
 
 inline KeyAssignment read(const juce::XmlElement& element)
 {
     const auto* child = &element;
     KeyAssignment a;
+    a.mode = child->getStringAttribute("mode") == "rhythmic"
+        ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
     const auto sequence = child->getStringAttribute("sequence");
     if (sequence.length() <= 45056)
         a.setSequenceFromString(sequence.toStdString());
@@ -59,8 +60,6 @@ inline KeyAssignment read(const juce::XmlElement& element)
     a.fixedLengthSteps = std::isfinite(fixed)
         ? juce::jlimit(0.0f, 16.0f, static_cast<float>(fixed)) : 0.0f;
     a.subdivision = juce::jlimit(0, 16, child->getIntAttribute("subdivision", 0));
-    a.mode = child->getStringAttribute("mode") == "rhythmic"
-        ? KeyAssignment::Mode::rhythmic : KeyAssignment::Mode::melodic;
     a.name = child->getStringAttribute("name").substring(0, 80).toStdString();
     a.transpose = juce::jlimit(-127, 127, child->getIntAttribute("transpose", 0));
     a.velocity = juce::jlimit(1, 127, child->getIntAttribute("velocity", 100));
@@ -84,11 +83,7 @@ inline KeyAssignment read(const juce::XmlElement& element)
         for (size_t i = 0; i < drumValues.size(); ++i)
             a.drumNotes[i] = juce::jlimit(0, 127, drumValues[i]);
     }
-    const auto velocityBits = parseValues(child->getStringAttribute("drumVelocityBits"));
-    if (velocityBits.size() == static_cast<size_t>(a.drumLaneCount))
-        for (size_t i = 0; i < velocityBits.size(); ++i)
-            a.drumVelocityBits[i] = juce::jlimit(1, 7, velocityBits[i]);
-    if (!a.hasValidDrumVelocityBits()) a.drumVelocityBits.fill(1);
+    a.drumVelocityBits = juce::jlimit(1, 7, child->getIntAttribute("drumVelocityBits", 1));
     return a;
 }
 }

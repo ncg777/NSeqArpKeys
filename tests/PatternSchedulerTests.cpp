@@ -23,7 +23,7 @@ void require(bool condition, const char* message)
 KeyAssignment assignmentWith(const std::vector<int>& sequence, float gate, float fixedSteps)
 {
     KeyAssignment assignment;
-    assignment.sequence = sequence;
+    assignment.sequence.assign(sequence.begin(), sequence.end());
     assignment.setForteFromString("1-1.0");
     assignment.gate = gate;
     assignment.fixedLengthSteps = fixedSteps;
@@ -159,7 +159,7 @@ int main()
     auto muted = assignmentWith({ 1, 0 }, 2.0f, 0.5f);
     muted.mode = KeyAssignment::Mode::rhythmic;
     muted.drumLaneCount = 1;
-    muted.drumVelocityBits[0] = 2;
+    muted.drumVelocityBits = 2;
     scheduler.triggerKey(60, muted, 60.0, 4, 1, trigger);
     const auto silentSteps = process(scheduler, 4);
     require(silentSteps.size() == 2 && silentSteps[0].on && silentSteps[1].on,
@@ -168,18 +168,17 @@ int main()
     scheduler.stopAll(stopped);
     require(stopped.getNumEvents() == 1, "Muted-step overlap must remain owned until stopped");
 
-    // Each active drum lane decodes its own packed velocity level.
+    // One shared width decodes each packed drum velocity level.
     scheduler.prepare(1000.0);
-    auto expression = assignmentWith({ 17, 0 }, 0.1f, 0.0f);
+    auto expression = assignmentWith({ 9, 0 }, 0.1f, 0.0f);
     expression.mode = KeyAssignment::Mode::rhythmic;
     expression.drumLaneCount = 2;
-    expression.drumVelocityBits[0] = 2;
-    expression.drumVelocityBits[1] = 3;
+    expression.drumVelocityBits = 2;
     expression.velocity = 127;
     scheduler.triggerKey(60, expression, 60.0, 4, 1, trigger);
     const auto lanes = process(scheduler, 3);
-    require(lanes.size() == 8 && lanes[0].velocity == 42 && lanes[1].velocity == 72
-            && lanes[4].velocity == 42 && lanes[5].velocity == 72,
+    require(lanes.size() == 8 && lanes[0].velocity == 42 && lanes[1].velocity == 85
+            && lanes[4].velocity == 42 && lanes[5].velocity == 85,
             "Drum lane velocity bits did not repeat with the pattern");
 
     for (int change = 0; change < 3; ++change)

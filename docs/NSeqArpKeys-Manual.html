@@ -111,7 +111,7 @@
         <tr><td><strong>Pattern (length) / step preview</strong></td><td>Space-separated step values. The label shows the number of items; the preview shows the first 16 steps. Zero creates a rest and extends the previous sounding step's gate span.</td></tr>
         <tr><td><strong>Name / Mode / Steps/QN</strong></td><td>Name one pattern; choose melodic or rhythmic interpretation and its step subdivision. Zero inherits the global rate.</td></tr>
         <tr><td><strong>Velocity / Transpose / Rotate / Reverse</strong></td><td>Shape output strength and pitch or change the integer step order.</td></tr>
-        <tr><td><strong>Drum notes / Velocity bits</strong></td><td>In rhythmic mode enter 1–16 MIDI pitches and one bit width (1–7) per pitch. Widths may total at most 32 bits.</td></tr>
+        <tr><td><strong>Drum notes / Velocity bits/lane</strong></td><td>In rhythmic mode enter 1-16 MIDI pitches. One numeric setting chooses the same bit width (1-7) for every pitch.</td></tr>
         <tr><td><strong>Colour / Tags / Favourite</strong></td><td>Organize patterns visually and make them easy to find in the bank.</td></tr>
         <tr><td><strong>Cut / Clear / Copy / Paste</strong></td><td>Remove or copy an assignment. Paste all settings, just sequence, timing, or expression.</td></tr>
         <tr><td><strong>Duplicate / Make independent</strong></td><td>Duplicate to the next key as a separate copy, or break a shared pattern link.</td></tr>
@@ -139,8 +139,8 @@
     <h3>Tempo and meter</h3>
     <p>Pattern steps follow the DAW tempo when a host supplies one. Otherwise the instrument uses 120 BPM. One step lasts <code>60 / (BPM x effective Steps/QN)</code> seconds: at 120 BPM and Steps/QN 4, a step lasts 0.125 seconds. A per-key value of 0 inherits the global setting. Meter Num is saved but does not currently change step duration or pattern length.</p>
     <h3>Rhythmic mode and variation</h3>
-    <p>Rhythmic mode needs no Forte set. Enter 1–16 Drum notes; this sets the active lane count. With one velocity bit for each lane, bit 0 plays the first pitch, bit 1 the second, and so on. Try <code>1 0 0 0 2 0 0 0</code> for notes 36 and 38 with the default map. Set Channel to match the receiving instrument; changing mode preserves it.</p>
-    <p>Velocity bits are packed from lane 1 at the least significant end of the 32-bit step word. Enter one width from 1–7 for each active lane; their sum cannot exceed 32. A lane value of zero rests, while nonzero values scale from quiet to velocity 127. For example, two lanes with widths <code>2 3</code> decode step <code>17</code> as level 1/3 on lane 1 and 4/7 on lane 2. Full-width masks with bit 31 set are entered as signed negative integers. Base velocity and incoming key velocity further scale the result. Rotate and Reverse reorder the integer steps.</p>
+    <p>Rhythmic mode needs no Forte set. Enter 1-16 Drum notes; this sets the active lane count. With one velocity bit for each lane, bit 0 plays the first pitch, bit 1 the second, and so on. Try <code>1 0 0 0 2 0 0 0</code> for notes 36 and 38 with the default map. Set Channel to match the receiving instrument; changing mode preserves it.</p>
+    <p>Velocity bits/lane is one number from 1-7, shared by every active drum lane as in GateRunner. Lane 1 occupies the least significant bits of a positive decimal step mask; each later lane uses the next group of bits. A lane value of zero rests, while nonzero values scale from quiet to velocity 127. For example, two lanes with two bits each decode step <code>9</code> as level 1/3 on lane 1 and 2/3 on lane 2. Positive masks support all 16 lanes at seven bits each (up to 112 bits). Legacy signed 32-bit masks remain accepted. Base velocity and incoming key velocity further scale the result. Rotate and Reverse reorder the integer steps.</p>
   </section>
 
   <section class="page">

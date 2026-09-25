@@ -44,12 +44,13 @@ key's **Steps/QN** is 0 to inherit the global value, or 1-16 to override it.
 Multiple keys can play at different rates. Timing changes preserve phase.
 
 Choose **Melodic** for Forte-mapped integers or **Rhythmic** for packed drum
-lanes. Rhythmic mode accepts 1-16 MIDI pitches. Each pitch has 1-7 velocity
-bits, with at most 32 bits total. The default one-bit widths preserve older
-16-lane masks: `5` triggers lanes 1 and 3. Zero is a rest; nonzero lane
-levels map to velocity 1-127, then scale with base and trigger velocity.
-For two lanes with widths `2 3`, step `17` produces levels 1/3 and 4/7.
-A signed negative integer can represent a mask with bit 31 set. Set
+lanes. Rhythmic mode accepts 1-16 MIDI pitches. **Velocity bits/lane** is one
+number from 1-7, shared by every pitch. Lane 1 uses the lowest bits. The
+default of one bit preserves older 16-lane masks: `5` triggers lanes 1 and 3.
+Zero is a rest; nonzero lane levels map to velocity 1-127, then scale with
+base and trigger velocity. With two lanes and two bits each, step `9` produces
+levels 1/3 and 2/3. Positive decimal masks support all 16 seven-bit lanes;
+legacy signed 32-bit masks still load. Set
 **Channel** to match the receiving instrument; switching modes preserves it.
 
 The editor shows the sequence length in parentheses after **Pattern**, a

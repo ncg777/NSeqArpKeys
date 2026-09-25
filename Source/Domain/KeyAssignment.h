@@ -7,7 +7,85 @@
 #include <charconv>
 #include <limits>
 #include <tuple>
+#include <cstdint>
 #include "../Pcs12.h"
+
+// A rhythmic step can address 16 lanes with seven bits each. Store its
+// unsigned 112-bit mask without narrowing it to a C++ int. Negative values
+// retain the legacy signed 32-bit interpretation.
+struct SequenceValue
+{
+    std::array<uint32_t, 4> words {};
+    std::string decimal = "0";
+    bool negative = false;
+    int signedValue = 0;
+
+    SequenceValue() = default;
+    SequenceValue(int value)
+        : words { static_cast<uint32_t>(value), 0, 0, 0 },
+          decimal(std::to_string(value)), negative(value < 0), signedValue(value) {}
+
+    static bool parse(const std::string& token, SequenceValue& output)
+    {
+        if (token.empty()) return false;
+        if (token[0] == '-')
+        {
+            int value = 0;
+            const auto parsed = std::from_chars(token.data(), token.data() + token.size(), value);
+            if (parsed.ec != std::errc{} || parsed.ptr != token.data() + token.size()) return false;
+            output = SequenceValue(value);
+            return true;
+        }
+        size_t start = token[0] == '+' ? 1 : 0;
+        if (start == token.size()) return false;
+        SequenceValue parsed;
+        for (size_t i = start; i < token.size(); ++i)
+        {
+            const char digit = token[i];
+            if (digit < '0' || digit > '9') return false;
+            uint64_t carry = static_cast<uint64_t>(digit - '0');
+            for (auto& word : parsed.words)
+            {
+                const uint64_t next = static_cast<uint64_t>(word) * 10 + carry;
+                word = static_cast<uint32_t>(next);
+                carry = next >> 32;
+            }
+            if (carry != 0 || (parsed.words[3] & 0xffff0000u) != 0) return false;
+        }
+        while (start + 1 < token.size() && token[start] == '0') ++start;
+        parsed.decimal = token.substr(start);
+        output = std::move(parsed);
+        return true;
+    }
+
+    bool fitsMelodicInt() const
+    {
+        return negative || (words[1] == 0 && words[2] == 0 && words[3] == 0
+                            && words[0] <= static_cast<uint32_t>(std::numeric_limits<int>::max()));
+    }
+
+    int melodicValue() const
+    {
+        if (negative) return signedValue;
+        return fitsMelodicInt() ? static_cast<int>(words[0]) : 0;
+    }
+
+    uint32_t bitsAt(int offset, int width) const
+    {
+        if (offset < 0 || offset >= 112 || width < 1 || width > 7) return 0;
+        const int word = offset / 32;
+        const int shift = offset % 32;
+        uint64_t bits = static_cast<uint64_t>(words[static_cast<size_t>(word)]) >> shift;
+        if (shift + width > 32 && word < 3)
+            bits |= static_cast<uint64_t>(words[static_cast<size_t>(word + 1)]) << (32 - shift);
+        return static_cast<uint32_t>(bits) & ((1u << width) - 1u);
+    }
+
+    bool operator==(const SequenceValue& other) const
+    {
+        return negative == other.negative && words == other.words;
+    }
+};
 
 /**
  * KeyAssignment – everything assigned to one trigger MIDI key.
@@ -22,20 +100,18 @@ struct KeyAssignment
 
     /** Integer sequence (GateRunner-style). Negative values select notes in the
      *  opposite direction from the pitch-class base offset. */
-    std::vector<int> sequence;
+    std::vector<SequenceValue> sequence;
 
     /** Zero follows the existing global subdivision, 1–16 overrides it. */
     int subdivision = 0;
     Mode mode = Mode::melodic;
     std::string name;
-    /** MIDI notes for bits 0–15 in rhythmic mode. */
+    /** MIDI notes for 1–16 rhythmic lanes. */
     std::array<int, 16> drumNotes { 36, 38, 42, 46, 41, 43, 45, 47,
                                     48, 50, 49, 51, 39, 37, 54, 56 };
     int drumLaneCount = 16;
-    /** Packed from the least significant bit, lane by lane. The widths total
-     *  at most 32 bits. One bit preserves the original binary lane masks. */
-    std::array<int, 16> drumVelocityBits { 1, 1, 1, 1, 1, 1, 1, 1,
-                                           1, 1, 1, 1, 1, 1, 1, 1 };
+    /** Shared bit width for every rhythmic lane, as in GateRunner. */
+    int drumVelocityBits = 1;
     int transpose = 0;
     int velocity = 100;
     int rotation = 0;
@@ -83,7 +159,7 @@ struct KeyAssignment
         for (size_t i = 0; i < sequence.size(); ++i)
         {
             if (i > 0) oss << ' ';
-            oss << sequence[i];
+            oss << sequence[i].decimal;
         }
         return oss.str();
     }
@@ -118,7 +194,19 @@ struct KeyAssignment
 
     bool setSequenceFromString(const std::string& s)
     {
-        return parseIntegerSequence(s, sequence);
+        if (s.size() > 45056) return false;
+        std::istringstream iss(s);
+        std::vector<SequenceValue> result;
+        std::string token;
+        while (iss >> token)
+        {
+            SequenceValue value;
+            if (result.size() >= 4096 || !SequenceValue::parse(token, value)
+                || (mode == Mode::melodic && !value.fitsMelodicInt())) return false;
+            result.push_back(std::move(value));
+        }
+        sequence = std::move(result);
+        return true;
     }
 
     bool operator==(const KeyAssignment& other) const
@@ -162,15 +250,8 @@ struct KeyAssignment
 
     bool hasValidDrumVelocityBits() const
     {
-        if (drumLaneCount < 1 || drumLaneCount > 16) return false;
-        int total = 0;
-        for (int i = 0; i < drumLaneCount; ++i)
-        {
-            const int width = drumVelocityBits[static_cast<size_t>(i)];
-            if (width < 1 || width > 7) return false;
-            total += width;
-        }
-        return total <= 32;
+        return drumLaneCount >= 1 && drumLaneCount <= 16
+            && drumVelocityBits >= 1 && drumVelocityBits <= 7;
     }
 
     int effectiveSubdivision(int global) const { return subdivision > 0 ? subdivision : global; }

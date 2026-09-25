@@ -113,9 +113,10 @@ private:
     juce::Slider       gateSlider;
     juce::Slider       fixedLengthStepsSlider;
     juce::TextEditor   patternTextEditor;
-    juce::TextEditor   patternNameEditor, drumVelocityBitsEditor, drumNotesEditor;
+    juce::TextEditor   patternNameEditor, drumNotesEditor;
     juce::ComboBox     modeSelector;
     juce::Slider       subdivisionSlider, velocitySlider, transposeSlider, rotationSlider;
+    juce::Slider       drumVelocityBitsSlider;
     juce::ToggleButton reverseButton;
     juce::TextButton copyPatternButton, pastePatternButton, duplicatePatternButton;
     juce::TextButton cutPatternButton, clearPatternButton, independentButton;

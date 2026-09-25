@@ -38,8 +38,7 @@ int runTests(int argc, char** argv)
     pattern.subdivision = 3;
     pattern.velocity = 89;
     pattern.drumLaneCount = 4;
-    pattern.drumVelocityBits[0] = 4;
-    pattern.drumVelocityBits[1] = 3;
+    pattern.drumVelocityBits = 4;
     pattern.tags = "drums, test";
     pattern.colour = "#F4BD68";
     pattern.favourite = true;
@@ -75,18 +74,20 @@ int runTests(int argc, char** argv)
 
     juce::XmlElement file("Assignment");
     AssignmentState::write(file, pattern);
+    require(file.getStringAttribute("drumVelocityBits") == "4",
+            "Velocity bits must serialize as one numeric parameter");
     const auto decoded = juce::XmlDocument::parse(file.toString());
     require(decoded != nullptr && AssignmentState::read(*decoded) == pattern,
             "Individual pattern export/import must preserve every setting");
     auto shortDrums = drum(36);
     shortDrums.drumLaneCount = 3;
-    shortDrums.drumVelocityBits[0] = 7;
-    shortDrums.drumVelocityBits[1] = 7;
-    shortDrums.drumVelocityBits[2] = 7;
+    shortDrums.drumVelocityBits = 7;
+    require(shortDrums.setSequenceFromString("40564819207303340847894502572032"),
+            "Wide rhythmic mask fixture was rejected");
     juce::XmlElement shortFile("Assignment");
     AssignmentState::write(shortFile, shortDrums);
     require(AssignmentState::read(shortFile) == shortDrums,
-            "Variable drum lane count or velocity widths were lost");
+            "Variable drum lane count, shared velocity bits or wide mask were lost");
 
     juce::XmlElement legacy("NSeqArpKeys");
     legacy.setAttribute("meterDenominator", 3);
@@ -304,7 +305,9 @@ int runTests(int argc, char** argv)
         editor.reset();
         editor.reset(processor.createEditor());
         auto snapshot = editor->createComponentSnapshot(editor->getLocalBounds());
-        juce::FileOutputStream output(juce::File::getCurrentWorkingDirectory().getChildFile(argv[1]));
+        const auto snapshotFile = juce::File::getCurrentWorkingDirectory().getChildFile(argv[1]);
+        snapshotFile.deleteFile();
+        juce::FileOutputStream output(snapshotFile);
         require(output.openedOk() && juce::PNGImageFormat().writeImageToStream(snapshot, output),
                 "Could not save editor snapshot");
         editor.reset();
@@ -314,7 +317,9 @@ int runTests(int argc, char** argv)
         {
             click("Pattern Bank");
             auto bankSnapshot = editor->createComponentSnapshot(editor->getLocalBounds());
-            juce::FileOutputStream bankOutput(juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]));
+            const auto bankFile = juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]);
+            bankFile.deleteFile();
+            juce::FileOutputStream bankOutput(bankFile);
             require(bankOutput.openedOk()
                 && juce::PNGImageFormat().writeImageToStream(bankSnapshot, bankOutput),
                 "Could not save Pattern Bank snapshot");
