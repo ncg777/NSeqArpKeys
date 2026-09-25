@@ -225,7 +225,10 @@ and verifies the ZIP. Archives are written to `release/`.
 
 [The GitHub Actions workflow](.github/workflows/build-release.yml) builds and
 runs this packaging script on Windows, Linux, and macOS. Every run uploads the
-three ZIPs as workflow artifacts. Pushing a `v1.4.0` tag publishes them as a
+three ZIPs as workflow artifacts. Generated `build/`, `dist/`, and `release/`
+folders are ignored by Git. The Windows PowerShell packager also reads the
+CMake build output (default `build/`, overridable with `-BuildDirectory`).
+Pushing a `v1.4.0` tag publishes the archives as a
 GitHub release after all three builds succeed.
 
 ## Repository map

@@ -1,11 +1,15 @@
 param(
-    [string] $OutputDirectory = ''
+    [string] $OutputDirectory = '',
+    [string] $BuildDirectory = 'build'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$vstBundle = Join-Path $repoRoot 'dist\windows-x64\VST3\NSeqArpKeys.vst3'
+if (-not [IO.Path]::IsPathRooted($BuildDirectory)) {
+    $BuildDirectory = Join-Path $repoRoot $BuildDirectory
+}
+$vstBundle = Join-Path ([IO.Path]::GetFullPath($BuildDirectory)) 'NSeqArpKeys_artefacts\Release\VST3\NSeqArpKeys.vst3'
 $manifest = Join-Path $vstBundle 'Contents\Resources\moduleinfo.json'
 $vstBinary = Join-Path $vstBundle 'Contents\x86_64-win\NSeqArpKeys.vst3'
 $manual = Join-Path $repoRoot 'output\pdf\NSeqArpKeys-Manual.pdf'
