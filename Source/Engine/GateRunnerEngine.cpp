@@ -51,7 +51,8 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
     const auto absVal = stepValue < 0 ? 0u - static_cast<unsigned int>(stepValue)
                                      : static_cast<unsigned int>(stepValue);
     int sign       = (stepValue > 0) ? 1 : -1;
-    int baseOffset = octave * pitchClassCount;
+    // Shift the unbounded degree position before clipping to the MIDI scale.
+    const int64_t baseOffset = static_cast<int64_t>(octave) * pitchClassCount + transpose;
 
     // Build bit array: bits[0] = LSB of absVal (matching generate.ts .reverse())
     std::vector<int> bits;
@@ -64,14 +65,12 @@ std::vector<int> GateRunnerEngine::computeStepNotes(const std::vector<int>& scal
 
     for (int idx = 0; idx < static_cast<int>(scale.size()); ++idx)
     {
-        int bitIndex = sign * (idx - baseOffset);
+        const auto bitIndex = sign * (idx - baseOffset);
         if (bitIndex >= 0
             && bitIndex < static_cast<int>(bits.size())
-            && bits[bitIndex] == 1)
+            && bits[static_cast<size_t>(bitIndex)] == 1)
         {
-            const int shiftedIndex = idx + transpose;
-            if (shiftedIndex >= 0 && shiftedIndex < static_cast<int>(scale.size()))
-                notes.push_back(scale[shiftedIndex]);
+            notes.push_back(scale[idx]);
         }
     }
 

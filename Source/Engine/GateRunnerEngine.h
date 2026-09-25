@@ -43,7 +43,7 @@ public:
      * The GateRunner bit-mapping (from generate.ts):
      *   bits        = abs(stepValue) in binary, LSB first
      *   sign        = sign(stepValue)   (0 produces no notes)
-     *   baseOffset  = octave × pitchClassCount
+     *   baseOffset  = octave × pitchClassCount + transpose
      *   active(idx) = (sign × (idx − baseOffset)) ∈ [0, bits.size())
      *                 AND bits[sign × (idx − baseOffset)] == 1
      */

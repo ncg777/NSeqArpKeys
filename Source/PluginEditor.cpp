@@ -1176,7 +1176,14 @@ void NSeqArpKeysAudioProcessorEditor::savePatternToBank()
             const bool saved = writeXmlFile(target, output);
             if (!saved) juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
                 "Pattern bank", "Could not save pattern.");
-            else safeThis->loadPatternLibrary();
+            else
+            {
+                safeThis->bankSourceSelector.setSelectedId(1, juce::dontSendNotification);
+                safeThis->patternSearchEditor.setText({}, false);
+                safeThis->bankFavouritesButton.setToggleState(false, juce::dontSendNotification);
+                safeThis->loadPatternLibrary(output.getStringAttribute("id"));
+                safeThis->showBankStatus("Saved pattern to " + target.getFullPathName());
+            }
         });
 }
 
@@ -1209,10 +1216,11 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternFromBank()
         });
 }
 
-void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary()
+void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary(const juce::String& preferredId)
 {
-    const auto selectedId = selectedPatternIndex >= 0 && selectedPatternIndex < static_cast<int>(patternLibrary.size())
-        ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id : juce::String();
+    const auto selectedId = preferredId.isNotEmpty() ? preferredId
+        : (selectedPatternIndex >= 0 && selectedPatternIndex < static_cast<int>(patternLibrary.size())
+            ? patternLibrary[static_cast<size_t>(selectedPatternIndex)].id : juce::String());
     stopPatternAudition();
     patternLibrary.clear();
     selectedPatternIndex = -1;

@@ -110,6 +110,19 @@ int main()
     notes = GateRunnerEngine::computeAllSteps(pattern);
     require(notes[0].empty() && notes[1] == std::vector<int>({ 0 })
         && notes[2].empty());
+    // Apply the degree offset before clipping, so notes can return to MIDI range.
+    pattern.sequence = { -3 };
+    pattern.transpose = 1;
+    require(GateRunnerEngine::computeAllSteps(pattern)[0] == std::vector<int>({ 0, 2 }));
+    pattern.setForteFromString("1-1.0");
+    pattern.octave = 10;
+    pattern.sequence = { 3 };
+    pattern.transpose = -1;
+    require(GateRunnerEngine::computeAllSteps(pattern)[0] == std::vector<int>({ 108, 120 }));
+    pattern.octave = 0;
+    pattern.sequence = { std::numeric_limits<int>::min() };
+    pattern.transpose = 31;
+    require(GateRunnerEngine::computeAllSteps(pattern)[0] == std::vector<int>({ 0 }));
     pattern = KeyAssignment{};
     pattern.mode = KeyAssignment::Mode::rhythmic;
     pattern.drumLaneCount = 1;

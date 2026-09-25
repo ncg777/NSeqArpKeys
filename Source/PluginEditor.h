@@ -38,7 +38,7 @@ private:
     void updatePatternPreview();
     void setPatternBrowserOpen(bool open);
     void stopPatternAudition();
-    void loadPatternLibrary();
+    void loadPatternLibrary(const juce::String& preferredId = {});
     void filterPatternLibrary();
     void importPatternBank();
     void exportPatternBank();
