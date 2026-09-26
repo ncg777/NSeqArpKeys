@@ -2,6 +2,12 @@
 
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="NSeqArpKeys\Built-in Banks">
+      <UniqueIdentifier>{17E18EEE-0952-96E1-37A6-A4B51F2D00D2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NSeqArpKeys\Brand">
+      <UniqueIdentifier>{58DFABE1-1199-FC24-CA55-5714259DCDFC}</UniqueIdentifier>
+    </Filter>
     <Filter Include="NSeqArpKeys\Source\Domain">
       <UniqueIdentifier>{719AAA75-73FE-3980-B6D8-884852F75F9D}</UniqueIdentifier>
     </Filter>
@@ -3552,6 +3558,9 @@
     </ClCompile>
     <ClCompile Include="C:\JUCE\modules\juce_midi_ci\juce_midi_ci.cpp">
       <Filter>JUCE Modules\juce_midi_ci</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\JuceLibraryCode\BinaryData.cpp">
+      <Filter>JUCE Library Code</Filter>
     </ClCompile>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_audio_basics.cpp">
       <Filter>JUCE Library Code</Filter>
@@ -7653,6 +7662,9 @@
     <ClInclude Include="C:\JUCE\modules\juce_midi_ci\juce_midi_ci.h">
       <Filter>JUCE Modules\juce_midi_ci</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\JuceLibraryCode\BinaryData.h">
+      <Filter>JUCE Library Code</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\JuceLibraryCode\JuceHeader.h">
       <Filter>JUCE Library Code</Filter>
     </ClInclude>
@@ -7661,6 +7673,15 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\banks\FactoryPatterns\FactoryPatterns.zip">
+      <Filter>NSeqArpKeys\Built-in Banks</Filter>
+    </None>
+    <None Include="..\..\assets\brand\icon-512.png">
+      <Filter>NSeqArpKeys\Brand</Filter>
+    </None>
+    <None Include="..\..\assets\brand\icon-128.png">
+      <Filter>NSeqArpKeys\Brand</Filter>
+    </None>
     <None Include="C:\JUCE\modules\juce_audio_devices\native\oboe\src\common\README.md">
       <Filter>JUCE Modules\juce_audio_devices\native\oboe\src\common</Filter>
     </None>
@@ -7729,6 +7750,9 @@
     </None>
     <None Include="C:\JUCE\modules\juce_graphics\unicode\sheenbidi\JUCE_CHANGES.txt">
       <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi</Filter>
+    </None>
+    <None Include=".\icon.ico">
+      <Filter>JUCE Library Code</Filter>
     </None>
   </ItemGroup>
 </Project>

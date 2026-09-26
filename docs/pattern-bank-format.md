@@ -31,7 +31,7 @@ project state.
 | `channel` | Integer 1–16 | 1 |
 | `octave` | Integer 0–10 | 4 |
 | `subdivision` | Integer 0–16; 0 inherits the global rate | 0 |
-| `transpose` | Integer -127–127 | 0 |
+| `transpose` | Integer -127–127; Forte-set degrees in melodic mode, semitones in rhythmic mode | 0 |
 | `velocity` | Integer 1–127 | 100 |
 | `rotation` | Integer -4096–4096 | 0 |
 | `rootKey` | Integer -1–127 | -1 |

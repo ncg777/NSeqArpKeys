@@ -38,7 +38,7 @@ private:
     void updatePatternPreview();
     void setPatternBrowserOpen(bool open);
     void stopPatternAudition();
-    void loadPatternLibrary();
+    void loadPatternLibrary(const juce::String& preferredId = {});
     void filterPatternLibrary();
     void importPatternBank();
     void exportPatternBank();
@@ -161,12 +161,19 @@ private:
     int selectedPresetIndex = -1;
     bool browserOpen = false;
     bool patternBrowserOpen = false;
-    struct PatternEntry { juce::String id; juce::File file; KeyAssignment assignment; };
+    struct PatternEntry
+    {
+        juce::String id;
+        juce::File file;
+        KeyAssignment assignment;
+        bool builtIn = false;
+    };
     std::vector<PatternEntry> patternLibrary;
     std::vector<int> filteredPatterns;
     int selectedPatternIndex = -1;
     int auditioningKey = -1;
     juce::TextEditor patternSearchEditor, bankNameEditor, bankTagsEditor;
+    juce::ComboBox bankSourceSelector;
     juce::ComboBox bankColourSelector;
     juce::Label patternSearchLabel, bankDetailsLabel, bankTagsLabel;
     juce::Label bankEmptyLabel, bankHelpLabel, bankStatusLabel;

@@ -86,7 +86,7 @@
     <div class="rule"></div>
     <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
     <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.3.1 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.4.0 | September 2026</span></div>
   </section>
 
   <section>
@@ -108,7 +108,7 @@
         <tr><td>-2</td><td>010</td><td>B below the anchor (MIDI 47)</td></tr>
       </tbody>
     </table>
-    <p>Enter <code>1 2 4 8 3 5 7 0</code> to hear single notes become chords. Keep the sequence and choose another Forte Set to hear new pitch material with the same bit relationships. The MIDI key you press triggers its assigned pattern; it does not transpose the output. <strong>Transpose</strong> changes output pitch separately. The appendix lists every base Forte set, its pitch classes, and its interval vector.</p>
+    <p>Enter <code>1 2 4 8 3 5 7 0</code> to hear single notes become chords. Keep the sequence and choose another Forte Set to hear new pitch material with the same bit relationships. The MIDI key you press triggers its assigned pattern; it does not transpose the output. <strong>Transpose</strong> moves melodic notes by positions in the selected Forte set: with the diatonic set, +1 moves C to D and +7 moves C up an octave. Negative values move down; notes outside MIDI 0-127 are omitted. In Rhythmic mode, Transpose moves drum notes by semitones. The appendix lists every base Forte set, its pitch classes, and its interval vector.</p>
   </section>
 
   <section class="page">
@@ -143,7 +143,7 @@
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
       <tbody>
         <tr><td><strong>Preset name / &lt; / &gt;</strong></td><td>Shows the loaded preset and steps through the preset library. An asterisk means the current setup has changed.</td></tr>
-        <tr><td><strong>Presets / Pattern Bank / Save</strong></td><td>Opens a whole-preset browser or searchable pattern bank. Save updates the current user preset, or opens the browser for a new copy.</td></tr>
+        <tr><td><strong>Presets / Pattern Bank / Save</strong></td><td>Opens presets or the built-in Factory Patterns library. Save updates a user preset or opens a new copy.</td></tr>
         <tr><td><strong>Keyboard / Playing</strong></td><td>Triggers a pattern and selects the MIDI key whose assignment is shown. The label below lists running keys. Right-click the keyboard to assign the selected bank pattern.</td></tr>
         <tr><td><strong>Latch / Stop Key / Stop All</strong></td><td>Keeps patterns running after release, stops the selected key, or stops every active key.</td></tr>
         <tr><td><strong>Preview sound</strong></td><td>Uncheck to silence the built-in tones while generated MIDI continues.</td></tr>
@@ -152,14 +152,14 @@
         <tr><td><strong>Gate / Fixed Steps</strong></td><td>Adds a gated fraction of the span through rests and a fixed duration in steps.</td></tr>
         <tr><td><strong>Pattern (length) / step preview</strong></td><td>Space-separated step values. The label shows the number of items; the preview shows the first 16 steps. Zero creates a rest and extends the previous sounding step's gate span.</td></tr>
         <tr><td><strong>Name / Mode / Steps/QN</strong></td><td>Name one pattern; choose melodic or rhythmic interpretation and its step subdivision. Zero inherits the global rate.</td></tr>
-        <tr><td><strong>Velocity / Transpose / Rotate / Reverse</strong></td><td>Shape output strength and pitch or change the integer step order.</td></tr>
+        <tr><td><strong>Velocity / Transpose / Rotate / Reverse</strong></td><td>Shape output strength, move melodic pitches through the selected Forte set (or rhythmic drum pitches by semitones), and change the integer step order.</td></tr>
         <tr><td><strong>Drum notes / Velocity bits/lane</strong></td><td>In rhythmic mode enter 1-16 MIDI pitches. One numeric setting chooses the same bit width (1-7) for every pitch.</td></tr>
         <tr><td><strong>Colour / Tags / Favourite</strong></td><td>Organize patterns visually and make them easy to find in the bank.</td></tr>
         <tr><td><strong>Cut / Clear / Copy / Paste</strong></td><td>Remove or copy an assignment. Paste all settings, just sequence, timing, or expression.</td></tr>
         <tr><td><strong>Duplicate / Make independent</strong></td><td>Duplicate to the next key as a separate copy, or break a shared pattern link.</td></tr>
         <tr><td><strong>Save pattern / Load pattern</strong></td><td>Store or recall a single assignment as a <code>.nseqpattern</code> file.</td></tr>
         <tr><td><strong>Import bank / Export bank</strong></td><td>Merge a whole pattern bank from a <code>.nseqbank</code> XML file, or save the whole bank to one file.</td></tr>
-        <tr><td><strong>MIDI range / Transpose by key / Assign range</strong></td><td>Copy an assignment into the inclusive range, optionally transposed according to each key's distance from the source.</td></tr>
+        <tr><td><strong>MIDI range / Transpose by key / Assign range</strong></td><td>Copy an assignment into the inclusive range, optionally adding one Forte-set degree per key in Melodic mode or one semitone per key in Rhythmic mode.</td></tr>
         <tr><td><strong>Find Set / Forte Set</strong></td><td>Search by Forte ID, common name, or pitch classes, then choose a matching pitch-class set.</td></tr>
       </tbody>
     </table>
@@ -241,7 +241,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.3.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.4.0 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 
   <section class="page forte-appendix">

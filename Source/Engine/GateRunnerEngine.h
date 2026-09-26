@@ -38,18 +38,20 @@ public:
      * @param pitchClassCount Number of pitch classes (forte.getK()).
      * @param stepValue       The integer at this step position.
      * @param octave          Base octave for the bit-index calculation.
+     * @param transpose       Number of Forte-set degrees to move each note.
      *
      * The GateRunner bit-mapping (from generate.ts):
      *   bits        = abs(stepValue) in binary, LSB first
      *   sign        = sign(stepValue)   (0 produces no notes)
-     *   baseOffset  = octave × pitchClassCount
+     *   baseOffset  = octave × pitchClassCount + transpose
      *   active(idx) = (sign × (idx − baseOffset)) ∈ [0, bits.size())
      *                 AND bits[sign × (idx − baseOffset)] == 1
      */
     static std::vector<int> computeStepNotes(const std::vector<int>& scale,
                                              int pitchClassCount,
                                              int stepValue,
-                                             int octave);
+                                             int octave,
+                                             int transpose = 0);
 
     /** Convenience: precompute all step note lists for a full KeyAssignment. */
     static std::vector<std::vector<int>> computeAllSteps(const KeyAssignment& assignment);

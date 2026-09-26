@@ -45,6 +45,7 @@ Generated\ Files/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 /build/
+/dist/
 /tmp/
 
 # NUnit

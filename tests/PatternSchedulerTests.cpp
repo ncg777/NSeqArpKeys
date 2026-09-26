@@ -96,7 +96,7 @@ int main()
     fast.subdivision = 4;
     slow.subdivision = 2;
     fast.velocity = 100;
-    slow.transpose = 12;
+    slow.transpose = 1;
     trigger.clear();
     scheduler.triggerKey(60, fast, 60.0, 4, 1, trigger, 64);
     scheduler.triggerKey(61, slow, 60.0, 4, 1, trigger);

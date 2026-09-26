@@ -1,11 +1,15 @@
 param(
-    [string] $OutputDirectory = ''
+    [string] $OutputDirectory = '',
+    [string] $BuildDirectory = 'build'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$vstBundle = Join-Path $repoRoot 'dist\windows-x64\VST3\NSeqArpKeys.vst3'
+if (-not [IO.Path]::IsPathRooted($BuildDirectory)) {
+    $BuildDirectory = Join-Path $repoRoot $BuildDirectory
+}
+$vstBundle = Join-Path ([IO.Path]::GetFullPath($BuildDirectory)) 'NSeqArpKeys_artefacts\Release\VST3\NSeqArpKeys.vst3'
 $manifest = Join-Path $vstBundle 'Contents\Resources\moduleinfo.json'
 $vstBinary = Join-Path $vstBundle 'Contents\x86_64-win\NSeqArpKeys.vst3'
 $manual = Join-Path $repoRoot 'output\pdf\NSeqArpKeys-Manual.pdf'
@@ -64,6 +68,9 @@ Then rescan plug-ins in your DAW and load NSeqArpKeys as an instrument.
 
 Open NSeqArpKeys-Manual.pdf for installation, controls, pattern editing,
 Forte set search, presets, and troubleshooting.
+
+Factory Patterns includes twelve melodic and rhythmic banks and a starter
+bank inside the plug-in.
 
 Quick start: load the Single Note Pulse preset, then hold C4 (MIDI 60).
 Release the key to stop. Enable Latch to hear the pattern while editing;

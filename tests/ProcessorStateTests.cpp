@@ -361,6 +361,16 @@ int runTests(int argc, char** argv)
         processor.setSelectedKey(60);
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
         require(editor != nullptr, "Editor failed to open");
+        bool keyboardFound = false;
+        for (auto* child : editor->getChildren())
+            if (auto* keyboard = dynamic_cast<juce::MidiKeyboardComponent*>(child))
+            {
+                keyboardFound = true;
+                require(keyboard->getWhiteNoteText(60) == "C4"
+                        && keyboard->getWhiteNoteText(48) == "C3",
+                        "Keyboard octave labels do not match MIDI note numbers");
+            }
+        require(keyboardFound, "Editor keyboard missing");
         bool previewToggleFound = false;
         for (auto* child : editor->getChildren())
             if (auto* toggle = dynamic_cast<juce::ToggleButton*>(child))
