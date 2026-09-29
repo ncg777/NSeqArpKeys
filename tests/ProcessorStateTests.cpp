@@ -316,7 +316,10 @@ int runTests(int argc, char** argv)
     audition.prepareToPlay(1000.0, 100);
     midi.clear();
     audition.processBlock(audio, midi);
-    require(midi.isEmpty(), "Release left a queued audition");
+    require(midi.getNumEvents() == 1 && (*midi.begin()).getMessage().isNoteOff()
+            && (*midi.begin()).getMessage().getChannel() == 10
+            && (*midi.begin()).getMessage().getNoteNumber() == 36,
+            "Release must flush the old audition's note-off without starting the queued audition");
 
     // Reported rhythmic pattern, without a Forte set.
     // Preview-key input follows the same queue used by the editor keyboard.

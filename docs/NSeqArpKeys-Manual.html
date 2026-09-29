@@ -86,7 +86,7 @@
     <div class="rule"></div>
     <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
     <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.4.1 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.4.2 | September 2026</span></div>
   </section>
 
   <section>
@@ -166,7 +166,7 @@
     <p>Integer fields accept up to 4096 space-separated values, with a 45,056-character input limit. Names, tags and preset details also have length limits. Invalid input is outlined in red and is not applied. Blank Pattern clears the sequence.</p>
     <h3>Change a running pattern</h3>
     <p>With Latch on, trigger and release a key, then edit its controls while listening. Most edits restart that key on the next audio block, preserving trigger velocity. Changes to tempo or Steps/QN preserve musical phase and pending note-offs.</p>
-    <div class="callout warn"><strong>Selected key matters.</strong> Stop Key applies to the key shown in the selected-key label. Stop All ends every currently playing pattern.</div>
+    <div class="callout warn"><strong>Stopping playback.</strong> Stop Key ends the selected key. Stop All, a DAW transport stop, or MIDI All Notes Off / All Sound Off ends every pattern, including latched keys and auditions.</div>
   </section>
 
   <section class="page patterns-page">
@@ -241,7 +241,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.4.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.4.2 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 
   <section class="page forte-appendix">

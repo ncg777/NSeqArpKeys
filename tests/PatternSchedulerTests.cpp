@@ -72,11 +72,15 @@ int main()
     scheduler.triggerKey(60, assignmentWith({ 1 }, 2.0f, 0.5f),
                          60.0, 4, 1, trigger);
     const auto overlapping = process(scheduler, 4);
-    require(overlapping.size() == 4, "Overlapping pitch was released early");
+    require(overlapping.size() == 7, "Overlapping pitches must have balanced retriggers");
     for (int i = 0; i < 4; ++i)
-        require(overlapping[static_cast<size_t>(i)].on
-                && overlapping[static_cast<size_t>(i)].sample == i * 1000,
+        require(overlapping[static_cast<size_t>(i * 2)].on
+                && overlapping[static_cast<size_t>(i * 2)].sample == i * 1000,
                 "Overlapping onset is wrong");
+    for (int i = 1; i < 4; ++i)
+        require(!overlapping[static_cast<size_t>(i * 2 - 1)].on
+                && overlapping[static_cast<size_t>(i * 2 - 1)].sample == i * 1000,
+                "Each repeated note-on needs a preceding note-off");
     juce::MidiBuffer stopped;
     scheduler.stopKey(60, stopped);
     require(stopped.getNumEvents() == 1, "Stop must release the overlapping pitch once");
@@ -150,8 +154,9 @@ int main()
         scheduler.triggerKey(swapKeys ? 61 : 60, shortNote, 60.0, 4, 1, trigger);
         scheduler.triggerKey(swapKeys ? 60 : 61, longNote, 60.0, 4, 1, trigger);
         const auto shared = process(scheduler, 2);
-        require(shared.size() == 3 && shared[0].on && shared[1].on
-                && !shared[2].on && shared[2].sample == 1500,
+        require(shared.size() == 4 && shared[0].on && !shared[1].on && shared[2].on
+                && shared[1].sample == 0 && shared[2].sample == 0
+                && !shared[3].on && shared[3].sample == 1500,
                 "Shared-pitch ownership must follow event time across all keys");
     }
 
@@ -162,7 +167,8 @@ int main()
     muted.drumVelocityBits = 2;
     scheduler.triggerKey(60, muted, 60.0, 4, 1, trigger);
     const auto silentSteps = process(scheduler, 4);
-    require(silentSteps.size() == 2 && silentSteps[0].on && silentSteps[1].on,
+    require(silentSteps.size() == 3 && silentSteps[0].on && !silentSteps[1].on
+            && silentSteps[2].on && silentSteps[1].sample == silentSteps[2].sample,
             "A muted step's off must not release an overlapping sounding step");
     stopped.clear();
     scheduler.stopAll(stopped);

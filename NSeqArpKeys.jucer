@@ -3,7 +3,7 @@
 <JUCERPROJECT id="E9fjjj" name="NSeqArpKeys" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
               pluginVSTCategory="kPlugCategSynth" pluginVST3Category="Instrument,Synth"
-              pluginAUMainType="'aumu'" pluginFormats="buildVST3,buildAU" version="1.4.1"
+              pluginAUMainType="'aumu'" pluginFormats="buildVST3,buildAU" version="1.4.2"
               binaryDataNamespace="FactoryPatternsData">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="AtlasBanks" name="Built-in Banks">

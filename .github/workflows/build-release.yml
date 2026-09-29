@@ -68,6 +68,7 @@ jobs:
           cmake --build build --config Release --target NSeqArpKeysTests --parallel 2
           cmake --build build --config Release --target NSeqArpKeysDomainTests --parallel 2
           cmake --build build --config Release --target NSeqArpKeysStateTests --parallel 2
+          cmake --build build --config Release --target NSeqArpKeysMidiTests --parallel 2
           ctest --test-dir build -C Release --output-on-failure
 
       - name: Package release archive

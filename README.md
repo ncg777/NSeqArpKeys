@@ -228,7 +228,7 @@ runs this packaging script on Windows, Linux, and macOS. Every run uploads the
 three ZIPs as workflow artifacts. Generated `build/`, `dist/`, and `release/`
 folders are ignored by Git. The Windows PowerShell packager also reads the
 CMake build output (default `build/`, overridable with `-BuildDirectory`).
-Pushing a `v1.4.1` tag publishes the archives as a
+Pushing a `v1.4.2` tag publishes the archives as a
 GitHub release after all three builds succeed.
 
 ## Repository map
@@ -252,3 +252,16 @@ reachable in smaller windows; the preset navigation stays at the top.
 Switching modes or browsing presets and patterns preserves your window size.
 The Pattern Bank places file-transfer actions on separate rows so they fit.
 See the [1.4.1 release notes](docs/release-notes-1.4.1.md).
+
+## Version 1.4.2 stuck-note fix
+
+Repeated notes now send a matching note-off before retriggering the same
+channel and pitch, preventing stacked voices from hanging on receiving
+instruments. Shared pitches remain sounding while another pattern owns them.
+Key release, Stop Key, Stop All, latch changes, and pattern replacement release
+the notes they own. Stopping the DAW transport or receiving MIDI All Notes Off
+or All Sound Off stops all patterns, including latched patterns and auditions.
+Manual audition remains available while the transport is stopped.
+
+Host reset and playback reinitialization preserve outstanding note-offs for
+the next audio callback. See the [1.4.2 release notes](docs/release-notes-1.4.2.md).

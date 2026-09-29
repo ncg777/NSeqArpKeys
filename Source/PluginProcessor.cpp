@@ -127,6 +127,7 @@ NSeqArpKeysAudioProcessor::~NSeqArpKeysAudioProcessor() {}
 //==============================================================================
 void NSeqArpKeysAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
 {
+    reset();
     m_scheduler.prepare(sampleRate);
     m_previewSynth.setCurrentPlaybackSampleRate(sampleRate);
     m_heldTriggerKeys.fill(false);
@@ -137,12 +138,18 @@ void NSeqArpKeysAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPe
 
 void NSeqArpKeysAudioProcessor::releaseResources()
 {
-    juce::MidiBuffer empty;
-    m_scheduler.stopAll(empty);
+    reset();
+}
+
+void NSeqArpKeysAudioProcessor::reset()
+{
+    m_scheduler.stopAll(m_deferredNoteOffs);
     m_previewSynth.allNotesOff(0, false);
+    m_transportWasPlaying = false;
 
     const juce::ScopedLock lock(m_pendingPreviewMidiLock);
     m_pendingPreviewMidi.clear();
+    m_nextPendingPreviewSamplePosition = 0;
     m_pendingStopKeys.clear();
     m_pendingStopAll = false;
     m_pendingAudition.reset();
@@ -186,16 +193,26 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     auto* playHead = getPlayHead();
     double bpm = 120.0;
+    bool transportStopped = false;
     if (playHead != nullptr)
         if (auto pos = playHead->getPosition())
+        {
             bpm = pos->getBpm().orFallback(120.0);
+            transportStopped = m_transportWasPlaying && !pos->getIsPlaying();
+            m_transportWasPlaying = pos->getIsPlaying();
+        }
+    if (transportStopped)
+    {
+        stopAllRequested = true;
+        audition.reset();
+    }
     if (!std::isfinite(bpm) || bpm <= 0.0)
         bpm = 120.0;
 
     int numerator   = meterNumerator->get();
     int denominator = meterDenominator->get();
 
-    struct TriggerEvent { int sample; int note; bool noteOn; int velocity; };
+    struct TriggerEvent { int sample; int note; bool noteOn; int velocity; bool panic = false; };
     std::vector<TriggerEvent> triggers;
     for (const auto& metadata : midiMessages)
     {
@@ -204,7 +221,12 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             triggers.push_back({ metadata.samplePosition, msg.getNoteNumber(), true, msg.getVelocity() });
         else if (msg.isNoteOff())
             triggers.push_back({ metadata.samplePosition, msg.getNoteNumber(), false, 0 });
+        else if (msg.isAllNotesOff() || msg.isAllSoundOff())
+            triggers.push_back({ metadata.samplePosition, 0, false, 0, true });
     }
+    // Hosts can include stale trigger events in the transport-stop callback.
+    if (transportStopped)
+        triggers.clear();
 
     midiMessages.clear();
 
@@ -220,6 +242,17 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         m_scheduler.stopKey(key, events);
         appendAt(events, offset);
     };
+
+    auto emitStopAll = [&](int offset)
+    {
+        juce::MidiBuffer events;
+        m_scheduler.stopAll(events);
+        appendAt(events, offset);
+        m_heldTriggerKeys.fill(false);
+    };
+
+    appendAt(m_deferredNoteOffs, 0);
+    m_deferredNoteOffs.clear();
 
     auto emitTrigger = [&](int key, int offset, const KeyAssignment& assignment,
                            int velocity = 127)
@@ -258,11 +291,7 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     m_latchWasEnabled = latch;
 
     if (stopAllRequested)
-    {
-        juce::MidiBuffer events;
-        m_scheduler.stopAll(events);
-        appendAt(events, 0);
-    }
+        emitStopAll(0);
     else
         for (int key : stopKeys)
             emitStopKey(key, 0);
@@ -285,7 +314,13 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         const int position = juce::jlimit(0, juce::jmax(0, buffer.getNumSamples() - 1), event.sample);
         processUntil(position);
 
-        if (event.noteOn)
+        if (event.panic)
+        {
+            // Trigger assignments are channel-independent, so panic stops all
+            // patterns, including latched keys and bank auditions.
+            emitStopAll(position);
+        }
+        else if (event.noteOn)
         {
             const bool wasHeld = m_heldTriggerKeys[static_cast<size_t>(event.note)];
             m_heldTriggerKeys[static_cast<size_t>(event.note)] = true;

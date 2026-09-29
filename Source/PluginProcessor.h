@@ -18,6 +18,7 @@ public:
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
+    void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     bool hasEditor() const override;
@@ -105,6 +106,9 @@ private:
     // Runtime playback
     // -----------------------------------------------------------------------
     PatternScheduler m_scheduler;
+    // Lifecycle callbacks have no host MIDI buffer; flush on the next callback.
+    juce::MidiBuffer m_deferredNoteOffs;
+    bool m_transportWasPlaying = false;
     juce::Synthesiser m_previewSynth;
     std::atomic<bool> m_previewSoundEnabled { true };
     juce::MidiBuffer m_pendingPreviewMidi;

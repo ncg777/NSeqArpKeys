@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.4.1 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.4.2 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -88,6 +88,12 @@ if (BUILD_TESTING)
     target_link_libraries(NSeqArpKeysStateTests PRIVATE
         NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME ProcessorState COMMAND NSeqArpKeysStateTests)
+    juce_add_console_app(NSeqArpKeysMidiTests PRODUCT_NAME "NSeqArpKeys MIDI Tests")
+    juce_generate_juce_header(NSeqArpKeysMidiTests)
+    target_sources(NSeqArpKeysMidiTests PRIVATE tests/MidiLifecycleTests.cpp)
+    target_link_libraries(NSeqArpKeysMidiTests PRIVATE
+        NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
+    add_test(NAME MidiLifecycle COMMAND NSeqArpKeysMidiTests)
     # Exercise actual editor controls, mode changes, bounds, and scrolling.
     # Linux needs a virtual display; Windows/macOS can render off-screen directly.
     if (UNIX AND NOT APPLE)

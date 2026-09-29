@@ -190,6 +190,11 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
             static_cast<int>(event.time));
         if (event.on)
         {
+            // MIDI receivers may stack repeated note-ons. Keep exactly one
+            // wire-level note per channel/pitch, while retaining all logical
+            // owners so an older gate or another key cannot end it early.
+            if (m_outputNoteCounts[static_cast<size_t>(pat.channel - 1)][static_cast<size_t>(event.note)] > 0)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(pat.channel, event.note), sampleAt);
             midiMessages.addEvent(juce::MidiMessage::noteOn(pat.channel, event.note,
                 static_cast<juce::uint8>(event.velocity)), sampleAt);
             ++pat.activeNoteCounts[static_cast<size_t>(event.note)];
