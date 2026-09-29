@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.4.0 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.4.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -88,4 +88,23 @@ if (BUILD_TESTING)
     target_link_libraries(NSeqArpKeysStateTests PRIVATE
         NSeqArpKeys juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME ProcessorState COMMAND NSeqArpKeysStateTests)
+    # Exercise actual editor controls, mode changes, bounds, and scrolling.
+    # Linux needs a virtual display; Windows/macOS can render off-screen directly.
+    if (UNIX AND NOT APPLE)
+        find_program(XVFB_RUN xvfb-run)
+    endif()
+    if (WIN32 OR APPLE OR XVFB_RUN)
+        set(editor_test_command $<TARGET_FILE:NSeqArpKeysStateTests>)
+        if (UNIX AND NOT APPLE)
+            list(PREPEND editor_test_command "${XVFB_RUN}" -a)
+        endif()
+        add_test(NAME EditorLayout COMMAND ${editor_test_command}
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-rhythmic.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-bank.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-melodic.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-small.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-presets.png")
+        set_tests_properties(EditorLayout PROPERTIES ENVIRONMENT
+            "NSEQARPKEYS_PRESET_DIR=${CMAKE_CURRENT_BINARY_DIR}/editor-test-data/Presets")
+    endif()
 endif()

@@ -86,7 +86,7 @@
     <div class="rule"></div>
     <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
     <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.4.0 | September 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.4.1 | September 2026</span></div>
   </section>
 
   <section>
@@ -121,7 +121,7 @@
     <div class="callout"><strong>Keep plug-in bundles intact.</strong> VST3 folders: Windows <code>C:\Program Files\Common Files\VST3</code>, Linux <code>~/.vst3</code>, macOS <code>~/Library/Audio/Plug-Ins/VST3</code>. For Audio Units on macOS, use <code>~/Library/Audio/Plug-Ins/Components</code>.</div>
     <h3>Make your first pattern</h3>
     <ol class="step-list">
-      <li>Open <strong>Browse Presets</strong>, choose <strong>Single Note Pulse</strong>, and click <strong>Load</strong>. This assigns a playable example to C4 (MIDI 60).</li>
+      <li>Open <strong>Presets</strong>, choose <strong>Single Note Pulse</strong>, and click <strong>Load</strong>. This assigns a playable example to C4 (MIDI 60).</li>
       <li>Hold C4 on the on-screen keyboard or send MIDI note 60 to the plug-in. The pattern plays while that key is held.</li>
       <li>Release C4 to stop. To keep it running while editing, turn on <strong>Latch (keep playing)</strong>, trigger C4 once, and release it.</li>
       <li>Click the same key again, or use <strong>Stop Key</strong> or <strong>Stop All</strong>, to stop a latched pattern.</li>
@@ -137,7 +137,7 @@
   </section>
 
   <section class="page editor-page">
-    <h2>3. Work in the editor</h2>
+    <h2>3. Work in the editor</h2><p>The compact editor opens at up to 820 &times; 600 logical pixels. Drag its bottom-right corner to resize down to 640 &times; 400; use the scrollbars to reach all controls in smaller windows. Preset navigation stays at the top, and switching modes or browsers keeps your window size.</p>
     <p>The keyboard selects a trigger note. The controls below it edit the assignment for that key. Each of the 128 MIDI keys can have its own pattern, set, channel, octave, gate, subdivision and expression.</p>
     <table class="controls-table">
       <thead><tr><th>Control</th><th>What it does</th></tr></thead>
@@ -205,7 +205,7 @@
     <h2>6. Presets</h2>
     <p>A preset captures the meter, latch setting, selected key, and all 128 key assignments. The library has six factory examples and can hold your own presets.</p>
     <h3>Browse and load</h3>
-    <p>Open <strong>Browse Presets</strong>. Search names, categories, tags, and descriptions; narrow results with the Category menu or <strong>Favourites only</strong>. Select a row to inspect its details, then click <strong>Load</strong>. Loading replaces the current setup and stops any active patterns.</p>
+    <p>Open <strong>Presets</strong>. Search names, categories, tags, and descriptions; narrow results with the Category menu or <strong>Favourites only</strong>. Select a row to inspect its details, then click <strong>Load</strong>. Loading replaces the current setup and stops any active patterns.</p>
     <h3>Save and manage</h3>
     <table>
       <thead><tr><th>Action</th><th>Result</th></tr></thead>
@@ -241,7 +241,7 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.4.0 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.4.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 
   <section class="page forte-appendix">

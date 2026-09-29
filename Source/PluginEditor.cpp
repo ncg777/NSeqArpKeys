@@ -695,7 +695,35 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     bankSaveButton.onClick = [this] { saveSelectedPatternMetadata(); };
 
     // ----- Initial load -------------------------------------------------------
-    setSize(980, 830);
+    // Move the existing controls into a scrollable panel; navigation stays fixed.
+    const auto children = getChildren();
+    for (auto* child : children)
+        if (child != &presetNameLabel && child != &previousPresetButton
+            && child != &nextPresetButton && child != &browsePresetsButton
+            && child != &browsePatternsButton && child != &savePresetButton)
+            controlPanel.addChildComponent(child);
+    controlViewport.setViewedComponent(&controlPanel, false);
+    controlViewport.setScrollBarsShown(true, true);
+    controlViewport.setScrollOnDragMode(juce::Viewport::ScrollOnDragMode::never);
+    addAndMakeVisible(controlViewport);
+    for (auto* slider : { &meterNumeratorSlider, &meterDenominatorSlider,
+                         &channelSlider, &octaveSlider, &gateSlider, &fixedLengthStepsSlider,
+                         &subdivisionSlider, &velocitySlider, &transposeSlider, &rotationSlider,
+                         &drumVelocityBitsSlider, &rangeFirstSlider, &rangeLastSlider })
+    {
+        slider->setSliderStyle(juce::Slider::LinearHorizontal);
+        slider->setTextBoxStyle(juce::Slider::TextBoxLeft, false, 52, 24);
+        slider->setScrollWheelEnabled(false);
+    }
+    setResizable(true, true);
+    setResizeLimits(640, 400, 1400, 1000);
+    auto initialSize = juce::Point<int>(820, 600);
+    if (const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+    {
+        initialSize.x = juce::jlimit(640, 820, display->userArea.getWidth() - 80);
+        initialSize.y = juce::jlimit(400, 600, display->userArea.getHeight() - 100);
+    }
+    setSize(initialSize.x, initialSize.y);
     loadPresetLibrary();
     loadAssignmentForKey(audioProcessor.getSelectedKey());
     lastStateRestoreRevision = audioProcessor.getStateRestoreRevision();
@@ -743,231 +771,186 @@ void NSeqArpKeysAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(getLocalBounds().reduced(7).toFloat(), 12.0f);
     g.setColour(juce::Colour(0xff62d6c6).withAlpha(0.9f));
     g.fillRoundedRectangle(12.0f, 12.0f, 5.0f, 28.0f, 2.0f);
-    if (!browserOpen && !patternBrowserOpen)
-    {
-        g.setColour(juce::Colour(0xff172a39));
-        g.fillRoundedRectangle(14.0f, 183.0f, static_cast<float>(getWidth() - 28),
-            static_cast<float>(getHeight() - 198), 10.0f);
-    }
+    g.setColour(juce::Colour(0xff172a39));
+    g.fillRoundedRectangle(controlViewport.getBounds().toFloat(), 8.0f);
 }
 
 void NSeqArpKeysAudioProcessorEditor::resized()
 {
-    auto area  = getLocalBounds().reduced(8);
-    int  w     = area.getWidth();
-    int  lblW  = 110;
-    int  rowH  = 32;
-
-    auto presetRow = area.removeFromTop(32);
-    presetNameLabel.setBounds(presetRow.removeFromLeft(300));
-    previousPresetButton.setBounds(presetRow.removeFromLeft(34));
-    presetRow.removeFromLeft(4);
-    nextPresetButton.setBounds(presetRow.removeFromLeft(34));
-    presetRow.removeFromLeft(8);
-    browsePresetsButton.setBounds(presetRow.removeFromLeft(135));
-    presetRow.removeFromLeft(8);
-    browsePatternsButton.setBounds(presetRow.removeFromLeft(125));
-    presetRow.removeFromLeft(8);
-    savePresetButton.setBounds(presetRow.removeFromLeft(90));
-    area.removeFromTop(6);
-
-    if (patternBrowserOpen)
+    auto outer = getLocalBounds().reduced(8);
+    auto header = outer.removeFromTop(28);
+    presetNameLabel.setBounds(header.removeFromLeft(header.getWidth() - 364));
+    auto headerButton = [&](juce::Component& button, int width)
     {
-        bankStatusLabel.setBounds(area.removeFromBottom(24));
-        auto searchRow = area.removeFromTop(32);
-        patternSearchLabel.setBounds(searchRow.removeFromLeft(100));
-        patternSearchEditor.setBounds(searchRow.removeFromLeft(350));
-        searchRow.removeFromLeft(12);
-        bankFavouritesButton.setBounds(searchRow.removeFromLeft(180));
-        searchRow.removeFromLeft(12);
-        bankSourceSelector.setBounds(searchRow.removeFromLeft(240));
-        area.removeFromTop(12);
-        auto left = area.removeFromLeft(400);
-        area.removeFromLeft(18);
-        presetList.setBounds(left);
-        bankEmptyLabel.setBounds(left.reduced(20));
-        bankDetailsLabel.setBounds(area.removeFromTop(36));
-        bankHelpLabel.setBounds(area.removeFromTop(28));
-        area.removeFromTop(10);
-        bankNameEditor.setBounds(area.removeFromTop(32));
-        area.removeFromTop(8);
-        auto tagsRow = area.removeFromTop(32);
-        bankTagsLabel.setBounds(tagsRow.removeFromLeft(70));
-        bankTagsEditor.setBounds(tagsRow);
-        area.removeFromTop(8);
-        bankColourSelector.setBounds(area.removeFromTop(32));
-        bankFavouriteButton.setBounds(area.removeFromTop(28));
-        area.removeFromTop(16);
-        auto assignRow = area.removeFromTop(36);
-        assignCopyButton.setBounds(assignRow.removeFromLeft(125));
-        assignRow.removeFromLeft(8);
-        assignLinkButton.setBounds(assignRow.removeFromLeft(125));
-        area.removeFromTop(8);
-        auto actionRow = area.removeFromTop(36);
-        auditionButton.setBounds(actionRow.removeFromLeft(125));
-        actionRow.removeFromLeft(8);
-        bankSaveButton.setBounds(actionRow.removeFromLeft(125));
-        area.removeFromTop(20);
-        auto transferRow = area.removeFromTop(36);
-        saveCurrentToBankButton.setBounds(transferRow.removeFromLeft(240));
-        transferRow.removeFromLeft(8);
-        importBankButton.setBounds(transferRow.removeFromLeft(115));
-        transferRow.removeFromLeft(8);
-        exportBankButton.setBounds(transferRow.removeFromLeft(115));
-        return;
-    }
-    if (browserOpen)
+        header.removeFromLeft(4);
+        button.setBounds(header.removeFromLeft(width));
+    };
+    headerButton(previousPresetButton, 28);
+    headerButton(nextPresetButton, 28);
+    headerButton(browsePresetsButton, 116);
+    headerButton(browsePatternsButton, 116);
+    headerButton(savePresetButton, 52);
+    outer.removeFromTop(6);
+    controlViewport.setBounds(outer);
+    // Reserve scrollbar space up front so resizing never oscillates between layouts.
+    controlPanel.setSize(juce::jmax(780, outer.getWidth() - controlViewport.getScrollBarThickness()),
+                         juce::jmax(532, outer.getHeight() - controlViewport.getScrollBarThickness()));
+    auto area = controlPanel.getLocalBounds().reduced(4);
+    auto row = [](juce::Rectangle<int>& bounds, int height = 28)
     {
-        auto filterRow = area.removeFromTop(28);
-        presetSearchLabel.setBounds(filterRow.removeFromLeft(58));
-        presetSearchEditor.setBounds(filterRow.removeFromLeft(235));
-        filterRow.removeFromLeft(8);
-        presetCategoryFilterLabel.setBounds(filterRow.removeFromLeft(72));
-        presetCategoryFilter.setBounds(filterRow.removeFromLeft(175));
-        filterRow.removeFromLeft(8);
-        favouritesOnlyButton.setBounds(filterRow);
-        area.removeFromTop(6);
-        presetStatusLabel.setBounds(area.removeFromBottom(24));
-
-        auto left = area.removeFromLeft(315);
-        area.removeFromLeft(10);
-        presetList.setBounds(left);
-        presetDetailsLabel.setBounds(area.removeFromTop(24));
-        auto field = [&](juce::Label& label, juce::Component& editor)
+        auto result = bounds.removeFromTop(height);
+        bounds.removeFromTop(4);
+        return result;
+    };
+    auto field = [](juce::Rectangle<int> bounds, juce::Label& label,
+                    juce::Component& control, int labelWidth = 94)
+    {
+        label.setBounds(bounds.removeFromLeft(labelWidth));
+        control.setBounds(bounds);
+    };
+    auto buttons = [](juce::Rectangle<int> bounds,
+                      std::initializer_list<juce::Component*> controls)
+    {
+        const int width = (bounds.getWidth() - 4 * (static_cast<int>(controls.size()) - 1))
+                        / static_cast<int>(controls.size());
+        for (auto* control : controls)
         {
-            auto row = area.removeFromTop(28);
-            label.setBounds(row.removeFromLeft(85));
-            editor.setBounds(row);
-            area.removeFromTop(3);
-        };
-        field(presetNameFieldLabel, presetNameEditor);
-        field(presetCategoryFieldLabel, presetCategoryEditor);
-        field(presetTagsFieldLabel, presetTagsEditor);
-        presetDescriptionFieldLabel.setBounds(area.removeFromTop(22));
-        presetDescriptionEditor.setBounds(area.removeFromTop(72));
-        area.removeFromTop(8);
-        auto actionRow = [&](juce::TextButton& a, juce::TextButton& b,
-                             juce::TextButton& c, juce::TextButton& d)
-        {
-            auto row = area.removeFromTop(30);
-            const int buttonWidth = (row.getWidth() - 18) / 4;
-            a.setBounds(row.removeFromLeft(buttonWidth)); row.removeFromLeft(6);
-            b.setBounds(row.removeFromLeft(buttonWidth)); row.removeFromLeft(6);
-            c.setBounds(row.removeFromLeft(buttonWidth)); row.removeFromLeft(6);
-            d.setBounds(row);
-            area.removeFromTop(5);
-        };
-        actionRow(loadPresetButton, saveNewPresetButton,
-                  updatePresetButton, duplicatePresetButton);
-        actionRow(deletePresetButton, favouritePresetButton,
-                  importPresetButton, exportPresetButton);
-        return;
-    }
-
-    keyboardComponent.setBounds(area.removeFromTop(88));
-    area.removeFromTop(6);
-
-    // Selected key display
-    selectedKeyLabel.setBounds(area.removeFromTop(20));
-    activeKeysLabel.setBounds(area.removeFromTop(20));
-    area.removeFromTop(6);
-
-    auto transportRow = area.removeFromTop(28);
-    latchButton.setBounds(transportRow.removeFromLeft(210));
-    transportRow.removeFromLeft(8);
-    stopKeyButton.setBounds(transportRow.removeFromLeft(110));
-    transportRow.removeFromLeft(8);
-    stopAllButton.setBounds(transportRow.removeFromLeft(110));
-    transportRow.removeFromLeft(12);
-    previewSoundButton.setBounds(transportRow.removeFromLeft(170));
-    area.removeFromTop(6);
-
-    // Two-column layout for global params
-    auto globalRow = area.removeFromTop(rowH);
-    meterNumeratorLabel .setBounds(globalRow.removeFromLeft(lblW));
-    meterNumeratorSlider.setBounds(globalRow.removeFromLeft((w - 2 * lblW) / 2));
-    meterDenominatorLabel .setBounds(globalRow.removeFromLeft(lblW));
-    meterDenominatorSlider.setBounds(globalRow);
-
-    area.removeFromTop(8);
-
-    // Per-key controls (one per row, label + control)
-    auto makeRow = [&](juce::Label& lbl, juce::Component& ctrl)
-    {
-        auto row = area.removeFromTop(rowH);
-        lbl.setBounds(row.removeFromLeft(lblW));
-        ctrl.setBounds(row);
-        area.removeFromTop(5);
+            control->setBounds(bounds.removeFromLeft(width));
+            bounds.removeFromLeft(4);
+        }
     };
 
-    makeRow(channelLabel, channelSlider);
+    if (patternBrowserOpen || browserOpen)
+    {
+        auto search = row(area);
+        if (patternBrowserOpen)
+        {
+            bankFavouritesButton.setBounds(search.removeFromRight(140));
+            search.removeFromRight(8);
+            bankSourceSelector.setBounds(search.removeFromRight(235));
+            search.removeFromRight(8);
+            field(search, patternSearchLabel, patternSearchEditor, 90);
+            bankStatusLabel.setBounds(area.removeFromBottom(28));
+        }
+        else
+        {
+            favouritesOnlyButton.setBounds(search.removeFromRight(140));
+            search.removeFromRight(8);
+            presetCategoryFilter.setBounds(search.removeFromRight(150));
+            presetCategoryFilterLabel.setBounds(search.removeFromRight(70));
+            search.removeFromRight(8);
+            field(search, presetSearchLabel, presetSearchEditor, 58);
+            presetStatusLabel.setBounds(area.removeFromBottom(28));
+        }
+        auto list = area.removeFromLeft(area.getWidth() * 2 / 5);
+        presetList.setBounds(list);
+        bankEmptyLabel.setBounds(list.reduced(12));
+        area.removeFromLeft(12);
+        if (patternBrowserOpen)
+        {
+            bankDetailsLabel.setBounds(row(area, 24));
+            bankHelpLabel.setBounds(row(area, 40));
+            bankNameEditor.setBounds(row(area));
+            field(row(area), bankTagsLabel, bankTagsEditor, 50);
+            bankColourSelector.setBounds(row(area));
+            bankFavouriteButton.setBounds(row(area));
+            buttons(row(area), { &assignCopyButton, &assignLinkButton });
+            buttons(row(area), { &auditionButton, &bankSaveButton });
+            area.removeFromTop(8);
+            saveCurrentToBankButton.setBounds(row(area));
+            buttons(row(area), { &importBankButton, &exportBankButton });
+        }
+        else
+        {
+            presetDetailsLabel.setBounds(row(area, 24));
+            field(row(area), presetNameFieldLabel, presetNameEditor, 72);
+            field(row(area), presetCategoryFieldLabel, presetCategoryEditor, 72);
+            field(row(area), presetTagsFieldLabel, presetTagsEditor, 72);
+            presetDescriptionFieldLabel.setBounds(row(area, 22));
+            presetDescriptionEditor.setBounds(row(area, 76));
+            buttons(row(area), { &loadPresetButton, &saveNewPresetButton,
+                                &updatePresetButton, &duplicatePresetButton });
+            buttons(row(area), { &deletePresetButton, &favouritePresetButton,
+                                &importPresetButton, &exportPresetButton });
+        }
+        return;
+    }
+
+    keyboardComponent.setBounds(row(area, 54));
+    auto status = row(area, 22);
+    selectedKeyLabel.setBounds(status.removeFromLeft(235));
+    activeKeysLabel.setBounds(status);
+    auto transport = row(area);
+    latchButton.setBounds(transport.removeFromLeft(185));
+    stopKeyButton.setBounds(transport.removeFromLeft(78));
+    transport.removeFromLeft(4);
+    stopAllButton.setBounds(transport.removeFromLeft(78));
+    transport.removeFromLeft(8);
+    previewSoundButton.setBounds(transport.removeFromLeft(140));
+    reverseButton.setBounds(transport);
+
+    const int columnWidth = (area.getWidth() - 12) / 2;
+    auto globals = row(area);
+    field(globals.removeFromLeft(columnWidth), meterNumeratorLabel, meterNumeratorSlider);
+    globals.removeFromLeft(12);
+    field(globals, meterDenominatorLabel, meterDenominatorSlider, 120);
+    auto identity = row(area);
+    field(identity.removeFromLeft(columnWidth), patternNameLabel, patternNameEditor);
+    identity.removeFromLeft(12);
+    field(identity, modeLabel, modeSelector);
+    field(row(area), patternLabel, patternTextEditor);
+    patternPreviewLabel.setBounds(row(area, 20));
+
+    auto parameters = area.removeFromTop(160);
+    auto left = parameters.removeFromLeft(columnWidth);
+    parameters.removeFromLeft(12);
+    auto right = parameters;
     const bool rhythmic = modeSelector.getSelectedId() == 2;
-    if (!rhythmic) makeRow(octaveLabel, octaveSlider);
-    makeRow(gateLabel,    gateSlider);
-    makeRow(fixedLengthStepsLabel, fixedLengthStepsSlider);
-    makeRow(patternLabel, patternTextEditor);
-    patternPreviewLabel.setBounds(area.removeFromTop(22));
-    area.removeFromTop(3);
-    makeRow(patternNameLabel, patternNameEditor);
-    auto metadataRow = area.removeFromTop(rowH);
-    patternColourLabel.setBounds(metadataRow.removeFromLeft(lblW));
-    patternColourSelector.setBounds(metadataRow.removeFromLeft(150));
-    metadataRow.removeFromLeft(10);
-    patternTagsLabel.setBounds(metadataRow.removeFromLeft(45));
-    patternTagsEditor.setBounds(metadataRow.removeFromLeft(360));
-    metadataRow.removeFromLeft(10);
-    patternFavouriteButton.setBounds(metadataRow);
-    area.removeFromTop(2);
-    auto modeRow = area.removeFromTop(rowH);
-    modeLabel.setBounds(modeRow.removeFromLeft(lblW));
-    modeSelector.setBounds(modeRow.removeFromLeft(260));
-    subdivisionLabel.setBounds(modeRow.removeFromLeft(lblW));
-    subdivisionSlider.setBounds(modeRow);
-    area.removeFromTop(2);
-    auto expressionRow = area.removeFromTop(rowH);
-    velocityLabel.setBounds(expressionRow.removeFromLeft(lblW));
-    velocitySlider.setBounds(expressionRow.removeFromLeft(150));
-    transposeLabel.setBounds(expressionRow.removeFromLeft(lblW));
-    transposeSlider.setBounds(expressionRow.removeFromLeft(160));
-    rotationLabel.setBounds(expressionRow.removeFromLeft(75));
-    rotationSlider.setBounds(expressionRow);
-    area.removeFromTop(2);
+    auto output = row(left);
+    field(output.removeFromLeft(columnWidth / 2), channelLabel, channelSlider, 62);
+    if (!rhythmic) field(output, octaveLabel, octaveSlider, 58);
+    field(row(left), gateLabel, gateSlider);
+    field(row(left), fixedLengthStepsLabel, fixedLengthStepsSlider);
+    field(row(left), velocityLabel, velocitySlider);
+    field(row(left), transposeLabel, transposeSlider);
+    field(row(right), subdivisionLabel, subdivisionSlider);
+    field(row(right), rotationLabel, rotationSlider);
     if (rhythmic)
     {
-        makeRow(drumNotesLabel, drumNotesEditor);
-        makeRow(drumVelocityBitsLabel, drumVelocityBitsSlider);
+        field(row(right), drumNotesLabel, drumNotesEditor);
+        field(row(right), drumVelocityBitsLabel, drumVelocityBitsSlider, 124);
     }
     else
     {
-        makeRow(forteSearchLabel, forteSearchEditor);
-        makeRow(forteLabel, forteNumberSelector);
-        forteSelectionLabel.setBounds(area.removeFromTop(rowH));
+        field(row(right), forteSearchLabel, forteSearchEditor);
+        field(row(right), forteLabel, forteNumberSelector);
+        forteSelectionLabel.setBounds(row(right));
     }
-    reverseButton.setBounds(area.removeFromTop(rowH));
-    auto copyRow = area.removeFromTop(30);
-    copyPatternButton.setBounds(copyRow.removeFromLeft(78));
-    cutPatternButton.setBounds(copyRow.removeFromLeft(70));
-    clearPatternButton.setBounds(copyRow.removeFromLeft(70));
-    pasteScopeSelector.setBounds(copyRow.removeFromLeft(145));
-    pastePatternButton.setBounds(copyRow.removeFromLeft(75));
-    duplicatePatternButton.setBounds(copyRow.removeFromLeft(170));
-    independentButton.setBounds(copyRow.removeFromLeft(160));
-    area.removeFromTop(4);
-    auto fileRow = area.removeFromTop(30);
-    undoButton.setBounds(fileRow.removeFromLeft(75));
-    fileRow.removeFromLeft(5);
-    redoButton.setBounds(fileRow.removeFromLeft(75));
-    fileRow.removeFromLeft(12);
-    savePatternButton.setBounds(fileRow.removeFromLeft(130));
-    fileRow.removeFromLeft(5);
-    loadPatternButton.setBounds(fileRow.removeFromLeft(130));
-    area.removeFromTop(3);
-    auto rangeRow = area.removeFromTop(rowH);
-    rangeLabel.setBounds(rangeRow.removeFromLeft(lblW));
-    rangeFirstSlider.setBounds(rangeRow.removeFromLeft(140));
-    rangeLastSlider.setBounds(rangeRow.removeFromLeft(140));
-    transposeRangeButton.setBounds(rangeRow.removeFromLeft(160));
-    applyRangeButton.setBounds(rangeRow.removeFromLeft(130));
+
+    auto metadata = row(area);
+    patternColourLabel.setBounds(metadata.removeFromLeft(55));
+    patternColourSelector.setBounds(metadata.removeFromLeft(125));
+    metadata.removeFromLeft(8);
+    patternFavouriteButton.setBounds(metadata.removeFromRight(110));
+    field(metadata, patternTagsLabel, patternTagsEditor, 45);
+    auto edits = row(area);
+    buttons(edits.removeFromLeft(174), { &copyPatternButton, &cutPatternButton, &clearPatternButton });
+    edits.removeFromLeft(4);
+    pasteScopeSelector.setBounds(edits.removeFromLeft(132));
+    edits.removeFromLeft(4);
+    pastePatternButton.setBounds(edits.removeFromLeft(60));
+    edits.removeFromLeft(4);
+    buttons(edits, { &duplicatePatternButton, &independentButton });
+    auto files = row(area);
+    buttons(files.removeFromLeft(150), { &undoButton, &redoButton });
+    files.removeFromLeft(12);
+    buttons(files.removeFromLeft(260), { &savePatternButton, &loadPatternButton });
+    auto range = row(area);
+    rangeLabel.setBounds(range.removeFromLeft(94));
+    rangeFirstSlider.setBounds(range.removeFromLeft(120));
+    rangeLastSlider.setBounds(range.removeFromLeft(120));
+    transposeRangeButton.setBounds(range.removeFromLeft(166));
+    applyRangeButton.setBounds(range.removeFromLeft(120));
 }
 
 //==============================================================================
@@ -1488,7 +1471,7 @@ void NSeqArpKeysAudioProcessorEditor::updatePatternPreview()
     const auto events = GateRunnerEngine::computeAllStepEvents(a, 16);
     juce::String text = "STEP PREVIEW   ";
     for (const auto& step : events)
-        text << (step.empty() ? "· " : juce::String(step.size()) + " ");
+        text << (step.empty() ? juce::String::charToString(0xb7) + " " : juce::String(step.size()) + " ");
     if (a.sequence.size() > 16) text << "…";
     patternPreviewLabel.setText(text, juce::dontSendNotification);
     patternPreviewLabel.setColour(juce::Label::textColourId,
@@ -1842,6 +1825,7 @@ void NSeqArpKeysAudioProcessorEditor::showPresetStatus(const juce::String& messa
 void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 {
     if (open) stopPatternAudition();
+    controlViewport.setViewPosition(0, 0);
     browserOpen = open;
     if (open) patternBrowserOpen = false;
     updateModeVisibility();
@@ -1850,6 +1834,7 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 void NSeqArpKeysAudioProcessorEditor::setPatternBrowserOpen(bool open)
 {
     if (!open) stopPatternAudition();
+    controlViewport.setViewPosition(0, 0);
     patternBrowserOpen = open;
     if (open)
     {
@@ -1932,8 +1917,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
         component->setVisible(patternBrowserOpen);
     bankEmptyLabel.setVisible(patternBrowserOpen && filteredPatterns.empty());
     presetList.updateContent();
-    // Melodic mode has an octave row and the selected-set description.
-    setSize(getWidth(), editor && !rhythmic ? 900 : 830);
+
     resized();
 }
 

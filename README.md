@@ -228,7 +228,7 @@ runs this packaging script on Windows, Linux, and macOS. Every run uploads the
 three ZIPs as workflow artifacts. Generated `build/`, `dist/`, and `release/`
 folders are ignored by Git. The Windows PowerShell packager also reads the
 CMake build output (default `build/`, overridable with `-BuildDirectory`).
-Pushing a `v1.4.0` tag publishes the archives as a
+Pushing a `v1.4.1` tag publishes the archives as a
 GitHub release after all three builds succeed.
 
 ## Repository map
@@ -242,3 +242,13 @@ GitHub release after all three builds succeed.
 | `docs/NSeqArpKeys-Manual.html` | Editable user manual |
 | `output/pdf/NSeqArpKeys-Manual.pdf` | Printable user manual |
 | `scripts/package-release.py` | Native distribution packaging and verification |
+
+## Version 1.4.1 compact interface
+
+The editor opens at 820 × 600 logical pixels (smaller when the desktop work
+area requires it), with related controls grouped into two columns. Drag the
+bottom-right corner to resize down to 640 × 400. Scrollbars keep all controls
+reachable in smaller windows; the preset navigation stays at the top.
+Switching modes or browsing presets and patterns preserves your window size.
+The Pattern Bank places file-transfer actions on separate rows so they fit.
+See the [1.4.1 release notes](docs/release-notes-1.4.1.md).

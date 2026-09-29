@@ -361,8 +361,18 @@ int runTests(int argc, char** argv)
         processor.setSelectedKey(60);
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
         require(editor != nullptr, "Editor failed to open");
+        const auto controls = [&]
+        {
+            juce::Array<juce::Component*> result;
+            for (auto* child : editor->getChildren())
+                if (auto* viewport = dynamic_cast<juce::Viewport*>(child))
+                    result.addArray(viewport->getViewedComponent()->getChildren());
+                else if (dynamic_cast<juce::Label*>(child) || dynamic_cast<juce::Button*>(child))
+                    result.add(child);
+            return result;
+        };
         bool keyboardFound = false;
-        for (auto* child : editor->getChildren())
+        for (auto* child : controls())
             if (auto* keyboard = dynamic_cast<juce::MidiKeyboardComponent*>(child))
             {
                 keyboardFound = true;
@@ -372,7 +382,7 @@ int runTests(int argc, char** argv)
             }
         require(keyboardFound, "Editor keyboard missing");
         bool previewToggleFound = false;
-        for (auto* child : editor->getChildren())
+        for (auto* child : controls())
             if (auto* toggle = dynamic_cast<juce::ToggleButton*>(child))
                 if (toggle->getButtonText() == "Preview sound")
                 {
@@ -388,12 +398,23 @@ int runTests(int argc, char** argv)
         require(previewToggleFound, "Preview sound control missing");
         const auto checkLayout = [&]
         {
-            for (auto* child : editor->getChildren())
+            const auto all = controls();
+            for (auto* child : all)
                 if (child->isVisible())
-                    require(child->getHeight() >= 16 && editor->getLocalBounds().contains(child->getBounds()),
-                            "A visible editor control is clipped or collapsed");
+                {
+                    require(child->getHeight() >= 20 && child->getWidth() >= 24
+                        && child->getParentComponent()->getLocalBounds().contains(child->getBounds()),
+                        "A visible editor control is clipped or collapsed");
+                    for (auto* other : all)
+                        if (other != child && other->isVisible()
+                            && other->getParentComponent() == child->getParentComponent()
+                            && !dynamic_cast<juce::ListBox*>(child)
+                            && !dynamic_cast<juce::ListBox*>(other))
+                            require(!child->getBounds().intersects(other->getBounds()),
+                                    "Visible editor controls overlap");
+                }
         };
-        for (auto* child : editor->getChildren())
+        for (auto* child : controls())
             if (auto* combo = dynamic_cast<juce::ComboBox*>(child))
                 if (combo->getItemText(0) == "Melodic")
                 {
@@ -417,7 +438,7 @@ int runTests(int argc, char** argv)
                 }
         auto click = [&](const juce::String& caption)
         {
-            for (auto* child : editor->getChildren())
+            for (auto* child : controls())
                 if (auto* button = dynamic_cast<juce::TextButton*>(child))
                     if (button->getButtonText() == caption)
                     {
@@ -426,6 +447,65 @@ int runTests(int argc, char** argv)
                     }
             throw std::runtime_error("Editor action not found");
         };
+        const auto saveSnapshot = [&](const char* filename)
+        {
+            auto file = juce::File::getCurrentWorkingDirectory().getChildFile(filename);
+            file.deleteFile();
+            juce::FileOutputStream stream(file);
+            require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                editor->createComponentSnapshot(editor->getLocalBounds()), stream),
+                "Could not save layout snapshot");
+        };
+        if (argc >= 5)
+        {
+            editor->setSize(640, 400);
+            saveSnapshot(argv[4]);
+            editor->setSize(820, 600);
+        }
+        if (argc >= 6)
+        {
+            click("Presets");
+            saveSnapshot(argv[5]);
+            click("Back to Editor");
+        }
+        // Window size must survive mode/browser changes. At smaller sizes all
+        // controls must still fit the scrollable panel and be reachable by scrolling.
+        for (const auto size : { juce::Point<int>(820, 600), juce::Point<int>(640, 400),
+                                 juce::Point<int>(760, 480), juce::Point<int>(1100, 760) })
+        {
+            editor->setSize(size.x, size.y);
+            for (auto* child : controls())
+                if (auto* combo = dynamic_cast<juce::ComboBox*>(child))
+                    if (combo->getItemText(0) == "Melodic")
+                        for (int mode : { 1, 2 })
+                        {
+                            combo->setSelectedId(mode, juce::sendNotificationSync);
+                            checkLayout();
+                            require(editor->getWidth() == size.x && editor->getHeight() == size.y,
+                                    "Changing mode resized the editor");
+                        }
+            for (const auto* caption : { "Presets", "Pattern Bank" })
+            {
+                click(caption);
+                checkLayout();
+                require(editor->getWidth() == size.x && editor->getHeight() == size.y,
+                        "Opening a browser resized the editor");
+                for (auto* child : editor->getChildren())
+                    if (auto* viewport = dynamic_cast<juce::Viewport*>(child))
+                    {
+                        auto* panel = viewport->getViewedComponent();
+                        viewport->setViewPosition(panel->getWidth(), panel->getHeight());
+                        require(viewport->getViewArea().getRight() >= panel->getWidth()
+                            && viewport->getViewArea().getBottom() >= panel->getHeight(),
+                            "Cannot scroll to the last controls");
+                    }
+                click("Back to Editor");
+                checkLayout();
+            }
+        }
+        editor->setSize(820, 600);
+        processor.setAssignmentForKey(60, pattern);
+        editor.reset(processor.createEditor());
         click("Duplicate to next key");
         require(processor.getAssignmentForKey(61) == pattern, "Editor duplicate lost settings");
         click("Undo");

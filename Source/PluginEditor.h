@@ -95,6 +95,9 @@ private:
     NSeqArpKeysAudioProcessor& audioProcessor;
     juce::LookAndFeel_V4 theme;
     juce::TooltipWindow tooltipWindow { this, 500 };
+    // Keep navigation fixed while smaller host windows can scroll every control.
+    juce::Component controlPanel;
+    juce::Viewport controlViewport;
 
     juce::MidiKeyboardState     keyboardState;
     juce::MidiKeyboardComponent keyboardComponent;
