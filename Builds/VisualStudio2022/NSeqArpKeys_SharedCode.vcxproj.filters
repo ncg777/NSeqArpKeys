@@ -724,6 +724,9 @@
     <ClCompile Include="..\..\Source\PluginEditor.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\VariationEditor.cpp">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClCompile>
     <ClCompile Include="C:\JUCE\modules\juce_audio_basics\audio_play_head\juce_AudioPlayHead.cpp">
       <Filter>JUCE Modules\juce_audio_basics\audio_play_head</Filter>
     </ClCompile>
@@ -3694,6 +3697,12 @@
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\PluginEditor.h">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\VariationEditor.h">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Domain\PatternVariations.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
     <ClInclude Include="C:\JUCE\modules\juce_audio_basics\audio_play_head\juce_AudioPlayHead.h">

@@ -44,7 +44,7 @@ namespace ProjectInfo
 {
     const char* const  projectName    = "NSeqArpKeys";
     const char* const  companyName    = "";
-    const char* const  versionString  = "1.4.2";
-    const int          versionNumber  = 0x10402;
+    const char* const  versionString  = "1.5.0";
+    const int          versionNumber  = 0x10500;
 }
 #endif

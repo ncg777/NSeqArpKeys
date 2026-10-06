@@ -115,6 +115,7 @@ NSeqArpKeysAudioProcessor::NSeqArpKeysAudioProcessor()
     // Initialize Pcs12 static maps (idempotent if already populated).
     Pcs12::GenerateMaps();
     for (auto& sounding : m_soundingKeys) sounding.store(false);
+    for (auto& step : m_playbackSteps) step.store(-1);
 
     addParameter(meterNumerator   = new juce::AudioParameterInt("meterNumerator",   "Meter Numerator",   1, 16, 4));
     addParameter(meterDenominator = new juce::AudioParameterInt("meterDenominator", "Meter Denominator", 1, 16, 4));
@@ -155,6 +156,7 @@ void NSeqArpKeysAudioProcessor::reset()
     m_pendingAudition.reset();
     m_heldTriggerKeys.fill(false);
     for (auto& sounding : m_soundingKeys) sounding.store(false);
+    for (auto& step : m_playbackSteps) step.store(-1);
 }
 
 bool NSeqArpKeysAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -350,7 +352,10 @@ void NSeqArpKeysAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     processUntil(buffer.getNumSamples());
     for (int key = 0; key < 128; ++key)
+    {
         m_soundingKeys[static_cast<size_t>(key)].store(m_scheduler.isKeyActive(key));
+        m_playbackSteps[static_cast<size_t>(key)].store(m_scheduler.getPlaybackStep(key));
+    }
     m_previewSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
     // Keep the synth and MIDI clock advancing so toggling preview never changes
     // note timing or leaves stale voices when sound is enabled again.

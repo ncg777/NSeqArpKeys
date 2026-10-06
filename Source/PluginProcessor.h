@@ -74,6 +74,8 @@ public:
     void auditionPattern(int key, const KeyAssignment& assignment);
     bool isKeySounding(int key) const { return key >= 0 && key < 128
         && m_soundingKeys[static_cast<size_t>(key)].load(); }
+    int getPlaybackStep(int key) const { return key >= 0 && key < 128
+        ? m_playbackSteps[static_cast<size_t>(key)].load() : -1; }
     void setLatchEnabled(bool enabled);
     bool isLatchEnabled() const;
     void setPreviewSoundEnabled(bool enabled) { m_previewSoundEnabled.store(enabled); }
@@ -122,6 +124,7 @@ private:
     std::array<bool, 128> m_heldTriggerKeys {};
     std::array<int, 128> m_triggerVelocities {};
     std::array<std::atomic<bool>, 128> m_soundingKeys {};
+    std::array<std::atomic<int>, 128> m_playbackSteps {};
 
     // -----------------------------------------------------------------------
     // UI state (not host-automatable)

@@ -58,6 +58,9 @@ foreach ($file in (Get-ChildItem -LiteralPath $vstBundle -File -Recurse | Sort-O
     $files += [pscustomobject]@{ Source = $file.FullName; Entry = "NSeqArpKeys.vst3/$relative" }
 }
 $files += [pscustomobject]@{ Source = $manual; Entry = 'NSeqArpKeys-Manual.pdf' }
+foreach ($notice in @('LICENSE', 'THIRD_PARTY_NOTICES.md')) {
+    $files += [pscustomobject]@{ Source = (Join-Path $repoRoot $notice); Entry = $notice }
+}
 
 $startHere = @"
 NSeqArpKeys $version - Windows x64

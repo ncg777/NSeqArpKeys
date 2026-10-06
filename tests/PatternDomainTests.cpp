@@ -14,9 +14,12 @@ void require(bool condition)
     if (!condition) throw std::runtime_error("Pattern domain regression failed");
 }
 
+void testPatternVariations();
+
 int main()
 {
     Pcs12::GenerateMaps();
+    testPatternVariations();
     KeyAssignment pattern;
     pattern.mode = KeyAssignment::Mode::rhythmic;
     pattern.sequence = { 5, 0, 1 };

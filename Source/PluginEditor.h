@@ -5,6 +5,8 @@
 #include "PluginProcessor.h"
 #include "Domain/AssignmentHistory.h"
 
+class VariationEditor;
+
 //==============================================================================
 class NSeqArpKeysAudioProcessorEditor : public juce::AudioProcessorEditor,
                                          private juce::MidiKeyboardStateListener,
@@ -29,6 +31,8 @@ private:
     void savePatternToBank();
     void loadPatternFromBank();
     void applyRange();
+    void setVariationsOpen(bool open);
+    bool saveVariationFamily(const std::vector<KeyAssignment>& assignments, juce::String& error);
     void recordKeyEdit();
     void undoKeyEdit();
     void redoKeyEdit();
@@ -131,6 +135,9 @@ private:
     juce::TextEditor patternTagsEditor;
     juce::ToggleButton patternFavouriteButton;
     juce::TextButton savePatternButton, loadPatternButton, applyRangeButton;
+    juce::TextButton generateVariationsButton;
+    std::unique_ptr<VariationEditor> variationEditor;
+    bool variationsOpen = false;
     juce::TextButton undoButton, redoButton;
     juce::Slider rangeFirstSlider, rangeLastSlider;
     juce::ToggleButton transposeRangeButton;

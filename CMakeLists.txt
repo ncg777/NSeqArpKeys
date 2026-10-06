@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.4.2 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.5.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -51,7 +51,8 @@ target_sources(NSeqArpKeys PRIVATE
     Source/Engine/GateRunnerEngine.cpp
     Source/Engine/PatternScheduler.cpp
     Source/PluginProcessor.cpp
-    Source/PluginEditor.cpp)
+    Source/PluginEditor.cpp
+    Source/VariationEditor.cpp)
 
 target_compile_definitions(NSeqArpKeys PUBLIC
     JUCE_WEB_BROWSER=0
@@ -78,7 +79,7 @@ if (BUILD_TESTING)
     add_test(NAME PatternScheduler COMMAND NSeqArpKeysTests)
     juce_add_console_app(NSeqArpKeysDomainTests PRODUCT_NAME "NSeqArpKeys Domain Tests")
     juce_generate_juce_header(NSeqArpKeysDomainTests)
-    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp)
+    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp tests/PatternVariationTests.cpp)
     target_link_libraries(NSeqArpKeysDomainTests PRIVATE
         NSeqArpKeys FactoryPatternsData juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)
@@ -109,7 +110,9 @@ if (BUILD_TESTING)
             "${CMAKE_CURRENT_BINARY_DIR}/editor-bank.png"
             "${CMAKE_CURRENT_BINARY_DIR}/editor-melodic.png"
             "${CMAKE_CURRENT_BINARY_DIR}/editor-small.png"
-            "${CMAKE_CURRENT_BINARY_DIR}/editor-presets.png")
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-presets.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-variations.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/editor-variations-small.png")
         set_tests_properties(EditorLayout PROPERTIES ENVIRONMENT
             "NSEQARPKEYS_PRESET_DIR=${CMAKE_CURRENT_BINARY_DIR}/editor-test-data/Presets")
     endif()
