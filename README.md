@@ -265,3 +265,13 @@ Manual audition remains available while the transport is stopped.
 
 Host reset and playback reinitialization preserve outstanding note-offs for
 the next audio callback. See the [1.4.2 release notes](docs/release-notes-1.4.2.md).
+
+## License
+
+Original NSeqArpKeys code and documentation are licensed under the
+[MIT License](LICENSE).
+
+Third-party components retain their own license terms, including
+[JUCE 8.0.6](https://github.com/juce-framework/JUCE/blob/8.0.6/LICENSE.md), its
+bundled SDKs and dependencies, and the BSD-3-Clause CSV parser in
+[Source/csv.h](Source/csv.h). The MIT license does not replace those terms.
