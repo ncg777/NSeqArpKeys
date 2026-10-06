@@ -76,6 +76,7 @@ public:
     void stopAll(juce::MidiBuffer& midiMessages);
     void stopKey(int key, juce::MidiBuffer& midiMessages);
     bool isKeyActive(int key) const;
+    int getPlaybackStep(int key) const;
     void setSubdivision(int key, int subdivision);
 
     /**

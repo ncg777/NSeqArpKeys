@@ -99,6 +99,16 @@ bool PatternScheduler::isKeyActive(int key) const
     return m_activePatterns.find(key) != m_activePatterns.end();
 }
 
+int PatternScheduler::getPlaybackStep(int key) const
+{
+    const auto found = m_activePatterns.find(key);
+    if (found == m_activePatterns.end() || found->second.numSteps <= 0 || found->second.lastStepDuration <= 0)
+        return -1;
+    const auto& pattern = found->second;
+    return static_cast<int>(std::fmod(std::floor(pattern.elapsedSamples / pattern.lastStepDuration),
+                                    static_cast<double>(pattern.numSteps)));
+}
+
 void PatternScheduler::setSubdivision(int key, int subdivision)
 {
     if (auto it = m_activePatterns.find(key); it != m_activePatterns.end())

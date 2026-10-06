@@ -3,6 +3,7 @@
 #include "Domain/AssignmentState.h"
 #include "Domain/SafeXml.h"
 #include "Domain/PatternBankFile.h"
+#include "VariationEditor.h"
 #if __has_include("FactoryPatternsData.h")
 #include "FactoryPatternsData.h"
 #else
@@ -419,7 +420,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     addAndMakeVisible(patternPreviewLabel);
     for (auto* button : { &copyPatternButton, &pastePatternButton, &duplicatePatternButton,
                           &undoButton, &redoButton,
-                          &savePatternButton, &loadPatternButton, &applyRangeButton,
+                          &savePatternButton, &loadPatternButton, &applyRangeButton, &generateVariationsButton,
                           &cutPatternButton, &clearPatternButton, &independentButton })
         addAndMakeVisible(button);
     copyPatternButton.setButtonText("Copy");
@@ -441,6 +442,8 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     savePatternButton.setButtonText("Save pattern");
     loadPatternButton.setButtonText("Load pattern");
     applyRangeButton.setButtonText("Assign range");
+    generateVariationsButton.setButtonText("Generate variations");
+    generateVariationsButton.onClick = [this] { setVariationsOpen(true); };
     copyPatternButton.onClick = [this] {
         copiedPattern = std::make_unique<KeyAssignment>(
             audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey()));
@@ -733,6 +736,7 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
 
 NSeqArpKeysAudioProcessorEditor::~NSeqArpKeysAudioProcessorEditor()
 {
+    variationEditor.reset();
     stopPatternAudition();
     setLookAndFeel(nullptr);
     presetList.setModel(nullptr);
@@ -794,8 +798,13 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     controlViewport.setBounds(outer);
     // Reserve scrollbar space up front so resizing never oscillates between layouts.
     controlPanel.setSize(juce::jmax(780, outer.getWidth() - controlViewport.getScrollBarThickness()),
-                         juce::jmax(532, outer.getHeight() - controlViewport.getScrollBarThickness()));
+                         juce::jmax(variationsOpen ? 800 : 532, outer.getHeight() - controlViewport.getScrollBarThickness()));
     auto area = controlPanel.getLocalBounds().reduced(4);
+    if (variationsOpen && variationEditor)
+    {
+        variationEditor->setBounds(area);
+        return;
+    }
     auto row = [](juce::Rectangle<int>& bounds, int height = 28)
     {
         auto result = bounds.removeFromTop(height);
@@ -945,6 +954,8 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     buttons(files.removeFromLeft(150), { &undoButton, &redoButton });
     files.removeFromLeft(12);
     buttons(files.removeFromLeft(260), { &savePatternButton, &loadPatternButton });
+    files.removeFromLeft(12);
+    generateVariationsButton.setBounds(files.removeFromLeft(180));
     auto range = row(area);
     rangeLabel.setBounds(range.removeFromLeft(94));
     rangeFirstSlider.setBounds(range.removeFromLeft(120));
@@ -1085,6 +1096,76 @@ void NSeqArpKeysAudioProcessorEditor::applyRange()
     audioProcessor.copyAssignmentToRange(audioProcessor.getSelectedKey(), first, last,
                                           transposeRangeButton.getToggleState());
     loadAssignmentForKey(audioProcessor.getSelectedKey());
+}
+
+void NSeqArpKeysAudioProcessorEditor::setVariationsOpen(bool open)
+{
+    stopPatternAudition();
+    if (variationEditor) variationEditor->stopAudition();
+    variationsOpen = open;
+    if (open)
+    {
+        browserOpen = patternBrowserOpen = false;
+        variationEditor = std::make_unique<VariationEditor>(audioProcessor, audioProcessor.getSelectedKey());
+        variationEditor->onClose = [this] { setVariationsOpen(false); };
+        variationEditor->onApply = [this](const std::vector<std::pair<int, KeyAssignment>>& assignments)
+        {
+            syncEditHistory();
+            AssignmentHistory::Edit edit { audioProcessor.getSelectedKey(), {} };
+            for (const auto& assignment : assignments)
+                edit.assignments.emplace_back(assignment.first, audioProcessor.getAssignmentForKey(assignment.first));
+            editHistory.record(std::move(edit));
+            audioProcessor.restoreAssignments(assignments);
+            // Keep the preview object alive until its button callback returns.
+            setVariationsOpen(false);
+            loadAssignmentForKey(audioProcessor.getSelectedKey());
+        };
+        variationEditor->onSaveFamily = [this](const std::vector<KeyAssignment>& assignments, juce::String& error)
+        { return saveVariationFamily(assignments, error); };
+        controlPanel.addAndMakeVisible(*variationEditor);
+    }
+    if (variationEditor) variationEditor->setVisible(open);
+    controlViewport.setViewPosition(0, 0);
+    updateModeVisibility();
+}
+
+bool NSeqArpKeysAudioProcessorEditor::saveVariationFamily(const std::vector<KeyAssignment>& assignments,
+                                                         juce::String& error)
+{
+    if (assignments.empty() || assignments.size() > 128)
+    { error = "A variation family must contain 1-128 patterns."; return false; }
+    const auto id = juce::Uuid().toString();
+    const auto directory = patternDirectory();
+    // Stage outside the bank and rename the complete folder into place. The
+    // browser never discovers a partially written family.
+    const auto staging = directory.getSiblingFile(".variation-" + id + ".tmp");
+    const auto target = directory.getChildFile("variation-" + id);
+    if (directory.createDirectory().failed() || staging.createDirectory().failed())
+    { error = "Could not create the variation family folder."; return false; }
+    juce::String firstId;
+    for (size_t index = 0; index < assignments.size(); ++index)
+    {
+        const auto patternId = juce::Uuid().toString();
+        if (index == 0) firstId = patternId;
+        auto xml = PatternBankFile::writePattern({ patternId, assignments[index] });
+        if (!writeXmlFile(staging.getChildFile(patternId + ".nseqpattern"), *xml))
+        {
+            staging.deleteRecursively();
+            error = "Could not save the variation family. No bank entries were added.";
+            return false;
+        }
+    }
+    if (!staging.moveFileTo(target))
+    {
+        staging.deleteRecursively();
+        error = "Could not finish saving the variation family. No bank entries were added.";
+        return false;
+    }
+    bankSourceSelector.setSelectedId(1, juce::dontSendNotification);
+    patternSearchEditor.setText({}, false);
+    bankFavouritesButton.setToggleState(false, juce::dontSendNotification);
+    loadPatternLibrary(firstId);
+    return true;
 }
 
 void NSeqArpKeysAudioProcessorEditor::recordKeyEdit()
@@ -1236,7 +1317,7 @@ void NSeqArpKeysAudioProcessorEditor::loadPatternLibrary(const juce::String& pre
         auto directory = patternDirectory();
         if (directory.createDirectory().failed()) { filterPatternLibrary(); return; }
         juce::Array<juce::File> files;
-        directory.findChildFiles(files, juce::File::findFiles, false, "*.nseqpattern");
+        directory.findChildFiles(files, juce::File::findFiles, true, "*.nseqpattern");
         for (const auto& file : files)
         {
             if (file.getSize() <= 0 || file.getSize() > 1024 * 1024) continue;
@@ -1824,6 +1905,7 @@ void NSeqArpKeysAudioProcessorEditor::showPresetStatus(const juce::String& messa
 
 void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 {
+    if (variationsOpen) setVariationsOpen(false);
     if (open) stopPatternAudition();
     controlViewport.setViewPosition(0, 0);
     browserOpen = open;
@@ -1833,6 +1915,7 @@ void NSeqArpKeysAudioProcessorEditor::setBrowserOpen(bool open)
 
 void NSeqArpKeysAudioProcessorEditor::setPatternBrowserOpen(bool open)
 {
+    if (variationsOpen) setVariationsOpen(false);
     if (!open) stopPatternAudition();
     controlViewport.setViewPosition(0, 0);
     patternBrowserOpen = open;
@@ -1853,7 +1936,7 @@ void NSeqArpKeysAudioProcessorEditor::stopPatternAudition()
 
 void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
 {
-    const bool editor = !browserOpen && !patternBrowserOpen;
+    const bool editor = !browserOpen && !patternBrowserOpen && !variationsOpen;
     const bool rhythmic = modeSelector.getSelectedId() == 2;
     browsePresetsButton.setButtonText(browserOpen ? "Back to Editor" : "Presets");
     browsePatternsButton.setButtonText(patternBrowserOpen ? "Back to Editor" : "Pattern Bank");
@@ -1880,7 +1963,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
                                         &cutPatternButton, &clearPatternButton, &pasteScopeSelector,
                                         &independentButton,
                                         &undoButton, &redoButton,
-                                        &savePatternButton, &loadPatternButton,
+                                        &savePatternButton, &loadPatternButton, &generateVariationsButton,
                                         &rangeLabel, &rangeFirstSlider, &rangeLastSlider,
                                         &transposeRangeButton, &applyRangeButton })
         component->setVisible(editor);

@@ -228,7 +228,7 @@ runs this packaging script on Windows, Linux, and macOS. Every run uploads the
 three ZIPs as workflow artifacts. Generated `build/`, `dist/`, and `release/`
 folders are ignored by Git. The Windows PowerShell packager also reads the
 CMake build output (default `build/`, overridable with `-BuildDirectory`).
-Pushing a `v1.4.2` tag publishes the archives as a
+Pushing a `v1.5.0` tag publishes the archives as a
 GitHub release after all three builds succeed.
 
 ## Repository map
@@ -265,6 +265,29 @@ Manual audition remains available while the transport is stopped.
 
 Host reset and playback reinitialization preserve outstanding note-offs for
 the next audio callback. See the [1.4.2 release notes](docs/release-notes-1.4.2.md).
+
+## Version 1.5.0 pattern variations
+
+Choose **Generate variations** to preview polynomial step permutations or a
+vertical flip of the selected key's pattern. Quadratic, cubic, rotation and custom
+polynomials are validated against the sequence length. **Inverse permutation**
+walks backward; **Keep zero steps in place** permutes only nonzero positions.
+
+Vertical flip reflects the sequence-wide occupied bit positions: `2 6 8` becomes
+`8 12 2`. Melodic signs are retained. Rhythmic mode moves whole drum lanes while
+preserving their velocity words, including wide masks.
+
+Choose the first key, number of keys, starting application and applications
+between keys. Each key receives the corresponding repeated operation; the preview
+shows cycles and repeated patterns. Compare original and variation bit grids,
+page through long sequences, and audition either with an actual playback playhead.
+Preview controls leave the source assignment unchanged.
+
+**Assign variations** creates independent copies retaining the source's musical
+settings, with one Undo/Redo transaction for the full batch. **Save family to bank**
+saves named and tagged patterns into the user bank. Existing project, preset and
+pattern formats remain compatible. See the [1.5.0 release notes](docs/release-notes-1.5.0.md)
+and [manual](docs/NSeqArpKeys-Manual.html).
 
 ## License
 

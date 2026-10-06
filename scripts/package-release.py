@@ -73,6 +73,8 @@ def main():
                      "NSeqArpKeys.component", sums)
         add_tree(archive, artifacts / "VST3" / "NSeqArpKeys.vst3", "NSeqArpKeys.vst3", sums)
         add_file(archive, manual, "NSeqArpKeys-Manual.pdf", sums)
+        add_file(archive, ROOT / "LICENSE", "LICENSE", sums)
+        add_file(archive, ROOT / "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md", sums)
         archive.writestr("SHA256SUMS.txt", "\n".join(sums) + "\n")
 
     with zipfile.ZipFile(output) as archive:

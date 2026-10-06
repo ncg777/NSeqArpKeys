@@ -2,6 +2,8 @@
 #include "../Source/Domain/AssignmentState.h"
 #include "../Source/Domain/AssignmentHistory.h"
 #include "../Source/Domain/SafeXml.h"
+#include "../Source/VariationEditor.h"
+#include "../Source/Domain/PatternBankFile.h"
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
@@ -594,6 +596,153 @@ int runTests(int argc, char** argv)
                 processor.releaseResources();
             }
         }
+    }
+    if (argc >= 2)
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        NSeqArpKeysAudioProcessor p;
+        auto source = drum(36);
+        source.sequence = { 1, 2, 4, 8, 3, 5, 7, 0 };
+        source.drumLaneCount = 4;
+        source.name = "UI family"; source.tags = "fixture"; source.linkId = "shared-source";
+        source.rotation = 2; source.reverse = true;
+        p.restoreAssignments({ {60, source}, {61, source}, {62, source} });
+        p.setSelectedKey(60);
+        p.prepareToPlay(1000.0, 100);
+        std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());
+        auto mainButton = [&](const juce::String& caption)
+        {
+            for (auto* child : editor->getChildren())
+                if (auto* viewport = dynamic_cast<juce::Viewport*>(child))
+                    for (auto* control : viewport->getViewedComponent()->getChildren())
+                        if (auto* button = dynamic_cast<juce::TextButton*>(control))
+                            if (button->getButtonText() == caption) { button->onClick(); return; }
+            throw std::runtime_error("Variation main action missing");
+        };
+        auto page = [&]() -> VariationEditor*
+        {
+            for (auto* child : editor->getChildren())
+                if (auto* viewport = dynamic_cast<juce::Viewport*>(child))
+                    for (auto* control : viewport->getViewedComponent()->getChildren())
+                        if (auto* variations = dynamic_cast<VariationEditor*>(control))
+                            if (variations->isVisible()) return variations;
+            throw std::runtime_error("Variation page missing");
+        };
+        auto button = [&](const juce::String& caption) -> juce::TextButton*
+        {
+            for (auto* control : page()->getChildren())
+                if (auto* b = dynamic_cast<juce::TextButton*>(control))
+                    if (b->getButtonText() == caption) return b;
+            throw std::runtime_error("Variation action missing");
+        };
+        auto slider = [&](const juce::String& id, double value)
+        {
+            for (auto* control : page()->getChildren())
+                if (control->getComponentID() == id)
+                    if (auto* s = dynamic_cast<juce::Slider*>(control))
+                    { s->setValue(value, juce::sendNotificationSync); return; }
+            throw std::runtime_error("Variation slider missing");
+        };
+        mainButton("Generate variations");
+        for (const auto size : { juce::Point<int>(820, 600), juce::Point<int>(640, 400),
+                                 juce::Point<int>(1100, 760) })
+        {
+            editor->setSize(size.x, size.y);
+            for (auto* child : page()->getChildren())
+                if (child->isVisible())
+                {
+                    require(child->getWidth() >= 24 && child->getHeight() >= 20
+                            && page()->getLocalBounds().contains(child->getBounds()),
+                            "Variation control clipped or collapsed");
+                    for (auto* other : page()->getChildren())
+                        if (child != other && other->isVisible())
+                            require(!child->getBounds().intersects(other->getBounds()), "Variation controls overlap");
+                }
+            for (auto* child : editor->getChildren())
+                if (auto* viewport = dynamic_cast<juce::Viewport*>(child))
+                {
+                    auto* panel = viewport->getViewedComponent();
+                    viewport->setViewPosition(panel->getWidth(), panel->getHeight());
+                    require(viewport->getViewArea().getBottom() >= panel->getHeight(),
+                            "Cannot reach variation actions by scrolling");
+                    viewport->setViewPosition(0, 0);
+                }
+        }
+        const auto snapshot = [&](int argument, int width, int height)
+        {
+            if (argc <= argument) return;
+            editor->setSize(width, height);
+            juce::FileOutputStream output(juce::File::getCurrentWorkingDirectory().getChildFile(argv[argument]));
+            require(output.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                editor->createComponentSnapshot(editor->getLocalBounds()), output), "Variation snapshot failed");
+        };
+        snapshot(6, 1100, 900); snapshot(7, 640, 400);
+        slider("variation-key-count", 2);
+        slider("variation-stride", 2);
+        require(p.getAssignmentForKey(60) == source && p.getAssignmentForKey(61) == source,
+                "Preview edited live assignments");
+        slider("variation-quadratic", 0); slider("variation-linear", 2);
+        require(!button("Assign variations")->isEnabled() && !button("Save family to bank")->isEnabled(),
+                "Invalid polynomial enabled writes");
+        slider("variation-quadratic", 2); slider("variation-linear", 1);
+        button("Audition variation")->onClick(); button("Stop audition")->onClick();
+        juce::AudioBuffer<float> audio(2, 100); juce::MidiBuffer midi;
+        p.processBlock(audio, midi);
+        require(midi.isEmpty() && p.getPlaybackStep(60) == -1, "Queued variation audition did not cancel");
+        button("Audition original")->onClick();
+        p.processBlock(audio, midi);
+        require(p.isKeySounding(60) && p.getPlaybackStep(60) >= 0, "Variation audition/playhead did not start");
+        button("Back to Editor")->onClick(); midi.clear(); p.processBlock(audio, midi);
+        require(!p.isKeySounding(60) && p.getPlaybackStep(60) == -1, "Closing variations left playback active");
+        mainButton("Generate variations");
+        slider("variation-key-count", 2); slider("variation-stride", 2);
+        button("Assign variations")->onClick();
+        PatternVariations::Options options; options.keyCount = 2; options.applicationsBetweenKeys = 2;
+        const auto expected = PatternVariations::build(source, options);
+        require(p.getAssignmentForKey(60).sequence == source.sequence
+                && p.getAssignmentForKey(61).sequence == expected.variations[1].assignment.sequence
+                && p.getAssignmentForKey(60).linkId.empty() && p.getAssignmentForKey(61).linkId.empty()
+                && p.getAssignmentForKey(62) == source, "UI batch assignment changed the wrong keys or linked copies");
+        mainButton("Undo");
+        require(p.getAssignmentForKey(60) == source && p.getAssignmentForKey(61) == source,
+                "Variation batch did not undo in one action");
+        mainButton("Redo");
+        require(p.getAssignmentForKey(61).sequence == expected.variations[1].assignment.sequence,
+                "Variation batch redo failed");
+        mainButton("Undo"); mainButton("Generate variations");
+        slider("variation-key-count", 2);
+        const auto presetPath = juce::SystemStats::getEnvironmentVariable("NSEQARPKEYS_PRESET_DIR", {});
+        if (presetPath.isNotEmpty())
+        {
+            const auto bank = juce::File(presetPath).getSiblingFile("Patterns");
+            const int before = bank.findChildFiles(juce::File::findFiles, true, "*.nseqpattern").size();
+            button("Save family to bank")->onClick();
+            const auto files = bank.findChildFiles(juce::File::findFiles, true, "*.nseqpattern");
+            require(files.size() == before + 2, "Family did not persist all patterns");
+            int found = 0;
+            for (const auto& file : files)
+                if (auto xml = SafeXml::readFile(file, 1024 * 1024))
+                {
+                    const auto* assignment = xml->getChildByName("Assignment");
+                    if (assignment == nullptr) continue;
+                    const auto entry = AssignmentState::read(*assignment);
+                    if (entry.name.find("UI family #") == 0)
+                    {
+                        ++found;
+                        require(entry.linkId.empty() && entry.tags.find("fixture") != std::string::npos,
+                                "Saved family lost tags or retained a shared link");
+                    }
+                }
+            require(found >= 2, "Saved family could not be read back");
+        }
+        juce::MemoryBlock state; p.getStateInformation(state);
+        p.setStateInformation(state.getData(), static_cast<int>(state.getSize()));
+        slider("variation-first-application", 1);
+        button("Assign variations")->onClick(); button("Audition original")->onClick();
+        midi.clear(); p.processBlock(audio, midi);
+        require(p.getAssignmentForKey(60) == source && !p.isKeySounding(60),
+                "Stale variation preview acted across a project restore");
+        editor.reset(); p.releaseResources();
     }
     std::cout << "Processor state and playback tests passed\n";
     return 0;
