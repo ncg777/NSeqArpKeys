@@ -3,12 +3,17 @@
 #include "../Source/Engine/GateRunnerEngine.h"
 #include <stdexcept>
 #include <set>
+#include <iostream>
 
 namespace
 {
 void check(bool condition, const char* message)
 {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition)
+    {
+        std::cerr << message << std::endl;
+        throw std::runtime_error(message);
+    }
 }
 }
 
@@ -24,7 +29,8 @@ void testPatternVariations()
     const auto before = source;
     Options options;
     auto family = build(source, options);
-    check(family.valid() && family.order == 4 && family.distinctPatterns == 4, "Quadratic cycle/order incorrect");
+    check(family.valid() && family.permutation && family.transientApplications == 0
+          && family.order == 4 && family.distinctPatterns == 4, "Quadratic cycle/order incorrect");
     check(family.variations[0].assignment.sequence == source.sequence, "Application zero must preserve the source");
     check(family.variations[1].assignment.sequence == std::vector<SequenceValue>({ 1, 8, 4, 5, 3, 0, 7, 2 }),
           "Quadratic step order incorrect");
@@ -51,13 +57,25 @@ void testPatternVariations()
           "Inverse permutation or starting application incorrect");
     options = {};
     options.polynomial = { 0, 0, 2, 0 };
-    check(!build(source, options).valid(), "A colliding polynomial was accepted");
+    family = build(source, options);
+    check(family.valid() && !family.permutation && family.transientApplications == 3
+          && family.order == 1 && family.distinctPatterns == 4, "Colliding map dynamics incorrect");
+    check(family.variations[1].assignment.sequence == std::vector<SequenceValue>({1, 4, 3, 7, 1, 4, 3, 7})
+          && family.variations[2].assignment.sequence == std::vector<SequenceValue>({1, 3, 1, 3, 1, 3, 1, 3})
+          && family.variations[3].assignment.sequence == std::vector<SequenceValue>(8, 1)
+          && family.variations[4].repeatsKey == 63, "Colliding map did not gather/composite source steps");
+    check(source == before && family.variations[1].assignment.channel == source.channel
+          && family.variations[1].assignment.linkId.empty(), "Mapping changed its source or assignment settings");
+    options.inverse = true;
+    check(!build(source, options).valid(), "A colliding polynomial acquired an inverse");
     std::vector<int> unchanged { 99 };
     std::string error;
-    check(!compile(options.polynomial, 8, false, unchanged, error) && unchanged == std::vector<int>({99}),
-          "Failed compilation partially changed its destination");
-    // Compare validity against direct evaluation over many composite/prime
-    // lengths, then verify every accepted inverse recovers each index.
+    check(!compile(options.polynomial, 8, true, unchanged, error) && unchanged == std::vector<int>({99}),
+          "Failed inverse compilation partially changed its destination");
+    check(!compile(options.polynomial, 4097, false, unchanged, error) && unchanged == std::vector<int>({99}),
+          "An oversized mapping was accepted or partially compiled");
+    // Compare forward evaluation, permutation classification, inverse availability,
+    // and repeated gathering against direct evaluation at prime/composite lengths.
     for (int length = 1; length <= 24; ++length)
         for (int quadratic = -2; quadratic <= 3; ++quadratic)
             for (int linear = -2; linear <= 3; ++linear)
@@ -68,19 +86,61 @@ void testPatternVariations()
                     expected.insert(modulo(static_cast<int64_t>(i) * i * i + quadratic * i * i + linear * i - 3, length));
                 std::vector<int> map, inverse;
                 const bool valid = compile(p, length, false, map, error);
-                check(valid == (expected.size() == static_cast<size_t>(length)), "Permutation validity incorrect");
-                if (valid)
+                const bool permutation = expected.size() == static_cast<size_t>(length);
+                check(valid && (dynamicsOf(map).transientApplications == 0) == permutation,
+                      "Mapping acceptance or permutation classification incorrect");
+                check(compile(p, length, true, inverse, error) == permutation, "Inverse availability incorrect");
+                if (permutation)
                 {
-                    check(compile(p, length, true, inverse, error), "Inverse compilation failed");
                     for (int i = 0; i < length; ++i)
                         check(inverse[static_cast<size_t>(map[static_cast<size_t>(i)])] == i, "Inverse map incorrect");
                 }
+                KeyAssignment fixture;
+                fixture.sequence.clear();
+                for (int i = 0; i < length; ++i) fixture.sequence.emplace_back(i + 1);
+                Options composed;
+                composed.polynomial = p; composed.firstApplication = 2;
+                composed.applicationsBetweenKeys = 3; composed.keyCount = 6;
+                const auto variations = build(fixture, composed);
+                check(variations.valid() && variations.permutation == permutation,
+                      ("General polynomial build failed at length " + std::to_string(length)
+                       + ", quadratic " + std::to_string(quadratic) + ", linear " + std::to_string(linear)
+                       + ": " + variations.error).c_str());
+                for (const auto& variation : variations.variations)
+                    for (int i = 0; i < length; ++i)
+                    {
+                        int from = i;
+                        for (int application = 0; application < variation.application; ++application)
+                            from = modulo(static_cast<int64_t>(from) * from * from + quadratic * from * from + linear * from - 3, length);
+                        check(variation.assignment.sequence[static_cast<size_t>(i)] == fixture.sequence[static_cast<size_t>(from)],
+                              "Repeated polynomial gathering disagrees with direct composition");
+                    }
             }
+    source.sequence = {1, 2, 3, 4, 5, 6};
+    options = {}; options.polynomial = {0, 1, 0, 1};
+    family = build(source, options);
+    check(family.valid() && !family.permutation && family.transientApplications == 2 && family.order == 2
+          && family.variations[2].assignment.sequence == std::vector<SequenceValue>({3, 6, 3, 6, 3, 6})
+          && family.variations[3].assignment.sequence == std::vector<SequenceValue>({6, 3, 6, 3, 6, 3})
+          && family.variations[4].repeatsKey == 62, "Transient leading to a nontrivial cycle incorrect");
+    options.firstApplication = 65536; options.applicationsBetweenKeys = 4096;
+    check(build(source, options).variations[7].assignment.sequence == family.variations[2].assignment.sequence,
+          "Large colliding-map application/stride incorrect");
+    options = {}; options.polynomial = {0, 0, 0, -1};
+    family = build(source, options);
+    check(family.valid() && family.transientApplications == 1 && family.order == 1
+          && family.variations[1].assignment.sequence == std::vector<SequenceValue>(6, 6), "Constant map incorrect");
     source.sequence = { 1, 0, 2, 0, 3, 4 };
     options = {}; options.firstApplication = 1; options.keepRests = true;
     family = build(source, options);
     check(family.valid() && family.variations[0].assignment.sequence == std::vector<SequenceValue>({1, 0, 4, 0, 3, 2}),
           "Rest preservation permuted the wrong domain");
+    options.polynomial = {0, 0, 2, 0};
+    family = build(source, options);
+    check(family.valid() && !family.permutation && family.transientApplications == 2
+          && family.variations[0].assignment.sequence == std::vector<SequenceValue>({1, 0, 3, 0, 1, 3})
+          && family.variations[1].assignment.sequence == std::vector<SequenceValue>({1, 0, 1, 0, 1, 1}),
+          "Colliding map moved zero steps or used the full-length modulus");
     source.sequence = { 0, 0, 0 };
     check(build(source, options).valid() && build(source, options).distinctPatterns == 1,
           "All-rest loops must retain length");
@@ -134,4 +194,15 @@ void testPatternVariations()
     options = {}; options.firstKey = 127; options.keyCount = 1;
     options.polynomial = {0, 0, 1, 1}; options.firstApplication = 65536;
     check(build(source, options).valid(), "Maximum pattern size or large power failed");
+    for (int i = 0; i < 4096; ++i) source.sequence[static_cast<size_t>(i)] = i + 1;
+    options.polynomial = {0, 0, 2, 0};
+    family = build(source, options);
+    check(family.valid() && family.transientApplications == 12 && family.order == 1
+          && family.variations[0].assignment.sequence == std::vector<SequenceValue>(4096, 1),
+          "Maximum-length colliding map did not settle at a large power");
+    source.sequence.assign(4096, 1); source.sequence[0] = std::numeric_limits<int>::min();
+    options = {}; options.polynomial = {0, 0, 0, 0};
+    family = build(source, options);
+    check(!family.valid() && family.variations.empty() && family.error.find("pattern text limit") != std::string::npos,
+          "Mapping generated an unreadable oversized pattern or exposed a partial family");
 }
