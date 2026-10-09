@@ -643,6 +643,20 @@ int runTests(int argc, char** argv)
                     { s->setValue(value, juce::sendNotificationSync); return; }
             throw std::runtime_error("Variation slider missing");
         };
+        auto inverse = [&]() -> juce::ToggleButton*
+        {
+            for (auto* control : page()->getChildren())
+                if (control->getComponentID() == "variation-inverse")
+                    return dynamic_cast<juce::ToggleButton*>(control);
+            throw std::runtime_error("Variation inverse missing");
+        };
+        auto mappingStatus = [&]() -> juce::String
+        {
+            for (auto* control : page()->getChildren())
+                if (control->getComponentID() == "variation-status")
+                    if (auto* label = dynamic_cast<juce::Label*>(control)) return label->getText();
+            throw std::runtime_error("Variation status missing");
+        };
         mainButton("Generate variations");
         for (const auto size : { juce::Point<int>(820, 600), juce::Point<int>(640, 400),
                                  juce::Point<int>(1100, 760) })
@@ -673,7 +687,8 @@ int runTests(int argc, char** argv)
             if (argc <= argument) return;
             editor->setSize(width, height);
             juce::FileOutputStream output(juce::File::getCurrentWorkingDirectory().getChildFile(argv[argument]));
-            require(output.openedOk() && juce::PNGImageFormat().writeImageToStream(
+            require(output.openedOk() && output.setPosition(0) && output.truncate().wasOk()
+                && juce::PNGImageFormat().writeImageToStream(
                 editor->createComponentSnapshot(editor->getLocalBounds()), output), "Variation snapshot failed");
         };
         snapshot(6, 1100, 900); snapshot(7, 640, 400);
@@ -681,10 +696,36 @@ int runTests(int argc, char** argv)
         slider("variation-stride", 2);
         require(p.getAssignmentForKey(60) == source && p.getAssignmentForKey(61) == source,
                 "Preview edited live assignments");
+        require(inverse()->isEnabled(), "A permutation did not enable its inverse");
+        inverse()->setToggleState(true, juce::dontSendNotification); inverse()->onClick();
         slider("variation-quadratic", 0); slider("variation-linear", 2);
-        require(!button("Assign variations")->isEnabled() && !button("Save family to bank")->isEnabled(),
-                "Invalid polynomial enabled writes");
+        require(button("Assign variations")->isEnabled() && button("Save family to bank")->isEnabled()
+                && button("Audition variation")->isEnabled() && !inverse()->isEnabled() && !inverse()->getToggleState()
+                && mappingStatus().contains("From application 3, cycle length 1"),
+                "Colliding polynomial blocked actions, retained inverse, or misreported its transient");
+        if (argc > 6)
+        {
+            editor->setSize(1100, 900);
+            const auto file = juce::File::getCurrentWorkingDirectory().getChildFile(argv[6])
+                              .getSiblingFile("editor-variations-mapping.png");
+            juce::FileOutputStream output(file);
+            require(output.openedOk() && output.setPosition(0) && output.truncate().wasOk()
+                && juce::PNGImageFormat().writeImageToStream(
+                editor->createComponentSnapshot(editor->getLocalBounds()), output), "Mapping snapshot failed");
+        }
+        slider("variation-first-application", 1);
+        button("Assign variations")->onClick();
+        require(p.getAssignmentForKey(60).sequence == std::vector<SequenceValue>({1, 4, 3, 7, 1, 4, 3, 7})
+                && p.getAssignmentForKey(61).sequence == std::vector<SequenceValue>(8, 1)
+                && p.getAssignmentForKey(62) == source, "UI did not assign colliding-map variations");
+        mainButton("Undo");
+        require(p.getAssignmentForKey(60) == source && p.getAssignmentForKey(61) == source,
+                "Colliding-map batch did not undo in one action");
+        mainButton("Generate variations");
+        slider("variation-key-count", 2); slider("variation-stride", 2);
         slider("variation-quadratic", 2); slider("variation-linear", 1);
+        require(inverse()->isEnabled() && mappingStatus().contains("Permutation."),
+                "Returning to a permutation did not restore inverse/status");
         button("Audition variation")->onClick(); button("Stop audition")->onClick();
         juce::AudioBuffer<float> audio(2, 100); juce::MidiBuffer midi;
         p.processBlock(audio, midi);

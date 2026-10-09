@@ -7,7 +7,7 @@
 #include <optional>
 
 // Editor-side transformations. Results are ordinary, independently saved
-// assignments; no operators, parsing or permutation work runs in playback.
+// assignments; no operators, parsing or mapping work runs in playback.
 namespace PatternVariations
 {
 enum class Operation { polynomial, verticalFlip };
@@ -38,7 +38,9 @@ struct Result
 {
     std::string error;
     std::vector<Variation> variations;
-    std::optional<uint64_t> order;
+    std::optional<uint64_t> order; // Eventual period of the operator's powers.
+    bool permutation = false;
+    int transientApplications = 0;
     int distinctPatterns = 0;
     bool valid() const { return error.empty() && !variations.empty(); }
 };
@@ -66,35 +68,60 @@ inline int evaluate(const Polynomial& p, int index, int length)
 inline bool compile(const Polynomial& p, int length, bool inverse,
                     std::vector<int>& map, std::string& error)
 {
-    if (length < 0 || length > 4096) { error = "A permutation supports at most 4096 steps."; return false; }
+    if (length < 0 || length > 4096) { error = "A mapping supports at most 4096 steps."; return false; }
     std::vector<int> result(static_cast<size_t>(length));
     std::vector<bool> used(static_cast<size_t>(length));
+    bool permutation = true;
     for (int i = 0; i < length; ++i)
     {
         const int target = evaluate(p, i, length);
-        if (used[static_cast<size_t>(target)])
+        if (used[static_cast<size_t>(target)]) permutation = false;
+        used[static_cast<size_t>(target)] = true;
+        result[static_cast<size_t>(i)] = target;
+    }
+    if (inverse)
+    {
+        if (!permutation)
         {
-            error = "Not a permutation at length " + std::to_string(length)
-                  + ": source position " + std::to_string(target + 1) + " is repeated.";
+            error = "Inverse is available only for a permutation at length " + std::to_string(length) + ".";
             return false;
         }
-        used[static_cast<size_t>(target)] = true;
-        if (inverse) result[static_cast<size_t>(target)] = i;
-        else result[static_cast<size_t>(i)] = target;
+        auto forward = result;
+        for (int i = 0; i < length; ++i) result[static_cast<size_t>(forward[static_cast<size_t>(i)])] = i;
     }
     map = std::move(result);
     error.clear();
     return true;
 }
 
-inline std::vector<std::vector<int>> cycles(const std::vector<int>& map)
+struct MappingDynamics
 {
-    std::vector<std::vector<int>> result;
+    std::vector<std::vector<int>> cycles;
+    int transientApplications = 0;
+};
+
+// Remove all tails before walking the remaining cycles. The longest tail is
+// the first application from which powers of the entire mapping repeat.
+inline MappingDynamics dynamicsOf(const std::vector<int>& map)
+{
+    MappingDynamics result;
+    std::vector<int> incoming(map.size()), depth(map.size()), pending;
+    for (const auto target : map) ++incoming[static_cast<size_t>(target)];
+    for (int i = 0; i < static_cast<int>(map.size()); ++i)
+        if (incoming[static_cast<size_t>(i)] == 0) pending.push_back(i);
+    for (size_t i = 0; i < pending.size(); ++i)
+    {
+        const auto index = static_cast<size_t>(pending[i]);
+        const auto target = static_cast<size_t>(map[index]);
+        depth[target] = std::max(depth[target], depth[index] + 1);
+        result.transientApplications = std::max(result.transientApplications, depth[target]);
+        if (--incoming[target] == 0) pending.push_back(static_cast<int>(target));
+    }
     std::vector<bool> visited(map.size());
     for (int first = 0; first < static_cast<int>(map.size()); ++first)
     {
-        if (visited[static_cast<size_t>(first)]) continue;
-        auto& cycle = result.emplace_back();
+        if (incoming[static_cast<size_t>(first)] == 0 || visited[static_cast<size_t>(first)]) continue;
+        auto& cycle = result.cycles.emplace_back();
         int index = first;
         do
         {
@@ -235,7 +262,7 @@ inline Result build(const KeyAssignment& source, const Options& options)
 
     std::vector<size_t> positions;
     std::vector<int> map;
-    std::vector<std::vector<int>> groups;
+    std::vector<std::vector<int>> powers;
     KeyAssignment flipped;
     if (options.operation == Operation::polynomial)
     {
@@ -243,8 +270,21 @@ inline Result build(const KeyAssignment& source, const Options& options)
             if (!options.keepRests || !isRest(source.sequence[step])) positions.push_back(step);
         if (!compile(options.polynomial, static_cast<int>(positions.size()), options.inverse, map, result.error))
             return result;
-        groups = cycles(map);
-        result.order = orderOf(groups);
+        const auto dynamics = dynamicsOf(map);
+        result.transientApplications = dynamics.transientApplications;
+        result.permutation = dynamics.transientApplications == 0;
+        result.order = orderOf(dynamics.cycles);
+        // Binary lifting makes large starting applications and strides cheap,
+        // including maps with tails and collisions.
+        const int maximumApplication = options.firstApplication + (options.keyCount - 1) * options.applicationsBetweenKeys;
+        powers.push_back(map);
+        for (int remaining = maximumApplication; remaining > 1; remaining >>= 1)
+        {
+            const auto& previous = powers.back();
+            std::vector<int> next(map.size());
+            for (size_t i = 0; i < map.size(); ++i) next[i] = previous[static_cast<size_t>(previous[i])];
+            powers.push_back(std::move(next));
+        }
     }
     else
     {
@@ -264,14 +304,23 @@ inline Result build(const KeyAssignment& source, const Options& options)
             if (variation.application % 2 != 0) variation.assignment.sequence = flipped.sequence;
         }
         else
-            for (const auto& cycle : groups)
-                for (size_t i = 0; i < cycle.size(); ++i)
+            for (size_t i = 0; i < positions.size(); ++i)
+            {
+                int from = static_cast<int>(i);
+                for (int remaining = variation.application, bit = 0; remaining != 0; remaining >>= 1, ++bit)
                 {
-                    const auto from = cycle[(i + static_cast<size_t>(variation.application)) % cycle.size()];
-                    variation.assignment.sequence[positions[static_cast<size_t>(cycle[i])]]
-                        = source.sequence[positions[static_cast<size_t>(from)]];
+                    if ((remaining & 1) != 0) from = powers[static_cast<size_t>(bit)][static_cast<size_t>(from)];
                 }
+                variation.assignment.sequence[positions[i]] = source.sequence[positions[static_cast<size_t>(from)]];
+            }
         const auto sequence = variation.assignment.sequenceToString();
+        if (sequence.size() > 45056)
+        {
+            result.error = "The variation at application " + std::to_string(variation.application)
+                         + " exceeds the pattern text limit.";
+            result.variations.clear();
+            return result;
+        }
         const auto found = seen.find(sequence);
         if (found != seen.end()) variation.repeatsKey = found->second;
         else seen.emplace(sequence, variation.key);

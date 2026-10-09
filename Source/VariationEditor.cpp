@@ -114,7 +114,7 @@ VariationEditor::VariationEditor(NSeqArpKeysAudioProcessor& p, int key)
     label(familyNameLabel, "Family name"); label(familyTagsLabel, "Tags");
     if (source.mode == KeyAssignment::Mode::rhythmic)
         sourceLabel.setText("Original - drum lanes (brightness = velocity)", juce::dontSendNotification);
-    operationSelector.addItem("Polynomial permutation", 1);
+    operationSelector.addItem("Polynomial mapping", 1);
     operationSelector.addItem("Vertical flip", 2);
     operationSelector.setSelectedId(1, juce::dontSendNotification);
     polynomialSelector.addItem("Quadratic", 1);
@@ -124,8 +124,11 @@ VariationEditor::VariationEditor(NSeqArpKeysAudioProcessor& p, int key)
     polynomialSelector.setSelectedId(1, juce::dontSendNotification);
     addAndMakeVisible(operationSelector); addAndMakeVisible(polynomialSelector);
     keepRestsButton.setButtonText("Keep zero steps in place");
-    keepRestsButton.setTooltip("Permute only nonzero positions. The polynomial must be a permutation at that smaller length.");
+    keepRestsButton.setTooltip("Map only nonzero positions and keep zeros fixed. The modulus is the number of nonzero positions.");
     inverseButton.setButtonText("Inverse permutation");
+    inverseButton.setTooltip("Available when the mapping uses every source position exactly once.");
+    inverseButton.setComponentID("variation-inverse");
+    statusLabel.setComponentID("variation-status");
     addAndMakeVisible(keepRestsButton); addAndMakeVisible(inverseButton);
     auto slider = [this](juce::Slider& component, double minimum, double maximum, double value)
     {
@@ -320,13 +323,33 @@ void VariationEditor::rebuild()
     options.applicationsBetweenKeys = static_cast<int>(strideSlider.getValue());
     result = PatternVariations::build(source, options);
     const bool polynomial = options.operation == PatternVariations::Operation::polynomial;
-    polynomialSelector.setEnabled(polynomial); keepRestsButton.setEnabled(polynomial); inverseButton.setEnabled(polynomial);
+    if (polynomial && options.inverse && !result.permutation)
+    {
+        inverseButton.setToggleState(false, juce::dontSendNotification);
+        options.inverse = false;
+        result = PatternVariations::build(source, options);
+    }
+    polynomialSelector.setEnabled(polynomial); keepRestsButton.setEnabled(polynomial);
+    inverseButton.setEnabled(polynomial && result.valid() && result.permutation);
     for (auto* coefficient : { &cubicSlider, &quadraticSlider, &linearSlider, &constantSlider }) coefficient->setEnabled(polynomial);
     applyButton.setEnabled(result.valid()); saveFamilyButton.setEnabled(result.valid()); variationButton.setEnabled(result.valid());
     auto status = result.valid() ? juce::String(result.distinctPatterns) + " distinct patterns across "
                                + juce::String(result.variations.size()) + " keys. " : juce::String(result.error);
-    if (result.valid()) status += result.order ? "Order repeats after " + juce::String(*result.order) + " applications."
-                                               : "Permutation order exceeds 64-bit counting.";
+    if (result.valid())
+    {
+        if (polynomial && !result.permutation)
+        {
+            status += "Repeats/omits source steps. From application " + juce::String(result.transientApplications)
+                    + (result.order ? ", cycle length " + juce::String(*result.order) + "."
+                                    : ", cycle length exceeds 64-bit counting.");
+        }
+        else
+        {
+            if (polynomial) status += "Permutation. ";
+            status += result.order ? "Order repeats after " + juce::String(*result.order) + " applications."
+                                   : "Permutation order exceeds 64-bit counting.";
+        }
+    }
     statusLabel.setColour(juce::Label::textColourId, result.valid() ? juce::Colour(0xffc8d9e2) : juce::Colour(0xffff9292));
     statusLabel.setText(status, juce::dontSendNotification); statusLabel.setTooltip(status);
     messageLabel.setText({}, juce::dontSendNotification);

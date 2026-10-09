@@ -86,7 +86,7 @@
     <div class="rule"></div>
     <p class="cover-note">Each pattern integer is a binary note selector: one set bit chooses one pitch, and several set bits make a chord. Change the Forte set to remap the same sequence to a new pitch collection. Assign a different pattern and set to each MIDI trigger key.</p>
     <p class="cover-note">Create more material with <a href="https://ncg777.github.io/sequence-operator/">Sequence Operator</a>, <a href="https://ncg777.github.io/rhythm-navigator/">Rhythm Navigator</a>, and <a href="https://ncg777.github.io/KComplexExplorer/">KComplexExplorer</a>.</p>
-    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.5.0 | October 2026</span></div>
+    <div class="cover-bottom"><span>Windows / Linux / macOS</span><span>Version 1.5.1 | October 2026</span></div>
   </section>
 
   <section>
@@ -241,22 +241,23 @@
       <div class="mini-card"><h3>To hear a pattern</h3><p>Assign Pattern + Forte Set, then hold the trigger note. Use Latch to keep it running while you edit.</p></div>
       <div class="mini-card"><h3>To share a setup</h3><p>Save New, select the preset in the browser, then Export. Send the resulting <code>.nseqpreset</code> file.</p></div>
     </div>
-    <p class="footer-note">NSeqArpKeys 1.5.0 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
+    <p class="footer-note">NSeqArpKeys 1.5.1 | Windows, Linux, macOS | VST3; Audio Units on macOS.</p>
   </section>
 
   <section class="page patterns-page">
     <h2>8. Create variations</h2>
     <p>Choose a source key in the editor, then click <strong>Generate variations</strong>. This page takes a snapshot of that assignment. Changing its controls and auditioning results leaves your assigned patterns unchanged.</p>
-    <h3>Polynomial permutations</h3>
-    <p>A polynomial rearranges the sequence's step positions. For a sequence of length <em>N</em>, positions start at zero and the mapping is <code>p(i) = a i^3 + b i^2 + c i + d (mod N)</code>. The coefficients are labelled Cubic, Quadratic, Linear and Constant. Quadratic, Cubic and Rotation presets supply starting values; edit any coefficient to make a Custom polynomial.</p>
-    <p>The mapping must use every source position exactly once. Invalid mappings show an error and disable assignment and saving. A preset can be valid at one length and invalid at another. <strong>Inverse permutation</strong> walks backward through the valid mapping.</p>
-    <p><strong>Keep zero steps in place</strong> permutes only the nonzero positions and leaves zeros at their original positions. The polynomial is validated against the number of nonzero positions. It preserves the integer rhythm; whether a nonzero mask sounds depends on its mode, pitches and MIDI bounds.</p>
+    <h3>Polynomial mappings</h3>
+    <p>For a sequence of length <em>N</em>, positions start at zero and the mapping is <code>p(i) = a i^3 + b i^2 + c i + d (mod N)</code>. Output step <em>i</em> reads source step <code>p(i)</code>. The coefficients are labelled Cubic, Quadratic, Linear and Constant. Quadratic, Cubic and Rotation presets supply starting values; edit any coefficient to make a Custom polynomial.</p>
+    <p>Every polynomial is allowed. A <strong>permutation</strong> uses every source position exactly once. Other mappings repeat some source steps and omit others, allowing repetition, thinning and collapse. <strong>Inverse permutation</strong> is enabled only for permutations; changing to a mapping with repeated positions clears the inverse selection.</p>
+    <p>For example, <code>p(i) = 2i mod 8</code> maps <code>1 2 3 4 5 6 7 8</code> to <code>1 3 5 7 1 3 5 7</code>, then <code>1 5 1 5 1 5 1 5</code>, then all ones.</p>
+    <p><strong>Keep zero steps in place</strong> maps only nonzero positions, using their count as the modulus, and leaves zeros fixed. It preserves the integer rhythm; whether a nonzero mask sounds depends on its mode, pitches and MIDI bounds.</p>
     <h3>Vertical flip</h3>
     <p>Find the lowest and highest occupied bit positions across the whole melodic sequence. Every occupied position <em>k</em> maps to <code>min + max - k</code>. Thus <code>2 6 8</code> becomes <code>8 12 2</code>. Zero steps stay zero, each step retains its set-bit count, and negative values retain their downward direction. A reflection that exceeds the melodic signed 32-bit range is rejected.</p>
     <p>In Rhythmic mode the same reflection moves occupied drum lanes. Each lane's complete velocity word moves intact, including masks wider than 32 bits. Legacy negative rhythmic masks are represented as equivalent unsigned masks after a flip.</p>
     <h3>Repeat across keys</h3>
     <p><strong>First key</strong> and <strong>Number of keys</strong> choose consecutive MIDI keys. <strong>Starting application</strong> chooses the first power: zero is the original, one applies the operation once. <strong>Applications between keys</strong> is the stride. With a start of zero and stride two, keys receive applications 0, 2, 4, 6 and so on.</p>
-    <p>Each application composes the operation with the previous result. The list identifies repeated patterns and the status reports the operation's cycle length. Identical source values can make the actual patterns repeat sooner than the position mapping.</p>
+    <p>Each application composes the operation with the previous result. The list identifies repeated patterns. Permutations repeat from application zero; other mappings can pass through a transient before settling into a cycle. The status reports the application from which the mapping is periodic and its cycle length. Identical source values can make patterns repeat sooner.</p>
     <h3>Compare, audition and save</h3>
     <p>Select a variation in the list. The two grids compare its bits or drum lanes with the original. Columns are playback steps; melodic rows are magnitude bit positions, with negative-direction steps shown in purple. Drum-row brightness follows the encoded velocity. The grids include the source's existing rotation and reversal. Use <strong>First visible step</strong> to inspect long sequences, and the grid scrollbar to reach distant bit positions.</p>
     <p><strong>Audition original</strong> and <strong>Audition variation</strong> replace the current audition on the source key without changing its saved assignment. A playhead follows actual playback and pages through longer loops. <strong>Stop audition</strong>, leaving this page, closing the editor, transport stop and MIDI panic stop audition playback. The existing Preview sound setting still controls the built-in sound; MIDI continues to the receiving instrument.</p>
