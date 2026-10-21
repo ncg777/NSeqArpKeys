@@ -71,6 +71,18 @@ void PatternScheduler::triggerKey(int key,
             }
     }
 
+    const auto warp = TimeWarp::resolve(assignment.timeWarp);
+    const auto minimumDuration = pat.lastStepDuration > 0 ? 0.0005 * m_sampleRate / pat.lastStepDuration : 0.0;
+    for (int step = 0; step < pat.numSteps; ++step)
+    {
+        const auto duration = pat.fixedLengthSteps + pat.gate * pat.noteLengthSteps[step];
+        const auto timing = TimeWarp::timing(step, duration, pat.numSteps, assignment.timeWarp, warp, minimumDuration);
+        pat.onsets.push_back({ timing.onset, timing.onset, step });
+        pat.releases.push_back({ timing.onset + timing.duration, timing.onset, step });
+    }
+    auto byTime = [](const ActivePattern::StepEvent& a, const ActivePattern::StepEvent& b) { return a.time < b.time; };
+    std::stable_sort(pat.onsets.begin(), pat.onsets.end(), byTime);
+    std::stable_sort(pat.releases.begin(), pat.releases.end(), byTime);
     m_activePatterns[key] = std::move(pat);
 }
 
@@ -105,8 +117,12 @@ int PatternScheduler::getPlaybackStep(int key) const
     if (found == m_activePatterns.end() || found->second.numSteps <= 0 || found->second.lastStepDuration <= 0)
         return -1;
     const auto& pattern = found->second;
-    return static_cast<int>(std::fmod(std::floor(pattern.elapsedSamples / pattern.lastStepDuration),
-                                    static_cast<double>(pattern.numSteps)));
+    const auto phase = std::fmod(pattern.elapsedSamples / pattern.lastStepDuration, pattern.numSteps);
+    auto next = std::upper_bound(pattern.onsets.begin(), pattern.onsets.end(), phase,
+        [](double time, const ActivePattern::StepEvent& event) { return time < event.time; });
+    if (next == pattern.onsets.begin())
+        return pattern.elapsedSamples < pattern.numSteps * pattern.lastStepDuration ? -1 : pattern.onsets.back().step;
+    return std::prev(next)->step;
 }
 
 void PatternScheduler::setSubdivision(int key, int subdivision)
@@ -154,31 +170,34 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
         double blockStart = pat.elapsedSamples;
         double blockEnd   = blockStart + static_cast<double>(numSamples);
 
-        // Look back by the longest possible duration, including both terms.
-        const double maxLength = pat.fixedLengthSteps + pat.gate * pat.maxNoteLengthSteps;
-        const auto firstStep = std::max<int64_t>(0, static_cast<int64_t>(blockStart / stepDur)
-                                            - static_cast<int64_t>(std::ceil(maxLength)) - 1);
-        const auto lastStep = static_cast<int64_t>(blockEnd / stepDur) + 1;
-
-        for (auto i = firstStep; i <= lastStep; ++i)
+        auto appendEvents = [&](const std::vector<ActivePattern::StepEvent>& schedule, bool on)
         {
-            const int stepIdx = static_cast<int>(i % pat.numSteps);
-            const double noteOnTime = static_cast<double>(i) * stepDur;
-            const double noteOffTime = noteOnTime
-                + (pat.fixedLengthSteps + pat.gate * pat.noteLengthSteps[stepIdx]) * stepDur;
-
-            for (const auto& hit : pat.stepNotes[stepIdx])
+            const double length = pat.numSteps;
+            const auto firstCycle = std::max<int64_t>(0, static_cast<int64_t>(std::floor((blockStart / stepDur - schedule.back().time) / length)) - 1);
+            const auto lastCycle = static_cast<int64_t>(std::floor((blockEnd / stepDur - schedule.front().time) / length)) + 1;
+            for (auto cycle = firstCycle; cycle <= lastCycle; ++cycle)
             {
-                const int note = hit.note;
-                if (note < 0 || note >= 128)
-                    continue;
-                const int velocity = std::max(1, pat.velocity * hit.velocityLevel / 127);
-                if (noteOnTime >= blockStart && noteOnTime < blockEnd)
-                    events.push_back({ noteOnTime - blockStart, noteOnTime - blockStart, key, note, velocity, true });
-                if (noteOffTime >= blockStart && noteOffTime < blockEnd)
-                    events.push_back({ noteOffTime - blockStart, noteOnTime - blockStart, key, note, velocity, false });
+                const auto cycleStart = static_cast<double>(cycle) * length;
+                // Search in sample units too: identical comparisons at block
+                // boundaries prevent a fractional onset being lost or doubled.
+                auto it = std::lower_bound(schedule.begin(), schedule.end(), blockStart,
+                    [&](const ActivePattern::StepEvent& event, double time) { return (cycleStart + event.time) * stepDur < time; });
+                for (; it != schedule.end(); ++it)
+                {
+                    const auto time = (cycleStart + it->time) * stepDur;
+                    if (time >= blockEnd) break;
+                    const auto onset = (cycleStart + it->onset) * stepDur;
+                    for (const auto& hit : pat.stepNotes[it->step])
+                    {
+                        if (hit.note < 0 || hit.note >= 128) continue;
+                        const auto velocity = std::max(1, pat.velocity * hit.velocityLevel / 127);
+                        events.push_back({ time - blockStart, onset - blockStart, key, hit.note, velocity, on });
+                    }
+                }
             }
-        }
+        };
+        appendEvents(pat.onsets, true);
+        appendEvents(pat.releases, false);
 
         pat.elapsedSamples += static_cast<double>(numSamples);
     }
@@ -186,7 +205,7 @@ void PatternScheduler::processBlock(juce::MidiBuffer& midiMessages,
     // Ownership must be evaluated chronologically across ALL keys, not
     // one complete pattern at a time. Older notes end before new onsets;
     // a zero-duration note still begins before its own off.
-    std::sort(events.begin(), events.end(), [](const NoteEvent& a, const NoteEvent& b)
+    std::stable_sort(events.begin(), events.end(), [](const NoteEvent& a, const NoteEvent& b)
     {
         if (a.time != b.time) return a.time < b.time;
         if (a.onset != b.onset) return a.onset < b.onset;

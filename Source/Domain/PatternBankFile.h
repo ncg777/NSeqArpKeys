@@ -44,7 +44,8 @@ inline juce::String invalidAssignmentAttribute(const juce::XmlElement& assignmen
                               { "octave", 0, 10 }, { "subdivision", 0, 16 },
                               { "transpose", -127, 127 }, { "velocity", 1, 127 },
                               { "rotation", -4096, 4096 }, { "rootKey", -1, 127 },
-                              { "drumVelocityBits", 1, 7 } })
+                              { "drumVelocityBits", 1, 7 }, { "timeWarpRepeats", 1, 64 },
+                              { "timeWarpQuantize", 0, 8 } })
     {
         if (!assignment.hasAttribute(field.name)) continue;
         std::vector<int> values;
@@ -53,18 +54,23 @@ inline juce::String invalidAssignmentAttribute(const juce::XmlElement& assignmen
             || values.size() != 1)
             return field.name;
     }
-    for (const auto* name : { "gate", "fixedLengthSteps" })
+    for (const auto* name : { "gate", "fixedLengthSteps", "timeWarpAmount" })
     {
         if (!assignment.hasAttribute(name)) continue;
         std::istringstream input(assignment.getStringAttribute(name).trim().toStdString());
         input.imbue(std::locale::classic());
         double value = 0;
         input >> value;
-        const double maximum = juce::String(name) == "gate" ? 2.0 : 16.0;
+        const double maximum = juce::String(name) == "gate" ? 2.0 : juce::String(name) == "timeWarpAmount" ? 100.0 : 16.0;
         if (input.fail() || !input.eof() || !std::isfinite(value) || value < 0 || value > maximum)
             return name;
     }
-    for (const auto* name : { "reverse", "favourite" })
+    if (assignment.hasAttribute("timeWarpQuantize") && !TimeWarp::isQuantize(assignment.getIntAttribute("timeWarpQuantize")))
+        return "timeWarpQuantize";
+    if (assignment.hasAttribute("timeWarpCurve") && !TimeWarp::isKnownCurve(assignment.getStringAttribute("timeWarpCurve").toStdString()))
+        return "timeWarpCurve";
+    if (assignment.getStringAttribute("timeWarpExpression").length() > 512) return "timeWarpExpression";
+    for (const auto* name : { "reverse", "favourite", "timeWarpEnabled", "timeWarpNoteLengths" })
     {
         if (!assignment.hasAttribute(name)) continue;
         const auto value = assignment.getStringAttribute(name).trim().toLowerCase();

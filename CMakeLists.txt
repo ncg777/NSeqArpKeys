@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NSeqArpKeys VERSION 1.5.1 LANGUAGES C CXX)
+project(NSeqArpKeys VERSION 1.6.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -50,6 +50,7 @@ target_sources(NSeqArpKeys PRIVATE
     Source/ForteCSV.cpp
     Source/Engine/GateRunnerEngine.cpp
     Source/Engine/PatternScheduler.cpp
+    Source/Engine/TimeWarp.cpp
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/VariationEditor.cpp)
@@ -70,7 +71,7 @@ include(CTest)
 if (BUILD_TESTING)
     juce_add_console_app(NSeqArpKeysTests PRODUCT_NAME "NSeqArpKeys Tests")
     juce_generate_juce_header(NSeqArpKeysTests)
-    target_sources(NSeqArpKeysTests PRIVATE tests/PatternSchedulerTests.cpp)
+    target_sources(NSeqArpKeysTests PRIVATE tests/PatternSchedulerTests.cpp tests/TimeWarpSchedulerTests.cpp)
     target_link_libraries(NSeqArpKeysTests PRIVATE
         NSeqArpKeys
         juce::juce_audio_utils
@@ -79,7 +80,7 @@ if (BUILD_TESTING)
     add_test(NAME PatternScheduler COMMAND NSeqArpKeysTests)
     juce_add_console_app(NSeqArpKeysDomainTests PRODUCT_NAME "NSeqArpKeys Domain Tests")
     juce_generate_juce_header(NSeqArpKeysDomainTests)
-    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp tests/PatternVariationTests.cpp)
+    target_sources(NSeqArpKeysDomainTests PRIVATE tests/PatternDomainTests.cpp tests/PatternVariationTests.cpp tests/TimeWarpTests.cpp)
     target_link_libraries(NSeqArpKeysDomainTests PRIVATE
         NSeqArpKeys FactoryPatternsData juce::juce_audio_utils juce::juce_recommended_config_flags)
     add_test(NAME PatternDomain COMMAND NSeqArpKeysDomainTests)

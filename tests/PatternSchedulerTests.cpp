@@ -51,9 +51,12 @@ std::vector<Event> process(PatternScheduler& scheduler, int blocks, int denomina
 }
 }
 
+void testTimeWarpScheduler();
+
 int main()
 {
     Pcs12::GenerateMaps();
+    testTimeWarpScheduler();
 
     PatternScheduler scheduler;
     scheduler.prepare(1000.0);

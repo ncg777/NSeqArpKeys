@@ -458,7 +458,8 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
             case 2: a.sequence = copiedPattern->sequence; break;
             case 3: a.subdivision = copiedPattern->subdivision;
                     a.gate = copiedPattern->gate;
-                    a.fixedLengthSteps = copiedPattern->fixedLengthSteps; break;
+                    a.fixedLengthSteps = copiedPattern->fixedLengthSteps;
+                    a.timeWarp = copiedPattern->timeWarp; break;
             case 4: a.velocity = copiedPattern->velocity;
                     a.transpose = copiedPattern->transpose;
                     a.rotation = copiedPattern->rotation;
@@ -697,6 +698,15 @@ NSeqArpKeysAudioProcessorEditor::NSeqArpKeysAudioProcessorEditor(NSeqArpKeysAudi
     };
     bankSaveButton.onClick = [this] { saveSelectedPatternMetadata(); };
 
+    addAndMakeVisible(timeWarpEditor);
+    timeWarpEditor.onChange = [this](const TimeWarp::Settings& settings)
+    {
+        auto assignment = audioProcessor.getAssignmentForKey(audioProcessor.getSelectedKey());
+        if (assignment.timeWarp == settings) return;
+        recordKeyEdit();
+        assignment.timeWarp = settings;
+        audioProcessor.setAssignmentForKey(audioProcessor.getSelectedKey(), assignment);
+    };
     // ----- Initial load -------------------------------------------------------
     // Move the existing controls into a scrollable panel; navigation stays fixed.
     const auto children = getChildren();
@@ -798,7 +808,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
     controlViewport.setBounds(outer);
     // Reserve scrollbar space up front so resizing never oscillates between layouts.
     controlPanel.setSize(juce::jmax(780, outer.getWidth() - controlViewport.getScrollBarThickness()),
-                         juce::jmax(variationsOpen ? 800 : 532, outer.getHeight() - controlViewport.getScrollBarThickness()));
+                         juce::jmax(variationsOpen ? 800 : 700, outer.getHeight() - controlViewport.getScrollBarThickness()));
     auto area = controlPanel.getLocalBounds().reduced(4);
     if (variationsOpen && variationEditor)
     {
@@ -936,6 +946,7 @@ void NSeqArpKeysAudioProcessorEditor::resized()
         forteSelectionLabel.setBounds(row(right));
     }
 
+    timeWarpEditor.setBounds(row(area, 164));
     auto metadata = row(area);
     patternColourLabel.setBounds(metadata.removeFromLeft(55));
     patternColourSelector.setBounds(metadata.removeFromLeft(125));
@@ -1036,6 +1047,7 @@ void NSeqArpKeysAudioProcessorEditor::loadAssignmentForKey(int key)
     octaveSlider .setValue(a.octave,  juce::dontSendNotification);
     gateSlider   .setValue(static_cast<double>(a.gate), juce::dontSendNotification);
     fixedLengthStepsSlider.setValue(static_cast<double>(a.fixedLengthSteps), juce::dontSendNotification);
+    timeWarpEditor.setSettings(a.timeWarp);
 
     forteSearchEditor.setText(a.forteString, false);
     updateForteSearchResults();
@@ -1947,7 +1959,7 @@ void NSeqArpKeysAudioProcessorEditor::updateModeVisibility()
                                         &meterDenominatorLabel, &meterDenominatorSlider,
                                         &channelLabel, &channelSlider, &octaveLabel,
                                         &octaveSlider, &gateLabel, &gateSlider,
-                                        &fixedLengthStepsLabel, &fixedLengthStepsSlider,
+                                        &fixedLengthStepsLabel, &fixedLengthStepsSlider, &timeWarpEditor,
                                         &patternLabel, &patternTextEditor, &forteSearchLabel,
                                         &forteSearchEditor, &forteLabel, &forteNumberSelector,
                                         &forteSelectionLabel,

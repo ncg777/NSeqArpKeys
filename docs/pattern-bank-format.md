@@ -18,7 +18,7 @@ to 112 bits). It may be empty. Other supported attributes are `mode`
 (`melodic` or `rhythmic`), `name`, `tags`, `colour`, `favourite`, `forte`,
 `channel`, `octave`, `gate`, `fixedLengthSteps`, `subdivision`, `transpose`,
 `velocity`, `rotation`, `reverse`, `rootKey`, `drumNotes`, and
-`drumVelocityBits`. The sequence text is limited to 45,056 bytes in UTF-8.
+`drumVelocityBits`, plus the time-warp fields below. The sequence text is limited to 45,056 bytes in UTF-8.
 The optional `drumNotes` attribute contains 1–16 space-separated MIDI note
 numbers from 0–127; an explicitly empty value is invalid. Omitted optional
 attributes use the defaults below. The `linkId` attribute, if
@@ -36,6 +36,12 @@ project state.
 | `rotation` | Integer -4096–4096 | 0 |
 | `rootKey` | Integer -1–127 | -1 |
 | `drumVelocityBits` | Integer 1–7 | 1 |
+| `timeWarpEnabled`, `timeWarpNoteLengths` | Boolean, as below | false / true |
+| `timeWarpCurve` | GateRunner curve ID (94 built-ins) or `custom` | `lin` |
+| `timeWarpExpression` | Up to 512 characters; `T`, constants, arithmetic and waveform helpers | `T` |
+| `timeWarpRepeats` | Integer 1-64 equal chunks | 1 |
+| `timeWarpAmount` | Finite decimal number 0-100 | 100 |
+| `timeWarpQuantize` | 0 (Off), 1, 2, 4 or 8 divisions per step | 0 |
 | `gate` | Finite decimal number 0–2 | 0.5 |
 | `fixedLengthSteps` | Finite decimal number 0–16 | 0 |
 | `reverse`, `favourite` | `0`/`1`, `false`/`true`, or `no`/`yes` (case insensitive) | false |
@@ -57,3 +63,7 @@ invalid settings before it writes any patterns. Export uses the same count,
 size and validation limits so its files can be reimported. Local entries with
 missing or duplicate IDs must be repaired before exporting; export reports
 an error instead of creating an unusable bank file.
+
+Custom expression syntax is retained on import; invalid syntax or nonfinite
+evaluations use identity timing. Oversized expressions and invalid warp
+attribute values are rejected. See the manual for expression syntax.

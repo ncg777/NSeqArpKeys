@@ -3,7 +3,7 @@
 <JUCERPROJECT id="E9fjjj" name="NSeqArpKeys" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
               pluginVSTCategory="kPlugCategSynth" pluginVST3Category="Instrument,Synth"
-              pluginAUMainType="'aumu'" pluginFormats="buildVST3,buildAU" version="1.5.1"
+              pluginAUMainType="'aumu'" pluginFormats="buildVST3,buildAU" version="1.6.0"
               binaryDataNamespace="FactoryPatternsData">
   <MAINGROUP id="Etz9os" name="NSeqArpKeys">
     <GROUP id="AtlasBanks" name="Built-in Banks">
@@ -59,10 +59,12 @@
             file="Source/RandomNumberGenerator.h"/>
       <FILE id="fU5YOz" name="Sequence.h" compile="0" resource="0" file="Source/Sequence.h"/>
       <GROUP id="DomainGrp" name="Domain">
+        <FILE id="TimeWarpH" name="TimeWarp.h" compile="0" resource="0" file="Source/Domain/TimeWarp.h"/>
         <FILE id="KeyAssignH" name="KeyAssignment.h" compile="0" resource="0"
               file="Source/Domain/KeyAssignment.h"/>
       </GROUP>
       <GROUP id="EngineGrp" name="Engine">
+        <FILE id="TimeWarpCpp" name="TimeWarp.cpp" compile="1" resource="0" file="Source/Engine/TimeWarp.cpp"/>
         <FILE id="GREh" name="GateRunnerEngine.h" compile="0" resource="0"
               file="Source/Engine/GateRunnerEngine.h"/>
         <FILE id="GREcp" name="GateRunnerEngine.cpp" compile="1" resource="0"
@@ -80,6 +82,7 @@
             file="Source/PluginEditor.cpp"/>
       <FILE id="i9a19m" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
       <FILE id="VariationCpp" name="VariationEditor.cpp" compile="1" resource="0" file="Source/VariationEditor.cpp"/>
+      <FILE id="TimeWarpEditorH" name="TimeWarpEditor.h" compile="0" resource="0" file="Source/TimeWarpEditor.h"/>
       <FILE id="VariationH" name="VariationEditor.h" compile="0" resource="0" file="Source/VariationEditor.h"/>
       <FILE id="VariationDomain" name="PatternVariations.h" compile="0" resource="0" file="Source/Domain/PatternVariations.h"/>
     </GROUP>
