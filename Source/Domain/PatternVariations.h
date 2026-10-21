@@ -25,6 +25,8 @@ struct Options
     bool inverse = false;
     int firstKey = 60, keyCount = 8;
     int firstApplication = 0, applicationsBetweenKeys = 1;
+    bool transposeByKey = false;
+    int sourceKey = 60;
 };
 
 struct Variation
@@ -257,7 +259,8 @@ inline Result build(const KeyAssignment& source, const Options& options)
     if (options.firstKey < 0 || options.firstKey > 127 || options.keyCount < 1
         || options.keyCount > 128 - options.firstKey || options.firstApplication < 0
         || options.firstApplication > 65536 || options.applicationsBetweenKeys < 1
-        || options.applicationsBetweenKeys > 4096)
+        || options.applicationsBetweenKeys > 4096
+        || options.sourceKey < 0 || options.sourceKey > 127)
     { result.error = "Choose keys within MIDI 0-127 and valid application counts."; return result; }
 
     std::vector<size_t> positions;
@@ -299,6 +302,8 @@ inline Result build(const KeyAssignment& source, const Options& options)
         variation.application = options.firstApplication + index * options.applicationsBetweenKeys;
         variation.assignment = source;
         variation.assignment.linkId.clear();
+        if (options.transposeByKey)
+            variation.assignment.transpose = std::clamp(source.transpose + variation.key - options.sourceKey, -127, 127);
         if (options.operation == Operation::verticalFlip)
         {
             if (variation.application % 2 != 0) variation.assignment.sequence = flipped.sequence;
@@ -321,9 +326,11 @@ inline Result build(const KeyAssignment& source, const Options& options)
             result.variations.clear();
             return result;
         }
-        const auto found = seen.find(sequence);
+        // Equal sequences at different pitches are distinct playable patterns.
+        const auto identity = sequence + "|" + std::to_string(variation.assignment.transpose);
+        const auto found = seen.find(identity);
         if (found != seen.end()) variation.repeatsKey = found->second;
-        else seen.emplace(sequence, variation.key);
+        else seen.emplace(identity, variation.key);
         result.variations.push_back(std::move(variation));
     }
     result.distinctPatterns = static_cast<int>(seen.size());

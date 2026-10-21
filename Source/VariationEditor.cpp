@@ -130,6 +130,11 @@ VariationEditor::VariationEditor(NSeqArpKeysAudioProcessor& p, int key)
     inverseButton.setComponentID("variation-inverse");
     statusLabel.setComponentID("variation-status");
     addAndMakeVisible(keepRestsButton); addAndMakeVisible(inverseButton);
+    transposeByKeyButton.setButtonText("Transpose by key");
+    transposeByKeyButton.setTooltip("Add destination key minus source key to Transpose: Forte-set degrees in Melodic, semitones in Rhythmic. Combined with every operator application.");
+    transposeByKeyButton.setComponentID("variation-transpose-by-key");
+    addAndMakeVisible(transposeByKeyButton);
+    transposeByKeyButton.onClick = [this] { rebuild(); };
     auto slider = [this](juce::Slider& component, double minimum, double maximum, double value)
     {
         component.setRange(minimum, maximum, 1);
@@ -259,6 +264,8 @@ void VariationEditor::resized()
     auto polynomial = row();
     polynomialLabel.setBounds(polynomial.removeFromLeft(80));
     polynomialSelector.setBounds(polynomial.removeFromLeft(170));
+    polynomial.removeFromLeft(16);
+    transposeByKeyButton.setBounds(polynomial.removeFromLeft(180));
     const int column = (area.getWidth() - 18) / 4;
     auto labels = row(20), coefficients = row();
     for (const auto pair : { std::make_pair(&cubicLabel, &cubicSlider), std::make_pair(&quadraticLabel, &quadraticSlider),
@@ -321,6 +328,8 @@ void VariationEditor::rebuild()
     options.keyCount = static_cast<int>(keyCountSlider.getValue());
     options.firstApplication = static_cast<int>(firstApplicationSlider.getValue());
     options.applicationsBetweenKeys = static_cast<int>(strideSlider.getValue());
+    options.transposeByKey = transposeByKeyButton.getToggleState();
+    options.sourceKey = sourceKey;
     result = PatternVariations::build(source, options);
     const bool polynomial = options.operation == PatternVariations::Operation::polynomial;
     if (polynomial && options.inverse && !result.permutation)
@@ -385,6 +394,7 @@ void VariationEditor::paintListBoxItem(int row, juce::Graphics& g, int width, in
     g.fillAll(isSelected ? juce::Colour(0xff294b57) : juce::Colour(0xff172431));
     g.setColour(juce::Colour(0xffedf6fb)); g.setFont(juce::FontOptions(13.0f));
     auto label = keyName(variation.key) + "   Application " + juce::String(variation.application)
+               + "   Transpose " + juce::String(variation.assignment.transpose)
                + "   " + variantName(variation);
     if (variation.repeatsKey >= 0) label += "   (repeats " + keyName(variation.repeatsKey) + ")";
     g.drawText(label, 6, 0, width - 12, height, juce::Justification::centredLeft, true);

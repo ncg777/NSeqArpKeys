@@ -26,6 +26,7 @@ void testPatternVariations()
     source.channel = 7; source.subdivision = 3; source.gate = 1.25f;
     source.fixedLengthSteps = 0.75f; source.rotation = -3; source.reverse = true;
     source.transpose = 4; source.velocity = 72;
+    source.timeWarp.enabled = true; source.timeWarp.curve = "custom"; source.timeWarp.expression = "T^2";
     const auto before = source;
     Options options;
     auto family = build(source, options);
@@ -205,4 +206,29 @@ void testPatternVariations()
     family = build(source, options);
     check(!family.valid() && family.variations.empty() && family.error.find("pattern text limit") != std::string::npos,
           "Mapping generated an unreadable oversized pattern or exposed a partial family");
+
+    for (const auto mode : { KeyAssignment::Mode::melodic, KeyAssignment::Mode::rhythmic })
+    {
+        source = before; source.mode = mode;
+        options = {}; options.transposeByKey = true; options.sourceKey = 60;
+        options.firstKey = 58; options.keyCount = 8; options.firstApplication = 1; options.applicationsBetweenKeys = 2;
+        family = build(source, options);
+        auto plainOptions = options; plainOptions.transposeByKey = false;
+        const auto plain = build(source, plainOptions);
+        check(family.valid() && family.distinctPatterns == 8, "Combined range did not account for distinct pitches");
+        for (size_t i = 0; i < family.variations.size(); ++i)
+        {
+            const auto& variation = family.variations[i];
+            auto expected = plain.variations[i].assignment;
+            expected.transpose = source.transpose + variation.key - 60;
+            check(variation.assignment == expected && variation.repeatsKey == -1,
+                  "Combined polynomial and transposition range lost mapping or source settings");
+        }
+        source.transpose = 127; options.firstKey = 126; options.keyCount = 2;
+        family = build(source, options);
+        check(family.variations[0].assignment.transpose == 127 && family.variations[1].assignment.transpose == 127,
+              "Combined transpose exceeded upper bound");
+        source.transpose = -127; options.firstKey = 0; options.keyCount = 2;
+        check(build(source, options).variations[0].assignment.transpose == -127, "Combined transpose exceeded lower bound");
+    }
 }

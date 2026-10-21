@@ -724,6 +724,9 @@
     <ClCompile Include="..\..\Source\PluginEditor.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\Engine\TimeWarp.cpp">
+      <Filter>NSeqArpKeys\Source\Engine</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\VariationEditor.cpp">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClCompile>
@@ -3697,6 +3700,12 @@
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\PluginEditor.h">
+      <Filter>NSeqArpKeys\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Domain\TimeWarp.h">
+      <Filter>NSeqArpKeys\Source\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\TimeWarpEditor.h">
       <Filter>NSeqArpKeys\Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\VariationEditor.h">

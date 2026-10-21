@@ -228,7 +228,7 @@ runs this packaging script on Windows, Linux, and macOS. Every run uploads the
 three ZIPs as workflow artifacts. Generated `build/`, `dist/`, and `release/`
 folders are ignored by Git. The Windows PowerShell packager also reads the
 CMake build output (default `build/`, overridable with `-BuildDirectory`).
-Pushing a `v1.5.1` tag publishes the archives as a
+Pushing a `v1.6.0` tag publishes the archives as a
 GitHub release after all three builds succeed.
 
 ## Repository map
@@ -245,9 +245,9 @@ GitHub release after all three builds succeed.
 
 ## Version 1.4.1 compact interface
 
-The editor opens at 820 × 600 logical pixels (smaller when the desktop work
+The editor opens at 820 Ã— 600 logical pixels (smaller when the desktop work
 area requires it), with related controls grouped into two columns. Drag the
-bottom-right corner to resize down to 640 × 400. Scrollbars keep all controls
+bottom-right corner to resize down to 640 Ã— 400. Scrollbars keep all controls
 reachable in smaller windows; the preset navigation stays at the top.
 Switching modes or browsing presets and patterns preserves your window size.
 The Pattern Bank places file-transfer actions on separate rows so they fit.
@@ -308,3 +308,21 @@ Third-party components retain their own license terms, including
 [JUCE 8.0.6](https://github.com/juce-framework/JUCE/blob/8.0.6/LICENSE.md), its
 bundled SDKs and dependencies, and the BSD-3-Clause CSV parser in
 [Source/csv.h](Source/csv.h). The MIT license does not replace those terms.
+
+
+## Version 1.6.0 time warp and combined ranges
+
+Each key has **Time warp** with GateRunner's 94 curves and custom expressions
+such as `T^2`, `1-T`, or `T + sin(2*PI*T)/8`. Set Amount, Repeats (equal chunks),
+and Quantize, and choose whether to warp note lengths or keep the existing
+Gate + Fixed Steps durations. The preview shows the chosen curve. Scroll the
+editor to reach all controls. Invalid expression edits keep the last valid
+assignment playing; older patterns load with warping disabled.
+
+In **Generate variations**, turn on **Transpose by key** to combine polynomial
+powers with automatic range transposition. Each destination gets the selected
+operator application and adds its MIDI-key distance from the source to
+Transpose (Forte-set degrees in Melodic mode, semitones in Rhythmic). Preview,
+audition, assignment, family saving and Undo all use the combined result.
+See the [1.6.0 release notes](docs/release-notes-1.6.0.md) and
+[user manual](docs/NSeqArpKeys-Manual.html).

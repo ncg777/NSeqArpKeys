@@ -4,6 +4,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginProcessor.h"
 #include "Domain/AssignmentHistory.h"
+#include "TimeWarpEditor.h"
 
 class VariationEditor;
 
@@ -123,6 +124,7 @@ private:
     juce::Slider       octaveSlider;
     juce::Slider       gateSlider;
     juce::Slider       fixedLengthStepsSlider;
+    TimeWarpEditor timeWarpEditor;
     juce::TextEditor   patternTextEditor;
     juce::TextEditor   patternNameEditor, drumNotesEditor;
     juce::ComboBox     modeSelector;

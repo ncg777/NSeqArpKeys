@@ -29,6 +29,10 @@ struct ActivePattern
     std::vector<std::vector<GateRunnerEngine::StepNote>> stepNotes;
     std::vector<int> noteLengthSteps;
     int maxNoteLengthSteps = 1;
+    struct StepEvent { double time, onset; int step; };
+    // Sorted once per trigger, in original-step units; a folded curve can
+    // reorder onsets and releases independently, including loop endpoints.
+    std::vector<StepEvent> onsets, releases;
 
     /** Active instances per pitch, used to avoid cutting off overlaps early. */
     std::array<int, 128> activeNoteCounts {};

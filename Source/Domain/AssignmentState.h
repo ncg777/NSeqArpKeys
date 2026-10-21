@@ -17,6 +17,13 @@ inline void write(juce::XmlElement& element, const KeyAssignment& a)
     child->setAttribute("octave",       a.octave);
     child->setAttribute("gate",         static_cast<double>(a.gate));
     child->setAttribute("fixedLengthSteps", static_cast<double>(a.fixedLengthSteps));
+    child->setAttribute("timeWarpEnabled", a.timeWarp.enabled);
+    child->setAttribute("timeWarpCurve", a.timeWarp.curve);
+    child->setAttribute("timeWarpExpression", a.timeWarp.expression);
+    child->setAttribute("timeWarpRepeats", a.timeWarp.repeats);
+    child->setAttribute("timeWarpAmount", a.timeWarp.amount);
+    child->setAttribute("timeWarpQuantize", a.timeWarp.quantize);
+    child->setAttribute("timeWarpNoteLengths", a.timeWarp.noteLengths);
     child->setAttribute("subdivision", a.subdivision);
     child->setAttribute("mode", a.mode == KeyAssignment::Mode::rhythmic ? "rhythmic" : "melodic");
     child->setAttribute("name", juce::String(a.name));
@@ -61,6 +68,16 @@ inline KeyAssignment read(const juce::XmlElement& element)
     a.gate = std::isfinite(gate) ? juce::jlimit(0.0f, 2.0f, static_cast<float>(gate)) : 0.5f;
     a.fixedLengthSteps = std::isfinite(fixed)
         ? juce::jlimit(0.0f, 16.0f, static_cast<float>(fixed)) : 0.0f;
+    a.timeWarp.enabled = child->getBoolAttribute("timeWarpEnabled", false);
+    const auto curve = child->getStringAttribute("timeWarpCurve", "lin").toStdString();
+    if (TimeWarp::isKnownCurve(curve)) a.timeWarp.curve = curve;
+    a.timeWarp.expression = child->getStringAttribute("timeWarpExpression", "T").substring(0, 512).toStdString();
+    a.timeWarp.repeats = juce::jlimit(1, 64, child->getIntAttribute("timeWarpRepeats", 1));
+    const auto amount = child->getDoubleAttribute("timeWarpAmount", 100.0);
+    a.timeWarp.amount = std::isfinite(amount) ? juce::jlimit(0.0, 100.0, amount) : 100.0;
+    const auto quantize = child->getIntAttribute("timeWarpQuantize", 0);
+    a.timeWarp.quantize = TimeWarp::isQuantize(quantize) ? quantize : 0;
+    a.timeWarp.noteLengths = child->getBoolAttribute("timeWarpNoteLengths", true);
     a.subdivision = juce::jlimit(0, 16, child->getIntAttribute("subdivision", 0));
     a.name = child->getStringAttribute("name").substring(0, 80).toStdString();
     a.transpose = juce::jlimit(-127, 127, child->getIntAttribute("transpose", 0));

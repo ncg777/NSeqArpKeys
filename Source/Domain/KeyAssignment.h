@@ -9,6 +9,7 @@
 #include <tuple>
 #include <cstdint>
 #include "../Pcs12.h"
+#include "TimeWarp.h"
 
 // A rhythmic step can address 16 lanes with seven bits each. Store its
 // unsigned 112-bit mask without narrowing it to a C++ int. Negative values
@@ -144,6 +145,7 @@ struct KeyAssignment
 
     /** Duration added to the gated span, in denominator-based steps (0–16). */
     float fixedLengthSteps = 0.0f;
+    TimeWarp::Settings timeWarp;
 
     KeyAssignment()
         : sequence(16, 0)
@@ -218,7 +220,7 @@ struct KeyAssignment
                             a.drumVelocityBits, a.transpose, a.velocity,
                             a.rotation, a.reverse, a.linkId, a.colour, a.tags,
                             a.favourite, a.rootKey, a.forteString, a.channel,
-                            a.octave, a.gate, a.fixedLengthSteps);
+                            a.octave, a.gate, a.fixedLengthSteps, a.timeWarp);
         };
         return fields(*this) == fields(other);
     }

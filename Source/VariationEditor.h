@@ -52,7 +52,7 @@ private:
     int selected = 0;
     bool auditioning = false, auditionOriginal = false, auditionStarted = false;
     juce::ComboBox operationSelector, polynomialSelector;
-    juce::ToggleButton keepRestsButton, inverseButton;
+    juce::ToggleButton keepRestsButton, inverseButton, transposeByKeyButton;
     juce::Slider cubicSlider, quadraticSlider, linearSlider, constantSlider;
     juce::Slider firstKeySlider, keyCountSlider, firstApplicationSlider, strideSlider, gridStartSlider;
     juce::Label titleLabel, operationLabel, polynomialLabel, statusLabel;

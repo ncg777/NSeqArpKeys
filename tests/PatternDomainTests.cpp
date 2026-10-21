@@ -15,11 +15,13 @@ void require(bool condition)
 }
 
 void testPatternVariations();
+void testTimeWarp();
 
 int main()
 {
     Pcs12::GenerateMaps();
     testPatternVariations();
+    testTimeWarp();
     KeyAssignment pattern;
     pattern.mode = KeyAssignment::Mode::rhythmic;
     pattern.sequence = { 5, 0, 1 };

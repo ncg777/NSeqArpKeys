@@ -3,6 +3,7 @@
 #include "../Source/Domain/AssignmentHistory.h"
 #include "../Source/Domain/SafeXml.h"
 #include "../Source/VariationEditor.h"
+#include "../Source/TimeWarpEditor.h"
 #include "../Source/Domain/PatternBankFile.h"
 #include <stdexcept>
 #include <iostream>
@@ -51,6 +52,7 @@ int runTests(int argc, char** argv)
     pattern.reverse = true;
     pattern.rootKey = 48;
     pattern.fixedLengthSteps = 0.25f;
+    pattern.timeWarp = { true, "custom", "T + sin(2*PI*T)/8", 3, 73, 4, false };
     pattern.setForteFromString("1-1.0");
     require(pattern.hasValidForte(), "State fixture must include a valid Forte set");
     processor.setAssignmentForKey(60, pattern);
@@ -376,6 +378,40 @@ int runTests(int argc, char** argv)
                     result.add(child);
             return result;
         };
+        TimeWarpEditor* warpPanel = nullptr;
+        for (auto* control : controls())
+            if (auto* panel = dynamic_cast<TimeWarpEditor*>(control)) warpPanel = panel;
+        require(warpPanel != nullptr, "Time warp controls missing");
+        const auto warpControl = [&](const juce::String& id) -> juce::Component*
+        {
+            for (auto* control : warpPanel->getChildren()) if (control->getComponentID() == id) return control;
+            throw std::runtime_error("Time warp control missing");
+        };
+        auto* warpExpression = dynamic_cast<juce::TextEditor*>(warpControl("time-warp-expression"));
+        auto* warpCurve = dynamic_cast<juce::ComboBox*>(warpControl("time-warp-curve"));
+        auto* warpEnabled = dynamic_cast<juce::ToggleButton*>(warpControl("time-warp-enabled"));
+        warpCurve->setSelectedId(warpCurve->getNumItems(), juce::sendNotificationSync);
+        warpExpression->setText("T^3", false); warpExpression->onTextChange();
+        warpEnabled->setToggleState(true, juce::dontSendNotification); warpEnabled->onClick();
+        require(processor.getAssignmentForKey(60).timeWarp.expression == "T^3"
+                && processor.getAssignmentForKey(60).timeWarp.enabled, "Time warp editor did not update assignment");
+        const auto lastValidWarp = processor.getAssignmentForKey(60).timeWarp;
+        warpExpression->setText("sin(", false); warpExpression->onTextChange();
+        require(processor.getAssignmentForKey(60).timeWarp == lastValidWarp, "Invalid expression replaced the last valid playing warp");
+        warpEnabled->setToggleState(false, juce::dontSendNotification); warpEnabled->onClick();
+        require(!processor.getAssignmentForKey(60).timeWarp.enabled, "Invalid draft prevented disabling time warp");
+        processor.setAssignmentForKey(60, pattern);
+        editor.reset(processor.createEditor());
+        if (argc >= 2)
+        {
+            editor->setSize(1100, 850);
+            const auto file = juce::File::getCurrentWorkingDirectory().getChildFile(argv[1]).getSiblingFile("editor-time-warp.png");
+            juce::FileOutputStream output(file);
+            require(output.openedOk() && output.setPosition(0) && output.truncate().wasOk()
+                    && juce::PNGImageFormat().writeImageToStream(editor->createComponentSnapshot(editor->getLocalBounds()), output),
+                    "Could not save time warp editor snapshot");
+            editor->setSize(820, 600);
+        }
         bool keyboardFound = false;
         for (auto* child : controls())
             if (auto* keyboard = dynamic_cast<juce::MidiKeyboardComponent*>(child))
@@ -417,6 +453,14 @@ int runTests(int argc, char** argv)
                             && !dynamic_cast<juce::ListBox*>(other))
                             require(!child->getBounds().intersects(other->getBounds()),
                                     "Visible editor controls overlap");
+                    if (auto* panel = dynamic_cast<TimeWarpEditor*>(child))
+                        for (auto* control : panel->getChildren())
+                        {
+                            require(control->getWidth() >= 24 && control->getHeight() >= 20
+                                    && panel->getLocalBounds().contains(control->getBounds()), "Time warp control clipped or collapsed");
+                            for (auto* other : panel->getChildren())
+                                if (other != control) require(!control->getBounds().intersects(other->getBounds()), "Time warp controls overlap");
+                        }
                 }
         };
         for (auto* child : controls())
@@ -750,6 +794,23 @@ int runTests(int argc, char** argv)
         mainButton("Redo");
         require(p.getAssignmentForKey(61).sequence == expected.variations[1].assignment.sequence,
                 "Variation batch redo failed");
+        mainButton("Undo"); mainButton("Generate variations");
+        slider("variation-first-key", 59); slider("variation-key-count", 3);
+        for (auto* control : page()->getChildren())
+            if (control->getComponentID() == "variation-transpose-by-key")
+                if (auto* transpose = dynamic_cast<juce::ToggleButton*>(control))
+                { transpose->setToggleState(true, juce::dontSendNotification); transpose->onClick(); }
+        button("Assign variations")->onClick();
+        require(p.getAssignmentForKey(59).transpose == source.transpose - 1
+                && p.getAssignmentForKey(60).transpose == source.transpose
+                && p.getAssignmentForKey(61).transpose == source.transpose + 1
+                && p.getAssignmentForKey(61).sequence == expected.variations[1].assignment.sequence,
+                "UI did not combine operator applications and source-relative transposition");
+        mainButton("Undo");
+        require(p.getAssignmentForKey(60) == source && p.getAssignmentForKey(61) == source,
+                "Combined range did not undo atomically");
+        mainButton("Redo");
+        require(p.getAssignmentForKey(61).transpose == source.transpose + 1, "Combined range redo lost transposition");
         mainButton("Undo"); mainButton("Generate variations");
         slider("variation-key-count", 2);
         const auto presetPath = juce::SystemStats::getEnvironmentVariable("NSEQARPKEYS_PRESET_DIR", {});
